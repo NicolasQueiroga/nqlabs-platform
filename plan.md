@@ -10,7 +10,7 @@ organized by phase and layer. It evolves as work progresses.
 | Phase | Target Environment | Lifecycle Level | Goal |
 |-------|--------------------|-----------------|------|
 | **0 — Foundation** | Mac laptop / UTM | L1 → L2 | Prove the stack works end-to-end on a single node |
-| **0.7 — Fixed-IP Desktop Lab** | Ryzen 9 7950X / 128GB RAM / 2TB SSD desktop | L2 → L3 | Rehearse the three-cluster model on a stable fixed-IP host before NUC migration |
+| **0.7 — Fixed-IP Desktop Lab** | Ryzen 9 7950X / 128GB RAM / 2TB SSD desktop | L2 → L3 | Virtualized NUC architecture rehearsal on Proxmox/Talos VMs |
 | **1 — NUC Cluster** | Dell NUC-class node pool | L2 → L4 | Production-grade three-cluster private cloud |
 | **2 — Operations** | NUC Cluster | L4 → L6 | Full automation, DR, multi-cluster readiness |
 
@@ -370,33 +370,37 @@ external/client-side endpoint probing
 
 ---
 
-## Phase 0.7 — Fixed-IP Desktop Lab
+## Phase 0.7 — Fixed-IP Desktop Lab / Virtualized NUC Rehearsal
 
 Nick may move the whole NQLabs lab from the Mac laptop to a desktop with a fixed IP
 before the NUCs are ready. Target desktop specs: AMD Ryzen 9 7950X, 128GB RAM,
-2TB SSD. Treat this as an intermediate rehearsal environment: more stable than the
-laptop lab, but not the final cloud.
+2TB SSD. Treat this as the virtualized rehearsal of the NUC architecture: more stable
+than the laptop lab, and capable of running the same management/staging/production
+cluster topology as VMs before that topology moves to bare metal.
 
 The goal is not to redesign the platform. The goal is to prove that the same GitOps
 stack and operating model can move from an ephemeral laptop network to a stable host
-network without losing reproducibility.
+network without losing reproducibility. The Mac remains the development/control
+workstation; the desktop becomes the always-on infrastructure host.
 
-- [ ] Document desktop host fixed IP and network topology
+- [x] Document desktop host fixed IP and network topology
+      - Runbook: `docs/runbooks/desktop-lab-bootstrap.md`
 - [ ] Install/configure desktop as a hypervisor host, preferably Proxmox VE, for Talos VM clusters
 - [ ] Define desktop VM/runtime subnet and Cilium LoadBalancer pool
 - [ ] Define desktop Gateway IP, DNS path, and Tailscale routes
 - [ ] Port Talos/bootstrap procedure from Mac UTM assumptions to desktop assumptions
-- [ ] Rehearse three Talos VM clusters if practical: `nqlabs-management`, `nqlabs-staging`, `nqlabs-production`
-- [ ] Re-run full ArgoCD app-of-apps bootstrap on desktop lab
-- [ ] Validate DNS, Gateway, TLS, service factory, Blackbox probes, Discord alerts, and release automation on desktop lab
+- [ ] Bootstrap one `nqlabs-desktop-lab` Talos cluster first to validate Proxmox, Talos, Cilium, DNS, TLS, and GitOps substrate
+- [ ] Rehearse the final three-cluster topology as Talos VMs: `nqlabs-management`, `nqlabs-staging`, `nqlabs-production`
+- [ ] Re-run full ArgoCD app-of-apps bootstrap on desktop lab and then multi-cluster desktop topology
+- [ ] Validate DNS, Gateway, TLS, service factory, Blackbox probes, Discord alerts, and release automation on desktop lab/topology
 - [ ] Document differences between Mac lab and desktop lab
 
 ---
 
 ## Phase 1 — NUC Cluster
 
-Builds on Phase 0 and the fixed-IP desktop rehearsal if that environment is used.
-Same stack, now running on real bare metal.
+Builds on Phase 0 and the fixed-IP desktop rehearsal. Same stack and cluster topology,
+now running on real bare metal instead of Proxmox VMs.
 
 Target topology:
 

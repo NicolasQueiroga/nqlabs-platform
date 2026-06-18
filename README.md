@@ -148,8 +148,8 @@ See `.gitignore` for the full exclusion list.
 | Phase | Target | Status |
 |-------|--------|--------|
 | 0 — Foundation | Single-node Talos on Mac laptop (UTM/ARM64) | 🔧 In progress — core platform operational, readiness backlog remains |
-| 0.7 — Fixed-IP Desktop Lab | Ryzen 9 7950X / 128GB RAM / 2TB SSD desktop hypervisor | ⏳ Planned intermediate rehearsal |
-| 1 — NUC Cluster | Dell NUC-class three-cluster private cloud | ⏳ Planned |
+| 0.7 — Fixed-IP Desktop Lab | Ryzen 9 7950X / 128GB RAM / 2TB SSD Proxmox/Talos VM host | ⏳ Planned virtualized NUC architecture rehearsal |
+| 1 — NUC Cluster | Dell NUC-class three-cluster private cloud | ⏳ Planned bare-metal implementation of the rehearsed topology |
 | 2 — Operations | Full automation, DR, multi-cluster | ⏳ Planned |
 
 Current IP plan and migration notes: [`docs/decisions/ip-address-plan.md`](./docs/decisions/ip-address-plan.md)
@@ -161,7 +161,7 @@ Service namespace model: [`docs/decisions/service-namespace-model.md`](./docs/de
 The environment progression is:
 
 ```text
-Mac laptop / UTM lab → desktop fixed-IP lab → NUC private cloud
+Mac laptop / UTM lab → desktop virtualized NUC rehearsal → NUC bare-metal private cloud
 ```
 
 Target cluster model:

@@ -15,17 +15,19 @@ NQLabs is intentionally moving through environments:
 
 ```text
 Mac laptop / UTM lab
-  → desktop fixed-IP lab (Ryzen 9 7950X, 128GB RAM, 2TB SSD)
-  → NUC bare-metal private cloud (`nqlabs-management`, `nqlabs-staging`, `nqlabs-production`)
+  → desktop fixed-IP virtualized NUC rehearsal (Ryzen 9 7950X, 128GB RAM, 2TB SSD)
+  → NUC bare-metal implementation (`nqlabs-management`, `nqlabs-staging`, `nqlabs-production`)
 ```
 
 The current IPs are valid for the Mac laptop test environment only. They prove the
 architecture, but they are not the final production addressing plan.
 
-When the platform moves to the desktop, add a new section with the desktop host IP,
-desktop VM/runtime subnet, LoadBalancer pool, Tailscale routes, and DNS records.
-When the platform moves to NUCs, replace lab assumptions with the final VLAN/subnet
-plan.
+When the platform moves to the desktop, use
+`docs/runbooks/desktop-lab-bootstrap.md` and add a filled desktop section with the
+desktop host IP, desktop VM/runtime subnet, LoadBalancer pool, Tailscale routes,
+and DNS records.
+When the platform moves to NUCs, preserve the desktop-rehearsed cluster topology but
+replace VM/LAN assumptions with the final bare-metal VLAN/subnet plan.
 
 ## Phase 0 Mac laptop network model
 
@@ -109,7 +111,9 @@ inside the cluster and LoadBalancer/Gateway addresses outside the cluster.
 
 ## Desktop fixed-IP lab placeholder
 
-Before moving the lab from the Mac to the desktop, document:
+The Mac remains the development/control workstation. The desktop becomes the stable
+Proxmox/KVM host for Talos VMs and the virtualized rehearsal of the NUC topology.
+Before moving workloads from the Mac to the desktop, document:
 
 - desktop fixed IP
 - VM/runtime networking model on the desktop

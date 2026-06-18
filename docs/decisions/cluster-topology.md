@@ -13,8 +13,9 @@ nqlabs-production
 ```
 
 The Mac laptop lab remains a single-cluster approximation. The fixed-IP desktop lab
-should rehearse the three-cluster model if practical. The Dell NUC-era private cloud
-should implement the three-cluster model for durable use.
+is the virtualized rehearsal of the NUC architecture: it should first prove one
+desktop Talos cluster, then run the three-cluster model as VMs. The Dell NUC-era
+private cloud implements the same model on bare metal for durable use.
 
 ## What a cluster means
 
@@ -109,6 +110,11 @@ secrets, quotas, limits, RBAC, and policies in the single-cluster lab.
 
 ### Desktop fixed-IP lab
 
+The desktop is the next infrastructure host and the virtualized NUC rehearsal. The
+Mac remains the development/control workstation for editing code, running CLI tools,
+and pushing GitOps changes. The desktop runs Proxmox/KVM and Talos VMs. See
+`docs/runbooks/desktop-lab-bootstrap.md` for the bootstrap procedure.
+
 The desktop has enough capacity to rehearse multi-cluster operation. Target hardware:
 
 ```text
@@ -118,7 +124,8 @@ AMD Ryzen 9 7950X
 fixed IP
 ```
 
-If practical, run three Talos VM clusters:
+After one `nqlabs-desktop-lab` bootstrap cluster proves the substrate, run three
+Talos VM clusters:
 
 ```text
 nqlabs-management
@@ -126,7 +133,8 @@ nqlabs-staging
 nqlabs-production
 ```
 
-If starting smaller, keep the same logical names and document any temporary shortcuts.
+The one-cluster bootstrap is a temporary substrate validation step. The architecture
+rehearsal target is the three-cluster topology above.
 
 Recommended host model:
 
@@ -142,6 +150,9 @@ the flexible VM lifecycle needed to rehearse `nqlabs-management`, `nqlabs-stagin
 and `nqlabs-production` on one physical machine.
 
 ### NUC cloud
+
+The NUC phase should not invent a new topology. It should move the desktop-rehearsed
+management/staging/production model from Proxmox VMs to Talos on bare metal.
 
 The NUC-era target is true environment separation:
 
