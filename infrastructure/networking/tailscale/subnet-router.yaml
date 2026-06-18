@@ -1,19 +1,22 @@
-# Tailscale Connector — subnet router for the lab cluster network
+# Tailscale Connector — subnet router for the cluster network
 #
-# Advertises 192.168.64.0/24 (UTM bridge network) to the tailnet.
-# All Tailscale devices can then reach cluster LoadBalancer IPs directly:
-#   - 192.168.64.192 (CoreDNS)
-#   - 192.168.64.193 (platform-gateway, HTTPS entry point)
-#   - 192.168.64.194+ (future services)
+# Advertises the desktop LAN/Cilium LB range to the tailnet so all Tailscale
+# devices can reach cluster LoadBalancer IPs directly.
 #
-# Phase 1: replace with NUC cluster subnet (e.g. 10.0.10.0/24)
+# UPDATE before desktop bootstrap (Phase F of desktop-lab-bootstrap.md):
+#   Replace advertiseRoutes with the actual desktop LAN subnet or Cilium LB pool.
+#   Example: 192.168.1.0/24  (if desktop LAN is 192.168.1.0/24)
+#   Example: 192.168.1.200/29 (if advertising only the Cilium LB pool)
+#
+# Phase 1 NUC: replace with NUC cluster subnet.
 
 apiVersion: tailscale.com/v1alpha1
 kind: Connector
 metadata:
   name: lab-subnet-router
+  namespace: tailscale
 spec:
   hostname: nqlabs-lab-router
   subnetRouter:
     advertiseRoutes:
-      - 192.168.64.0/24
+      - 192.168.1.0/24   # TODO: replace with desktop LAN subnet before bootstrap

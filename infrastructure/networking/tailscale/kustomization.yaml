@@ -1,0 +1,15 @@
+# Kustomize manifest list for infrastructure/networking/tailscale
+#
+# Explicitly lists only Kubernetes manifests so ArgoCD (tailscale-config app)
+# applies exactly these resources and ignores values.yaml.
+#
+# Managed by: platform/argocd/apps/tailscale-config.yaml (sync-wave 3)
+# Depends on: tailscale-operator (sync-wave 2) for Connector CRD
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - subnet-router.yaml        # Connector — subnet router (update routes before bootstrap)
+  - coredns-svc.yaml          # LoadBalancer Service exposing CoreDNS on Tailscale (split DNS)
+  - platform-gateway-svc.yaml # LoadBalancer Service exposing platform HTTPS Gateway on Tailscale

@@ -1,24 +1,8 @@
-# Expose ArgoCD UI on Tailscale
-# Creates a Tailscale device named "argocd" on hen-exponential.ts.net
-# Access: http://argocd (MagicDNS) or http://argocd.hen-exponential.ts.net
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: argocd-tailscale
-  namespace: argocd
-  annotations:
-    tailscale.com/expose: "true"
-    tailscale.com/hostname: "argocd"
-    tailscale.com/tags: "tag:k8s"
-    # DNS record now managed by HTTPRoute annotation via Gateway
-    # See infrastructure/networking/gateway/argocd-route.yaml
-spec:
-  type: LoadBalancer
-  loadBalancerClass: tailscale
-  selector:
-    app.kubernetes.io/name: argocd-server
-  ports:
-    - name: http
-      port: 80
-      targetPort: 8080
+# REMOVED — ArgoCD is not exposed directly on Tailscale.
+#
+# ArgoCD is accessible via:
+#   https://argocd.platform.nqlabs.network
+# through the platform Gateway + Let's Encrypt cert + Tailscale subnet route.
+#
+# A separate Tailscale LoadBalancer Service for ArgoCD was redundant and
+# exposed the UI over plain HTTP (port 80 → 8080) without TLS.
