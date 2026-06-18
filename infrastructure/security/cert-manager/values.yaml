@@ -1,0 +1,38 @@
+# cert-manager Helm values — NQLabs Platform
+# Chart: jetstack/cert-manager
+#
+# Manages TLS certificates for all platform services.
+# Two issuers:
+#   - Let's Encrypt + Cloudflare DNS-01 → *.nqlabs.network (private reachability, public trust)
+#   - Internal CA (self-signed) fallback for bootstrap/internal use
+#
+# ClusterIssuers, token ExternalSecret, and Gateway Certificate defined in:
+#   infrastructure/security/cert-manager/cluster-issuers.yaml
+#   infrastructure/security/cert-manager/externalsecrets.yaml
+#   infrastructure/networking/gateway/platform-gateway.yaml
+
+crds:
+  enabled: true   # Install CRDs with the chart
+
+replicaCount: 1
+
+# Prometheus metrics
+prometheus:
+  enabled: true
+  servicemonitor:
+    enabled: false  # Enable once kube-prometheus-stack is deployed
+
+# Required for Gateway API integration
+featureGates: "ExperimentalGatewayAPISupport=true"
+
+# DNS-01 challenge requires these settings
+extraArgs:
+  - --dns01-recursive-nameservers-only
+  - --dns01-recursive-nameservers=1.1.1.1:53,8.8.8.8:53
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi

@@ -1,0 +1,22 @@
+# Tailscale Operator Helm values — NQLabs Platform
+# Chart: tailscale/tailscale-operator
+# Tailnet: hen-exponential.ts.net
+#
+# OAuth credentials NOT in git.
+# Pre-created as bootstrap secret (pulled from 1Password NQLabs vault → tailscale-key):
+#   kubectl create secret generic operator-oauth -n tailscale \
+#     --from-literal=client_id=<username field> \
+#     --from-literal=client_secret=<credential field>
+#
+# Future: replace manual secret with ExternalSecret (1Password Connect + ESO, Phase 0).
+
+operatorConfig:
+  # Name this operator appears as on the tailnet
+  hostname: nqlabs-operator
+  # Log level
+  logging: info
+
+# oauth block intentionally empty — reads from pre-created operator-oauth secret
+oauth:
+  clientId: ""
+  clientSecret: ""

@@ -1,0 +1,45 @@
+# Tailscale Operator — cluster access layer
+#
+# Exposes K8s services to the tailnet (hen-exponential.ts.net) without
+# public IPs or port-forwarding.
+#
+# Pre-requisite: operator-oauth secret must exist in tailscale namespace.
+# See infrastructure/networking/tailscale/values.yaml for bootstrap steps.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tailscale-operator
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+
+  sources:
+    - repoURL: https://pkgs.tailscale.com/helmcharts
+      chart: tailscale-operator
+      targetRevision: "1.98.4"
+      helm:
+        valueFiles:
+          - $values/infrastructure/networking/tailscale/values.yaml
+
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tailscale
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/enforce-version: latest
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

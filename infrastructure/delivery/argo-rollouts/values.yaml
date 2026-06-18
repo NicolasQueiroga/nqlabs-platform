@@ -1,0 +1,49 @@
+# Argo Rollouts Helm values — NQLabs Platform
+#
+# Chart: argo/argo-rollouts 2.41.0
+# App:   Argo Rollouts v1.9.0
+# Namespace: argo-rollouts
+
+installCRDs: true
+
+controller:
+  # Single-node Phase 0 cluster; increase in Phase 1.
+  replicas: 1
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# Dashboard is private behind Tailscale/Gateway and read-only.
+# Mutating rollout operations should be done through git/ArgoCD or kubectl plugin.
+dashboard:
+  enabled: true
+  readonly: true
+
+  replicas: 1
+
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+  httproute:
+    enabled: true
+    annotations:
+      external-dns.alpha.kubernetes.io/hostname: rollouts.platform.nqlabs.network
+    parentRefs:
+      - name: platform-gateway
+        namespace: platform
+        sectionName: https
+    hostnames:
+      - rollouts.platform.nqlabs.network

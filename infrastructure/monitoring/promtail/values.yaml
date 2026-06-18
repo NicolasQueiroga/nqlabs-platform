@@ -1,0 +1,18 @@
+# Promtail Helm values — NQLabs Platform
+#
+# Chart: grafana/promtail 6.17.1
+# Ships Kubernetes pod/container logs to Loki.
+
+config:
+  clients:
+    - url: http://loki-gateway.monitoring.svc.cluster.local/loki/api/v1/push
+
+serviceMonitor:
+  enabled: true
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    memory: 256Mi

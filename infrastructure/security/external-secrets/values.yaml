@@ -1,0 +1,36 @@
+# External Secrets Operator — NQLabs Platform
+# Chart: external-secrets/external-secrets v2.6.0
+#
+# Backend: 1Password SDK (onepasswordSDK provider)
+# Auth: service account token stored in K8s secret `onepassword-service-account-token`
+#       in namespace external-secrets.
+#
+# Bootstrap (one-time manual step — run before ArgoCD deploys ESO):
+#   op item get "Service Account Auth Token: NQ Labs" \
+#     --account my.1password.com --fields credential --format json \
+#     | python3 -c "import json,sys; print(json.load(sys.stdin)['value'])" \
+#     | kubectl create secret generic onepassword-service-account-token \
+#         --from-file=token=/dev/stdin \
+#         -n external-secrets
+#
+# After ESO is deployed, all platform secrets are defined as ExternalSecret
+# resources in infrastructure/security/external-secrets/secrets/
+
+replicaCount: 1
+
+installCRDs: true
+
+# Prometheus metrics
+metrics:
+  service:
+    enabled: true
+
+# Leader election for HA (single replica for Phase 0)
+leaderElect: false
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    memory: 256Mi

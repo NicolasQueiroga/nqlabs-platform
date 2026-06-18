@@ -1,0 +1,21 @@
+# local-path-provisioner Helm values — NQLabs Platform
+# Chart: rancher/local-path-provisioner (deploy/chart)
+# Version: v0.0.36
+#
+# Phase 0 only — single-node lab storage.
+# Replaced by Rook/Ceph in Phase 1 (NUC cluster).
+#
+# Volumes are backed by hostPath on the node disk (/opt/local-path-provisioner).
+# No replication — data is lost if the node disk fails.
+# Acceptable for Phase 0: no production data, rapid iteration.
+
+storageClass:
+  create: true
+  defaultClass: true   # Default StorageClass — PVCs without explicit class use this
+  name: local-path
+
+# Node path where volumes are created
+nodePathMap:
+  - node: DEFAULT_PATH_FOR_NON_LISTED_NODES
+    paths:
+      - /opt/local-path-provisioner

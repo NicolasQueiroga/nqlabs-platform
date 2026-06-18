@@ -1,0 +1,38 @@
+# etcd Helm values — DNS backend for standalone CoreDNS
+# Chart: bitnami/etcd
+#
+# Single-node etcd used ONLY as CoreDNS record backend (SkyDNS pattern).
+# Not the Kubernetes control-plane etcd. Separate, lightweight instance.
+# external-dns writes A/CNAME records here; CoreDNS reads and serves them.
+#
+# Phase 1: may migrate to a 3-node etcd for HA DNS backend.
+
+replicaCount: 1
+
+auth:
+  rbac:
+    create: false   # Internal DNS backend — no auth needed in lab
+  token:
+    enabled: false
+
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: local-path
+
+# Expose only inside the cluster — CoreDNS and external-dns use ClusterIP
+service:
+  type: ClusterIP
+  ports:
+    client: 2379
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+# Single node — no need for peer election
+startFromSnapshot:
+  enabled: false

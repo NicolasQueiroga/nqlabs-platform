@@ -1,0 +1,53 @@
+# Standalone CoreDNS Helm values — authoritative for nqlabs.network
+# Chart: coredns/coredns
+#
+# Separate from Kubernetes' own CoreDNS (kube-dns).
+# This instance is the authoritative nameserver for nqlabs.network.
+# Records written by external-dns via etcd (SkyDNS protocol).
+# Exposed via Tailscale → used as Tailscale split DNS target.
+
+replicaCount: 1
+
+service:
+  name: coredns-dns
+  # Gets IP from Cilium LB IPAM pool (192.168.64.200/28)
+  type: LoadBalancer
+  port: 53
+  targetPort: 53
+  annotations: {}
+
+serviceType: LoadBalancer
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+# CoreDNS Corefile — authoritative for nqlabs.network via etcd
+servers:
+  - zones:
+      - zone: .
+    port: 53
+    plugins:
+      - name: errors
+      - name: health
+        configBlock: |-
+          lameduck 5s
+      - name: ready
+      # Authoritative zone for nqlabs.network — reads from etcd (SkyDNS format)
+      - name: etcd
+        parameters: nqlabs.network
+        configBlock: |-
+          stubzones
+          path /skydns
+          endpoint http://10.103.246.202:2379
+      # Forward everything else to upstream resolvers
+      - name: forward
+        parameters: . 1.1.1.1 8.8.8.8
+      - name: cache
+        parameters: "30"
+      - name: loop
+      - name: reload
+      - name: loadbalance

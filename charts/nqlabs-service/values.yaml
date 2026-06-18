@@ -1,0 +1,109 @@
+app:
+  name: ""
+
+environment:
+  name: ""
+
+replicaCount: 1
+
+image:
+  repository: traefik/whoami
+  tag: v1.11.0
+  pullPolicy: IfNotPresent
+
+# Optional Kubernetes image pull secrets for private registries such as private
+# GHCR packages or future Harbor projects.
+# Example:
+# imagePullSecrets:
+#   - name: ghcr-pull-secret
+imagePullSecrets: []
+
+container:
+  port: 80
+  env: []
+
+serviceAccount:
+  create: true
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+securityContext: {}
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    memory: 128Mi
+
+# Namespace-scoped guardrails. The Mac lab uses dedicated service-environment
+# namespaces such as <service>-staging or <service>-production so these apply to
+# one service environment instead of a shared environment namespace.
+resourceQuota:
+  enabled: false
+  hard:
+    requests.cpu: "500m"
+    requests.memory: 512Mi
+    limits.memory: 1Gi
+    pods: "4"
+  scopes: []
+  scopeSelector: {}
+
+limitRange:
+  enabled: false
+  limits:
+    - type: Container
+      default:
+        memory: 128Mi
+      defaultRequest:
+        cpu: 10m
+        memory: 32Mi
+
+# Optional namespaced Kubernetes API permissions for the service account. Keep
+# disabled by default: most application pods should not need Kubernetes API access.
+rbac:
+  create: false
+  rules: []
+
+# Optional Cilium policy for workload isolation. CiliumNetworkPolicy is the
+# preferred NQLabs service policy mechanism because Cilium is the platform CNI and
+# supports richer L3/L4/L7/FQDN controls than standard Kubernetes NetworkPolicy.
+ciliumNetworkPolicy:
+  enabled: false
+  # Defaults to this chart's app selector when left empty.
+  endpointSelector: {}
+  # Enable default deny per direction when the policy is enabled. Add explicit
+  # ingress/egress allow rules before enabling for real workloads.
+  enableDefaultDeny:
+    ingress: true
+    egress: false
+  ingress: []
+  egress: []
+  ingressDeny: []
+  egressDeny: []
+
+rollout:
+  enabled: false
+  strategy:
+    canary:
+      maxSurge: 25%
+      maxUnavailable: 0
+
+service:
+  type: ClusterIP
+  port: 80
+
+route:
+  enabled: false
+  host: ""
+  annotations: {}
+  parentRefs:
+    - name: platform-gateway
+      namespace: platform
+      sectionName: https
+  path:
+    type: PathPrefix
+    value: /

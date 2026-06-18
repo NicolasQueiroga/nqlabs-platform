@@ -1,0 +1,44 @@
+# Blackbox endpoint alert rules — NQLabs Platform
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: nqlabs-endpoint-alerts
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: blackbox-exporter
+    prometheus: kube-prometheus-stack-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: nqlabs.endpoint-availability
+      rules:
+        - alert: NQLabsEndpointDown
+          expr: probe_success{job="nqlabs-endpoints"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            namespace: monitoring
+          annotations:
+            summary: "NQLabs endpoint is down"
+            description: "{{ $labels.instance }} failed the internal Blackbox probe for more than 2 minutes."
+
+        - alert: NQLabsEndpointSlow
+          expr: probe_duration_seconds{job="nqlabs-endpoints"} > 2
+          for: 5m
+          labels:
+            severity: warning
+            namespace: monitoring
+          annotations:
+            summary: "NQLabs endpoint is slow"
+            description: "{{ $labels.instance }} has taken more than 2 seconds to respond for 5 minutes."
+
+        - alert: NQLabsEndpointTLSExpiringSoon
+          expr: (probe_ssl_earliest_cert_expiry{job="nqlabs-endpoints"} - time()) / 86400 < 14
+          for: 15m
+          labels:
+            severity: warning
+            namespace: monitoring
+          annotations:
+            summary: "NQLabs endpoint TLS certificate expires soon"
+            description: "{{ $labels.instance }} TLS certificate expires in less than 14 days."

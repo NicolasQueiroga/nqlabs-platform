@@ -1,0 +1,91 @@
+# etcd StatefulSet — DNS record backend for standalone CoreDNS
+# Image: gcr.io/etcd-development/etcd (official, multi-arch)
+# Single node — DNS backend only, not control-plane etcd.
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: etcd-dns
+  namespace: dns
+  labels:
+    app: etcd-dns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: etcd-dns
+  serviceName: etcd-dns
+  podManagementPolicy: OrderedReady
+  revisionHistoryLimit: 10
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
+  template:
+    metadata:
+      labels:
+        app: etcd-dns
+    spec:
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: etcd
+          image: gcr.io/etcd-development/etcd:v3.5.21
+          imagePullPolicy: IfNotPresent
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          command:
+            - etcd
+          args:
+            - --data-dir=/var/etcd/data
+            - --listen-client-urls=http://0.0.0.0:2379
+            - --advertise-client-urls=http://etcd-dns.dns.svc.cluster.local:2379
+            - --listen-peer-urls=http://0.0.0.0:2380
+            - --initial-advertise-peer-urls=http://etcd-dns.dns.svc.cluster.local:2380
+            - --initial-cluster=default=http://etcd-dns.dns.svc.cluster.local:2380
+            - --initial-cluster-state=new
+            - --initial-cluster-token=nqlabs-dns-etcd
+          ports:
+            - containerPort: 2379
+              name: client
+              protocol: TCP
+            - containerPort: 2380
+              name: peer
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /var/etcd
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 2379
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+  volumeClaimTemplates:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: local-path
+        volumeMode: Filesystem
+        resources:
+          requests:
+            storage: 1Gi

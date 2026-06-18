@@ -1,0 +1,37 @@
+{{- if .Values.ciliumNetworkPolicy.enabled -}}
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "nqlabs-service.fullname" . }}
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.ciliumNetworkPolicy.endpointSelector }}
+  endpointSelector:
+    {{- toYaml .Values.ciliumNetworkPolicy.endpointSelector | nindent 4 }}
+  {{- else }}
+  endpointSelector:
+    matchLabels:
+      {{- include "nqlabs-service.selectorLabels" . | nindent 6 }}
+  {{- end }}
+  {{- with .Values.ciliumNetworkPolicy.enableDefaultDeny }}
+  enableDefaultDeny:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- if or .Values.ciliumNetworkPolicy.enableDefaultDeny.ingress .Values.ciliumNetworkPolicy.ingress }}
+  ingress:
+    {{- toYaml .Values.ciliumNetworkPolicy.ingress | nindent 4 }}
+  {{- end }}
+  {{- if or .Values.ciliumNetworkPolicy.enableDefaultDeny.egress .Values.ciliumNetworkPolicy.egress }}
+  egress:
+    {{- toYaml .Values.ciliumNetworkPolicy.egress | nindent 4 }}
+  {{- end }}
+  {{- with .Values.ciliumNetworkPolicy.ingressDeny }}
+  ingressDeny:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.ciliumNetworkPolicy.egressDeny }}
+  egressDeny:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

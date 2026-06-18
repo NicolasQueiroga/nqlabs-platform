@@ -1,0 +1,19 @@
+# Control plane machine config patch — lab cluster (single node)
+#
+# Allows workloads to be scheduled on the control plane node.
+# Required for single-node setups where there are no separate worker nodes.
+# This patch is NOT applied to production multi-node clusters.
+
+cluster:
+  allowSchedulingOnControlPlanes: true
+
+  network:
+    cni:
+      name: none  # Disable default Flannel — Cilium is installed separately via Helm
+
+  proxy:
+    disabled: true  # Disable kube-proxy — Cilium replaces it in eBPF mode
+
+machine:
+  install:
+    disk: /dev/vda  # UTM virtio disk (virtio-blk presents as vda, not sda)

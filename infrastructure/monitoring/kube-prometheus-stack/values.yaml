@@ -1,0 +1,146 @@
+# kube-prometheus-stack Helm values — NQLabs Platform
+#
+# Chart: prometheus-community/kube-prometheus-stack 86.2.3
+# Namespace: monitoring
+#
+# Talos/Cilium notes:
+#   - kubeProxy disabled   — replaced by Cilium
+#   - kubeEtcd disabled    — Talos etcd listens on localhost only
+#   - kubeControllerManager/kubeScheduler disabled — Talos exposes on 127.0.0.1 only
+#   - CoreDNS enabled      — kube-system CoreDNS is accessible
+#   - No tolerations needed — single node has no taints
+
+# ── Disabled components (not accessible on Talos + Cilium) ──────────────────
+kubeProxy:
+  enabled: false
+
+kubeEtcd:
+  enabled: false
+
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+# ── Grafana ─────────────────────────────────────────────────────────────────
+grafana:
+  enabled: true
+
+  admin:
+    existingSecret: grafana-admin-credentials
+    userKey: admin-user
+    passwordKey: admin-password
+
+  ingress:
+    enabled: false   # HTTPRoute used instead
+
+  persistence:
+    enabled: true
+    storageClassName: local-path
+    size: 5Gi
+
+  grafana.ini:
+    server:
+      root_url: https://grafana.platform.nqlabs.network
+      serve_from_sub_path: false
+
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+    datasources:
+      enabled: true
+
+  defaultDashboardsTimezone: browser
+
+# ── Prometheus ──────────────────────────────────────────────────────────────
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    retentionSize: "18GB"
+
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 20Gi
+
+    # Discover ServiceMonitors/PodMonitors/Rules across all namespaces
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+
+
+    # Talos + subPath bind mounts block writes for non-root UIDs at the kernel level
+    # even with correct fsGroup/ownership. Prometheus must run as root on this setup.
+    # monitoring namespace is enforced as 'privileged' — running as root is intentional.
+    securityContext:
+      runAsUser: 0
+      runAsGroup: 0
+      runAsNonRoot: false
+      fsGroup: 0
+
+    containerSecurityContext:
+      runAsUser: 0
+      runAsNonRoot: false
+      readOnlyRootFilesystem: false
+      allowPrivilegeEscalation: true
+      capabilities: {}
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 2Gi
+
+# ── Alertmanager ────────────────────────────────────────────────────────────
+alertmanager:
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 2Gi
+
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+
+# ── Prometheus Operator ─────────────────────────────────────────────────────
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+# ── kube-state-metrics ──────────────────────────────────────────────────────
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# ── node-exporter ───────────────────────────────────────────────────────────
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi

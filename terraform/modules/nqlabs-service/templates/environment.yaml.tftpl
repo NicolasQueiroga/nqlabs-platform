@@ -1,0 +1,111 @@
+app:
+  name: ${service_name}
+
+environment:
+  name: ${environment_name}
+  namespace: ${namespace}
+
+argocd:
+  project: ${argocd_project}
+  valueFile: ${value_file}
+
+replicaCount: ${replica_count}
+
+image:
+  repository: ${image_repository}
+  tag: ${image_tag}
+  pullPolicy: ${image_pull_policy}
+%{ if length(image_pull_secrets) > 0 }
+
+imagePullSecrets:
+%{ for secret in image_pull_secrets }
+  - name: ${secret}
+%{ endfor }
+%{ endif }
+container:
+  port: ${container_port}
+
+rollout:
+  enabled: ${rollout_enabled}
+  strategy:
+    canary:
+      maxSurge: ${max_surge}
+      maxUnavailable: ${max_unavailable}
+%{ if resource_quota.enabled ~}
+
+resourceQuota:
+  enabled: true
+  hard:
+%{ for key, value in resource_quota.hard ~}
+    ${key}: "${value}"
+%{ endfor ~}
+
+%{ endif ~}
+%{ if limit_range.enabled ~}
+limitRange:
+  enabled: true
+  limits:
+    - type: Container
+%{ if length(limit_range.default) > 0 ~}
+      default:
+%{ for key, value in limit_range.default ~}
+        ${key}: "${value}"
+%{ endfor ~}
+%{ endif ~}
+%{ if length(limit_range.default_request) > 0 ~}
+      defaultRequest:
+%{ for key, value in limit_range.default_request ~}
+        ${key}: "${value}"
+%{ endfor ~}
+%{ endif ~}
+%{ if length(limit_range.max) > 0 ~}
+      max:
+%{ for key, value in limit_range.max ~}
+        ${key}: "${value}"
+%{ endfor ~}
+%{ endif ~}
+%{ if length(limit_range.min) > 0 ~}
+      min:
+%{ for key, value in limit_range.min ~}
+        ${key}: "${value}"
+%{ endfor ~}
+%{ endif ~}
+
+%{ endif ~}
+%{ if rbac.create ~}
+rbac:
+  create: true
+  rules:
+%{ for rule in rbac.rules ~}
+    - apiGroups: ${jsonencode(rule.api_groups)}
+      resources: ${jsonencode(rule.resources)}
+      verbs: ${jsonencode(rule.verbs)}
+%{ endfor ~}
+
+%{ endif ~}
+%{ if cilium_network_policy.enabled ~}
+ciliumNetworkPolicy:
+  enabled: true
+  enableDefaultDeny:
+    ingress: ${cilium_network_policy.default_deny_ingress}
+    egress: ${cilium_network_policy.default_deny_egress}
+%{ if length(cilium_network_policy.ingress) > 0 ~}
+  ingress: ${jsonencode(cilium_network_policy.ingress)}
+%{ endif ~}
+%{ if length(cilium_network_policy.egress) > 0 ~}
+  egress: ${jsonencode(cilium_network_policy.egress)}
+%{ endif ~}
+%{ if length(cilium_network_policy.ingress_deny) > 0 ~}
+  ingressDeny: ${jsonencode(cilium_network_policy.ingress_deny)}
+%{ endif ~}
+%{ if length(cilium_network_policy.egress_deny) > 0 ~}
+  egressDeny: ${jsonencode(cilium_network_policy.egress_deny)}
+%{ endif ~}
+%{ endif ~}
+
+service:
+  port: ${service_port}
+
+route:
+  enabled: ${route_enabled}
+  host: ${route_host}

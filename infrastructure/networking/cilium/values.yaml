@@ -1,0 +1,79 @@
+# Cilium Helm values — NQLabs Platform
+# Chart: cilium/cilium
+# Version: 1.19.4
+#
+# Installation:
+#   helm install cilium cilium/cilium --namespace kube-system -f values.yaml
+#
+# Upgrade:
+#   helm upgrade cilium cilium/cilium --namespace kube-system -f values.yaml --set k8sServiceHost=<NODE_IP>
+#
+# Notes:
+# - kubeProxyReplacement=true: Cilium replaces kube-proxy entirely (eBPF mode)
+# - Talos requires specific cgroup and securityContext settings
+# - k8sServiceHost/Port must match the cluster control plane endpoint
+# - Hubble enabled for network observability (relay + UI)
+# - gatewayAPI replaces Nginx Ingress Controller — no separate ingress component needed
+# - Gateway API CRDs must be installed before enabling gatewayAPI (see scripts/install-gateway-api-crds.sh)
+
+ipam:
+  mode: kubernetes
+
+kubeProxyReplacement: true
+
+# Single-node lab: only 1 operator replica can schedule.
+# Set to 2 for NUC cluster (multi-node, HA).
+operator:
+  replicas: 1
+
+securityContext:
+  capabilities:
+    ciliumAgent:
+      - CHOWN
+      - KILL
+      - NET_ADMIN
+      - NET_RAW
+      - IPC_LOCK
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    cleanCiliumState:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE
+
+cgroup:
+  autoMount:
+    enabled: false
+  hostRoot: /sys/fs/cgroup
+
+# Override per cluster — must match the control plane IP/port
+k8sServiceHost: 192.168.64.3  # lab cluster only — parameterize per environment
+k8sServicePort: 6443
+
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+  ui:
+    enabled: true
+
+# Gateway API — replaces Nginx Ingress Controller
+# Requires Gateway API CRDs to be installed first (upstream Kubernetes project)
+# Exposes GatewayClass "cilium" for use by HTTPRoute, TLSRoute, GRPCRoute resources
+gatewayAPI:
+  enabled: true
+
+# L2 Announcements — ARP-based LoadBalancer IP advertisement on local network
+# Required for CiliumLoadBalancerIPPool IPs to be reachable from the Mac host.
+# Pairs with CiliumL2AnnouncementPolicy in infrastructure/networking/cilium/lb-ipam/
+l2announcements:
+  enabled: true
+
+# LB IPAM — Cilium assigns IPs to LoadBalancer services from defined pools
+# Pool defined in infrastructure/networking/cilium/lb-ipam/pool.yaml
+externalIPs:
+  enabled: true

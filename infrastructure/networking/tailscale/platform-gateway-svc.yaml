@@ -1,0 +1,30 @@
+# Expose platform-gateway via Tailscale
+# All HTTPS platform services route through this single gateway.
+# external-dns creates per-service records pointing to this Tailscale IP.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: platform-gateway-tailscale
+  namespace: platform
+  annotations:
+    tailscale.com/expose: "true"
+    tailscale.com/hostname: "platform-gateway"
+    tailscale.com/tags: "tag:k8s"
+    # All platform service hostnames route through this gateway.
+    # Add new hostnames here as comma-separated values when adding new HTTPRoutes.
+    # This service exposes the Gateway on Tailscale for MagicDNS access only.
+    # DNS records (nqlabs.network) are managed via the cilium-gateway service annotation.
+    # Subnet routing (192.168.64.0/24) handles external-device access to Gateway LB IPs.
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    gateway.networking.k8s.io/gateway-name: platform-gateway
+  ports:
+    - name: https
+      port: 443
+      targetPort: 443
+    - name: http
+      port: 80
+      targetPort: 80

@@ -1,0 +1,19 @@
+# Tailscale Connector — subnet router for the lab cluster network
+#
+# Advertises 192.168.64.0/24 (UTM bridge network) to the tailnet.
+# All Tailscale devices can then reach cluster LoadBalancer IPs directly:
+#   - 192.168.64.192 (CoreDNS)
+#   - 192.168.64.193 (platform-gateway, HTTPS entry point)
+#   - 192.168.64.194+ (future services)
+#
+# Phase 1: replace with NUC cluster subnet (e.g. 10.0.10.0/24)
+
+apiVersion: tailscale.com/v1alpha1
+kind: Connector
+metadata:
+  name: lab-subnet-router
+spec:
+  hostname: nqlabs-lab-router
+  subnetRouter:
+    advertiseRoutes:
+      - 192.168.64.0/24

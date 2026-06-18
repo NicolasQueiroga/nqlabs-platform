@@ -1,0 +1,19 @@
+# etcd Service — exposes client port to CoreDNS and external-dns
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd-dns
+  namespace: dns
+  labels:
+    app: etcd-dns
+spec:
+  type: ClusterIP   # Real ClusterIP so CoreDNS can connect by IP, no DNS lookup needed
+  selector:
+    app: etcd-dns
+  ports:
+    - name: client
+      port: 2379
+      targetPort: 2379
+    - name: peer
+      port: 2380
+      targetPort: 2380

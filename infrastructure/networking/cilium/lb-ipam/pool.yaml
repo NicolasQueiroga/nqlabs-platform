@@ -1,0 +1,15 @@
+# Cilium LoadBalancer IP Pool — NQLabs Lab
+#
+# Allocates IPs for LoadBalancer services on the UTM host network (192.168.64.0/24).
+# Range 192.168.64.200-214 is safe — UTM DHCP assigns .2-.50 range only.
+# IPs are announced via L2 (gratuitous ARP) so the Mac host can reach them directly.
+#
+# Phase 1 (NUC cluster): define a separate pool per cluster with appropriate CIDR.
+
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: lab-pool
+spec:
+  blocks:
+    - cidr: "192.168.64.200/28"   # .200 – .214  (14 usable IPs)

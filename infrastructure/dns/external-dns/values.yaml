@@ -1,0 +1,40 @@
+# external-dns Helm values — writes DNS records to CoreDNS/etcd
+# Chart: external-dns/external-dns
+#
+# Watches Services and Ingresses for hostname annotations.
+# Writes A/CNAME records to etcd using SkyDNS path format (/skydns/...).
+# CoreDNS reads those records and serves them.
+#
+# Annotation to trigger record creation:
+#   external-dns.alpha.kubernetes.io/hostname: argocd.platform.nqlabs.network
+
+provider:
+  name: coredns
+
+env:
+  - name: ETCD_URLS
+    value: http://10.103.246.202:2379
+
+# Manage private split-DNS records for internal platform/service names.
+domainFilters:
+  - nqlabs.network
+
+# Watch Services and Ingresses
+sources:
+  - service
+  - ingress
+  - gateway-httproute
+
+# Log level
+logLevel: info
+
+# Naming convention: <resource>.platform.nqlabs.network  (platform tools)
+#                    <resource>.staging.nqlabs.network   (staging services)
+#                    <resource>.production.nqlabs.network (production services)
+# Annotation drives record creation — no wildcard sync
+annotationFilter: "external-dns.alpha.kubernetes.io/hostname"
+
+# Policy: sync (create + delete). Use upsert-only to protect manual records.
+policy: sync
+
+txtOwnerId: nqlabs-lab

@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: services
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+  generators:
+    - git:
+        repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+        revision: HEAD
+        files:
+          - path: apps/*/environments/*.yaml
+  template:
+    metadata:
+      name: '{{ .app.name }}-{{ .environment.name }}'
+      labels:
+        nqlabs.network/service: '{{ .app.name }}'
+        nqlabs.network/environment: '{{ .environment.name }}'
+    spec:
+      project: '{{ .argocd.project }}'
+      sources:
+        - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+          targetRevision: HEAD
+          path: charts/nqlabs-service
+          helm:
+            releaseName: '{{ .app.name }}'
+            valueFiles:
+              - $values/{{ .argocd.valueFile }}
+        - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+          targetRevision: HEAD
+          ref: values
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{ .environment.namespace }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        managedNamespaceMetadata:
+          labels:
+            nqlabs.network/service: '{{ .app.name }}'
+            nqlabs.network/environment: '{{ .environment.name }}'
+            pod-security.kubernetes.io/enforce: baseline
+            pod-security.kubernetes.io/enforce-version: latest
+        syncOptions:
+          - ServerSideApply=true
+          - CreateNamespace=true

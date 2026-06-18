@@ -1,0 +1,35 @@
+# Blackbox endpoint probes — NQLabs Platform
+#
+# Probes the full user-facing HTTPS path for platform and demo service URLs:
+# DNS -> platform Gateway -> TLS -> HTTPRoute -> Service -> Pod.
+
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: nqlabs-endpoints
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: blackbox-exporter
+    nqlabs.network/component: endpoint-probes
+spec:
+  jobName: nqlabs-endpoints
+  interval: 30s
+  scrapeTimeout: 15s
+  module: http_2xx_internal
+  prober:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+    scheme: http
+    path: /probe
+  targets:
+    staticConfig:
+      labels:
+        cluster: lab
+        probe_scope: internal
+      static:
+        - https://argocd.platform.nqlabs.network
+        - https://grafana.platform.nqlabs.network
+        - https://prometheus.platform.nqlabs.network
+        - https://alertmanager.platform.nqlabs.network
+        - https://rollouts.platform.nqlabs.network
+        - https://demo.staging.nqlabs.network
+        - https://demo.production.nqlabs.network
