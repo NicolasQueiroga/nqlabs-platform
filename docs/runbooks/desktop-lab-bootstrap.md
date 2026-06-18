@@ -324,18 +324,53 @@ From the Mac with the desktop cluster kubeconfig active:
 
 ## Phase H — Update Tailscale
 
-In Tailscale admin DNS settings, keep:
+### Context
 
-```text
-nqlabs.network → CoreDNS tailnet IP
+The Mac lab Tailscale devices have been removed. The old CoreDNS split DNS target
+(`100.125.207.63`) no longer exists. `*.nqlabs.network` DNS is intentionally broken
+until the desktop CoreDNS Service gets its new Tailscale IP and the split DNS entry
+is updated.
+
+### Step 1 — Find the new CoreDNS Tailscale IP
+
+After the desktop cluster is up and the Tailscale operator has reconciled, find the
+new CoreDNS Tailscale IP:
+
+```bash
+kubectl get svc -n dns coredns -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 ```
 
-But the CoreDNS tailnet IP will change if the desktop cluster creates a new
-Tailscale-exposed CoreDNS Service.
+Or check the Tailscale admin console — a new device named `coredns` should appear
+with a `100.x.x.x` address.
 
-Also approve the desktop subnet route advertised by the desktop subnet router.
+### Step 2 — Update Tailscale split DNS
 
-Expected checks from the Mac and iPhone:
+In the Tailscale admin console:
+
+```text
+https://login.tailscale.com/admin/dns
+```
+
+Under **Nameservers**:
+
+1. Remove the old entry:
+   ```text
+   100.125.207.63  →  nqlabs.network
+   ```
+
+2. Add the new entry:
+   ```text
+   <new-desktop-coredns-tailscale-ip>  →  nqlabs.network
+   ```
+
+3. Save.
+
+### Step 3 — Approve subnet route
+
+In the Tailscale admin console under **Machines**, find the desktop subnet router
+and approve the advertised route for the desktop LAN/Cilium LB range.
+
+### Step 4 — Verify from Mac and iPhone
 
 ```bash
 dig argocd.platform.nqlabs.network +short
@@ -347,8 +382,18 @@ curl https://demo.production.nqlabs.network
 Expected results:
 
 ```text
-DNS returns desktop Gateway IP
+DNS returns the desktop Gateway IP
 HTTPS succeeds without certificate warnings
+```
+
+If DNS does not resolve, check:
+
+```bash
+# Confirm split DNS is active on the Mac
+scutil --dns | grep -A5 nqlabs.network
+
+# Test directly against the new CoreDNS IP
+dig argocd.platform.nqlabs.network @<new-desktop-coredns-tailscale-ip>
 ```
 
 ## Phase I — Rehearse the NUC topology in VMs
