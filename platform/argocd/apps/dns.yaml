@@ -16,6 +16,9 @@ metadata:
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # wave 1: after local-path-provisioner (wave 0) — etcd PVC requires local-path StorageClass
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   project: platform
   source:
@@ -53,6 +56,9 @@ metadata:
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # wave 2: after etcd-dns (wave 1) — CoreDNS backend must be ready before CoreDNS starts
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   project: platform
   sources:
@@ -85,6 +91,10 @@ metadata:
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # wave 3: after coredns-dns (wave 2) — external-dns writes to etcd; CoreDNS must be
+    # serving before external-dns starts creating records
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   project: platform
   sources:

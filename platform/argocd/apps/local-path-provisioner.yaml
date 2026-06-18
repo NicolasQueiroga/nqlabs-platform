@@ -14,6 +14,9 @@ metadata:
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # wave 0: must be ready before etcd-dns (wave 1) creates a local-path PVC
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   project: platform
 

@@ -1,0 +1,15 @@
+# Kustomize manifest list for Cilium LB IPAM configuration
+#
+# Managed by: platform/argocd/apps/cilium-config.yaml (sync-wave 0)
+# Applied after Cilium is bootstrapped manually (Cilium itself is not ArgoCD-managed).
+#
+# UPDATE before desktop bootstrap (Phase F of docs/runbooks/desktop-lab-bootstrap.md):
+#   pool.yaml          — replace 192.168.64.200/28 with desktop Cilium LB pool
+#   l2-announcement.yaml — replace enp0s1 with the actual Talos VM NIC interface name
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - pool.yaml
+  - l2-announcement.yaml

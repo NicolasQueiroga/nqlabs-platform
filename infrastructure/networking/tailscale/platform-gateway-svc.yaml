@@ -14,8 +14,8 @@ metadata:
     # All platform service hostnames route through this gateway.
     # Add new hostnames here as comma-separated values when adding new HTTPRoutes.
     # This service exposes the Gateway on Tailscale for MagicDNS access only.
-    # DNS records (nqlabs.network) are managed via the cilium-gateway service annotation.
-    # Subnet routing (192.168.64.0/24) handles external-device access to Gateway LB IPs.
+    # DNS records (nqlabs.network) are managed by external-dns via service annotations.
+    # Subnet routing (desktop LAN — see subnet-router.yaml) handles external-device access to Gateway LB IPs.
 spec:
   type: LoadBalancer
   loadBalancerClass: tailscale

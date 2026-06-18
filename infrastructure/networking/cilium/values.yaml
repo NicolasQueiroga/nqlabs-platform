@@ -51,7 +51,14 @@ cgroup:
   hostRoot: /sys/fs/cgroup
 
 # Override per cluster — must match the control plane IP/port
-k8sServiceHost: 192.168.64.3  # lab cluster only — parameterize per environment
+# TODO (desktop bootstrap — Phase F):
+#   Override with the actual Talos node/cluster endpoint at install time:
+#     helm install cilium cilium/cilium ... --set k8sServiceHost=<NODE_IP> --set k8sServicePort=6443
+#   For single-node Talos: use the node's LAN IP.
+#   For multi-node Talos: use the cluster VIP or load balancer endpoint.
+#   Do NOT commit the per-cluster IP here; pass it as a --set flag at bootstrap time.
+#   This file is the base config reference; cluster-specific values go in the bootstrap command.
+k8sServiceHost: 192.168.64.3  # Mac UTM lab only — must be overridden at desktop bootstrap
 k8sServicePort: 6443
 
 hubble:

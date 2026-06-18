@@ -1,10 +1,17 @@
 # Cilium LoadBalancer IP Pool — NQLabs Lab
 #
-# Allocates IPs for LoadBalancer services on the UTM host network (192.168.64.0/24).
-# Range 192.168.64.200-214 is safe — UTM DHCP assigns .2-.50 range only.
-# IPs are announced via L2 (gratuitous ARP) so the Mac host can reach them directly.
+# Allocates IPs for LoadBalancer services from a reserved range on the host network.
+# IPs are announced via L2 (gratuitous ARP) so LAN devices can reach them directly.
 #
-# Phase 1 (NUC cluster): define a separate pool per cluster with appropriate CIDR.
+# Managed by: platform/argocd/apps/cilium-config.yaml
+#
+# TODO (Phase F — desktop bootstrap):
+#   Replace the CIDR below with the desktop Cilium LB pool.
+#   Choose a range that does not overlap the desktop LAN DHCP pool.
+#   Example: if desktop LAN is 192.168.1.0/24 and DHCP is .2-.99, use 192.168.1.200/28
+#   See docs/runbooks/desktop-lab-bootstrap.md for the decision table.
+#
+# Current value is Mac UTM lab only — must be updated before desktop bootstrap.
 
 apiVersion: "cilium.io/v2alpha1"
 kind: CiliumLoadBalancerIPPool
@@ -12,4 +19,4 @@ metadata:
   name: lab-pool
 spec:
   blocks:
-    - cidr: "192.168.64.200/28"   # .200 – .214  (14 usable IPs)
+    - cidr: "192.168.64.200/28"   # TODO: replace with desktop LB pool before bootstrap

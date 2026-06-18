@@ -1,21 +1,27 @@
 # Cilium L2 Announcement Policy — NQLabs Lab
 #
 # Announces LoadBalancer IPs via gratuitous ARP on the host network interface.
-# Required so the Mac (192.168.64.1) can reach services at 192.168.64.200+.
-# Interface: enp0s1 (UTM virtio NIC on the Talos node).
+# Required so LAN devices can reach Cilium LB IPs directly.
+#
+# Managed by: platform/argocd/apps/cilium-config.yaml
+#
+# TODO (Phase F — desktop bootstrap):
+#   Replace the interface name below with the actual NIC name on the Talos VM.
+#   Common names on Proxmox VMs: eth0, enp6s18, enp0s18.
+#   To find the name after Talos boots: talosctl get links --nodes <IP>
+#   See docs/runbooks/desktop-lab-bootstrap.md Phase F.
+#
+# Current value is Mac UTM lab only (enp0s1 = UTM virtio NIC).
 
 apiVersion: "cilium.io/v2alpha1"
 kind: CiliumL2AnnouncementPolicy
 metadata:
   name: lab-l2-policy
 spec:
-  # Apply to all LoadBalancer services
   serviceSelector:
     matchLabels: {}
-  # Announce on all nodes (single node lab — talos-z9w-4rg)
   nodeSelector:
     matchLabels: {}
-  # Physical interface to announce on
   interfaces:
-    - enp0s1
+    - enp0s1   # TODO: replace with desktop Talos VM NIC interface name before bootstrap
   loadBalancerIPs: true

@@ -20,7 +20,7 @@ replicaCount: 1
 prometheus:
   enabled: true
   servicemonitor:
-    enabled: false  # Enable once kube-prometheus-stack is deployed
+    enabled: true
 
 # Required for Gateway API integration
 featureGates: "ExperimentalGatewayAPISupport=true"

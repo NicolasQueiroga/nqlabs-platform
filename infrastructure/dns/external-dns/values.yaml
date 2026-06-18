@@ -13,7 +13,7 @@ provider:
 
 env:
   - name: ETCD_URLS
-    value: http://10.103.246.202:2379
+    value: http://etcd-dns.dns.svc.cluster.local:2379
 
 # Manage private split-DNS records for internal platform/service names.
 domainFilters:

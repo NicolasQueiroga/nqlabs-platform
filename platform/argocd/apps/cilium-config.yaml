@@ -1,0 +1,45 @@
+# Cilium Config — LB IPAM pool and L2 announcement policy
+#
+# Manages the Cilium-specific platform resources that are NOT part of the Cilium
+# Helm chart itself:
+#   - CiliumLoadBalancerIPPool   — IP range for LoadBalancer services
+#   - CiliumL2AnnouncementPolicy — ARP-based IP advertisement on the host NIC
+#
+# Cilium itself is NOT managed by ArgoCD — it is bootstrapped manually before ArgoCD
+# runs (required for cluster networking). This app manages post-bootstrap config only.
+#
+# sync-wave 0: Cilium CRDs are installed during manual bootstrap before ArgoCD starts,
+# so this app can apply CiliumL2AnnouncementPolicy and CiliumLoadBalancerIPPool
+# immediately at wave 0.
+#
+# UPDATE before desktop bootstrap (Phase F of docs/runbooks/desktop-lab-bootstrap.md):
+#   infrastructure/networking/cilium/lb-ipam/pool.yaml          — desktop LB pool CIDR
+#   infrastructure/networking/cilium/lb-ipam/l2-announcement.yaml — desktop NIC interface
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cilium-config
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: platform
+
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: infrastructure/networking/cilium/lb-ipam
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
