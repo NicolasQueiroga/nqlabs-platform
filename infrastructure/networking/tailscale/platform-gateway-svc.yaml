@@ -19,7 +19,7 @@ metadata:
   namespace: platform
   annotations:
     tailscale.com/expose: "true"
-    tailscale.com/hostname: "platform-gateway"
+    tailscale.com/hostname: "platform-ingress"
     tailscale.com/tags: "tag:k8s"
     tailscale.com/proxy-group: "platform-gateway"
 spec:
