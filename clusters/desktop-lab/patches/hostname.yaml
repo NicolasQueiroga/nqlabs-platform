@@ -1,0 +1,14 @@
+# Hostname target for talos-desktop-cp-01.
+#
+# Talos v1.13 generates HostnameConfig with `auto: stable` by default.
+# The generated multi-document config does not support JSON6902 removal of /auto,
+# and strategic merge with `auto: null` still renders `auto: stable`, causing:
+#   HostnameConfig: 'auto' and 'hostname' cannot be set at the same time
+#
+# Bootstrap proceeds with Talos generated stable hostname. Revisit after Kubernetes
+# is up using a supported Talos config edit/patch workflow.
+#
+# Desired final HostnameConfig:
+# apiVersion: v1alpha1
+# kind: HostnameConfig
+# hostname: talos-desktop-cp-01

@@ -119,10 +119,16 @@ The desktop has enough capacity to rehearse multi-cluster operation. Target hard
 
 ```text
 AMD Ryzen 9 7950X
-128GB RAM
-2TB SSD
+124GB RAM usable by Proxmox
+223.6GB active Proxmox system SSD with 130.3GB local-lvm thin VM storage
+1.9TB secondary SSD present as NTFS, not assigned to Proxmox yet
 fixed IP
 ```
+
+Storage policy for the desktop rehearsal: be CPU/RAM-rich but disk-conscious. Run
+thin VM disks, short observability retention, and no real data-platform workloads on
+the active 130GB VM pool. The full topology can still be rehearsed by keeping each
+cluster lean. Repurpose the 1.9TB disk only after an explicit wipe/format decision.
 
 After one `nqlabs-desktop-lab` bootstrap cluster proves the substrate, run three
 Talos VM clusters:

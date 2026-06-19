@@ -12,8 +12,8 @@
 #   See docs/runbooks/desktop-lab-bootstrap.md Phase F.
 #
 # Desktop: must be set to the NIC name inside the Talos VM, not the Proxmox host
-# interface. Find it after Talos boots with:
-#   talosctl get links --nodes <TALOS_CP_IP>
+# interface. Confirmed after Talos maintenance boot with:
+#   talosctl get links --insecure --nodes 192.168.15.39
 
 apiVersion: "cilium.io/v2alpha1"
 kind: CiliumL2AnnouncementPolicy
@@ -25,5 +25,5 @@ spec:
   nodeSelector:
     matchLabels: {}
   interfaces:
-    - eth0   # TODO: replace with actual Talos VM NIC name before ArgoCD sync
+    - ens18   # desktop Talos VM NIC confirmed with talosctl get links
   loadBalancerIPs: true

@@ -148,7 +148,7 @@ See `.gitignore` for the full exclusion list.
 | Phase | Target | Status |
 |-------|--------|--------|
 | 0 — Foundation | Single-node Talos on Mac laptop (UTM/ARM64) | 🔧 In progress — core platform operational, readiness backlog remains |
-| 0.7 — Fixed-IP Desktop Lab | Ryzen 9 7950X / 128GB RAM / 2TB SSD Proxmox/Talos VM host | ⏳ Planned virtualized NUC architecture rehearsal |
+| 0.7 — Fixed-IP Desktop Lab | Ryzen 9 7950X / 124GB RAM Proxmox/Talos VM host; active Proxmox VM storage is currently 130GB thin LVM | ⏳ Planned virtualized NUC architecture rehearsal |
 | 1 — NUC Cluster | Dell NUC-class three-cluster private cloud | ⏳ Planned bare-metal implementation of the rehearsed topology |
 | 2 — Operations | Full automation, DR, multi-cluster | ⏳ Planned |
 

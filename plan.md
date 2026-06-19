@@ -10,7 +10,7 @@ organized by phase and layer. It evolves as work progresses.
 | Phase | Target Environment | Lifecycle Level | Goal |
 |-------|--------------------|-----------------|------|
 | **0 — Foundation** | Mac laptop / UTM | L1 → L2 | Prove the stack works end-to-end on a single node |
-| **0.7 — Fixed-IP Desktop Lab** | Ryzen 9 7950X / 128GB RAM / 2TB SSD desktop | L2 → L3 | Virtualized NUC architecture rehearsal on Proxmox/Talos VMs |
+| **0.7 — Fixed-IP Desktop Lab** | Ryzen 9 7950X / 124GB RAM desktop; 130GB active Proxmox thin VM storage | L2 → L3 | Virtualized NUC architecture rehearsal on Proxmox/Talos VMs with lean disk sizing |
 | **1 — NUC Cluster** | Dell NUC-class node pool | L2 → L4 | Production-grade three-cluster private cloud |
 | **2 — Operations** | NUC Cluster | L4 → L6 | Full automation, DR, multi-cluster readiness |
 
@@ -373,10 +373,13 @@ external/client-side endpoint probing
 ## Phase 0.7 — Fixed-IP Desktop Lab / Virtualized NUC Rehearsal
 
 Nick may move the whole NQLabs lab from the Mac laptop to a desktop with a fixed IP
-before the NUCs are ready. Target desktop specs: AMD Ryzen 9 7950X, 128GB RAM,
-2TB SSD. Treat this as the virtualized rehearsal of the NUC architecture: more stable
-than the laptop lab, and capable of running the same management/staging/production
-cluster topology as VMs before that topology moves to bare metal.
+before the NUCs are ready. Actual active desktop resources: AMD Ryzen 9 7950X,
+124GB RAM, 223.6GB Proxmox system SSD with 130.3GB `local-lvm` thin storage for VM
+disks. A separate 1.9TB NTFS SSD is present but not assigned to Proxmox and must not
+be repurposed without an explicit decision. Treat this as the virtualized rehearsal
+of the NUC architecture: more stable than the laptop lab, and capable of running the
+same management/staging/production cluster topology as VMs before that topology
+moves to bare metal, as long as disks are sized deliberately.
 
 The goal is not to redesign the platform. The goal is to prove that the same GitOps
 stack and operating model can move from an ephemeral laptop network to a stable host
@@ -388,6 +391,7 @@ workstation; the desktop becomes the always-on infrastructure host.
 - [ ] Install/configure desktop as a hypervisor host, preferably Proxmox VE, for Talos VM clusters
 - [ ] Define desktop VM/runtime subnet and Cilium LoadBalancer pool
 - [ ] Define desktop Gateway IP, DNS path, and Tailscale routes
+- [ ] Run lean desktop VM disks on `local-lvm`; defer heavy storage/data-platform work until storage expansion or NUC phase
 - [ ] Port Talos/bootstrap procedure from Mac UTM assumptions to desktop assumptions
 - [ ] Bootstrap one `nqlabs-desktop-lab` Talos cluster first to validate Proxmox, Talos, Cilium, DNS, TLS, and GitOps substrate
 - [ ] Rehearse the final three-cluster topology as Talos VMs: `nqlabs-management`, `nqlabs-staging`, `nqlabs-production`
@@ -628,7 +632,7 @@ None. All decisions locked. ✓
 | DNS provider (external) | Cloudflare | Public DNS delegation for owned domains; DNS-01 validation for `.network` |
 | DNS resolver (internal) | Tailscale split DNS → in-cluster CoreDNS ← external-dns | Fully automated; no AdGuard Home needed |
 | VM backend (laptop) | UTM | M1 Pro native; ARM64 Talos images |
-| Desktop lab host | AMD Ryzen 9 7950X, 128GB RAM, 2TB SSD, fixed IP | Rehearse stable/multi-cluster operation before NUCs |
+| Desktop lab host | AMD Ryzen 9 7950X, 124GB RAM, 130GB active Proxmox thin VM storage, fixed IP | Rehearse stable/multi-cluster operation before NUCs with lean disk sizing |
 | GitHub repository | Public | No deploy key needed; strict secrets discipline required |
 | Laptop architecture | ARM64 (Apple M1 Pro) | Use `metal-arm64` Talos images for local testing |
 | NUC architecture | x86_64 Dell NUC-class node pool | Use `metal-amd64` Talos images for production |

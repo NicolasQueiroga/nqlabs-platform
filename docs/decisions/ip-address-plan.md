@@ -15,7 +15,7 @@ NQLabs is intentionally moving through environments:
 
 ```text
 Mac laptop / UTM lab
-  → desktop fixed-IP virtualized NUC rehearsal (Ryzen 9 7950X, 128GB RAM, 2TB SSD)
+  → desktop fixed-IP virtualized NUC rehearsal (Ryzen 9 7950X, 124GB RAM, 130GB active VM thin pool)
   → NUC bare-metal implementation (`nqlabs-management`, `nqlabs-staging`, `nqlabs-production`)
 ```
 
@@ -116,6 +116,8 @@ Proxmox/KVM host for Talos VMs and the virtualized rehearsal of the NUC topology
 
 Host: `nqlabs-desktop`
 Hardware: AMD Ryzen 9 7950X, 32 threads, 124GB RAM
+Active Proxmox VM storage: 130.3GB `local-lvm` thin pool on 223.6GB Force MP510 SSD
+Secondary disk: 1.9TB Predator GM7000 SSD, currently NTFS and not assigned to Proxmox
 Proxmox: VE 9.2.2
 Ethernet: `nic0` bridged into `vmbr0`
 Ethernet MAC: `74:56:3c:f7:32:39`
@@ -165,7 +167,7 @@ Do not assign another service inside `192.168.15.200/28` without documenting it 
 
 | IP | VM | Cluster | Role |
 |----|----|---------|------|
-| `192.168.15.30` | `talos-desktop-cp-01` / VMID `130` / MAC `BC:24:11:15:00:30` | `nqlabs-desktop-lab` | control-plane + worker bootstrap node |
+| `192.168.15.30` | `talos-desktop-cp-01` / VMID `130` / MAC `BC:24:11:15:00:30` | `nqlabs-desktop-lab` | large all-in-one bootstrap node; 16 vCPU, 64GB RAM, 96GB thin disk |
 | `192.168.15.31-39` | TBD | desktop multi-cluster rehearsal | management / staging / production VMs |
 
 Wake-on-LAN for the desktop host:

@@ -33,10 +33,25 @@ Current planned desktop:
 
 ```text
 CPU:     AMD Ryzen 9 7950X
-Memory:  128GB RAM
-Storage: 2TB SSD
+Memory:  124GB usable by Proxmox
+Storage: 223.6GB active Proxmox system SSD
+         130.3GB local-lvm thin pool for VM disks
+         1.9TB secondary SSD present as NTFS, not assigned to Proxmox yet
 Network: fixed LAN IP / DHCP reservation
 ```
+
+The desktop is CPU/RAM-rich but the active Proxmox VM pool is smaller than the
+original 2TB assumption. The platform can still rehearse the full final topology if
+we are disk-conscious:
+
+- use thin-provisioned VM disks on `local-lvm`
+- keep the first bootstrap VM at 96GB thin disk: large enough for the full platform,
+  still safe on the 130GB active thin pool if actual usage is monitored
+- keep Loki/Prometheus retention short during desktop rehearsal
+- do not run real database/storage-platform workloads yet
+- do not repurpose the 1.9TB NTFS disk unless Nick explicitly approves wiping it
+- if needed later, move VM storage to the 1.9TB disk or add dedicated storage before
+  data-platform work
 
 ## Recommended approach
 
@@ -213,7 +228,7 @@ Recommended initial VM sizing:
 
 | VM | Role | vCPU | RAM | Disk | Notes |
 |----|------|------|-----|------|-------|
-| `talos-desktop-cp-01` | control plane + worker | 4 | 12GB | 80GB | first single-node cluster |
+| `talos-desktop-cp-01` | control plane + worker | 16 | 64GB | 96GB thin | first large all-in-one desktop cluster |
 
 Planned first VM identity:
 
@@ -224,10 +239,22 @@ MAC:        BC:24:11:15:00:30
 IP:         192.168.15.30/24
 Gateway:    192.168.15.1
 DNS:        192.168.15.1, 1.1.1.1
-Storage:    local-lvm
+CPU/RAM:    16 vCPU, 64GB RAM
+Storage:    local-lvm, 96GB thin disk
 Bridge:     vmbr0
 Autostart:  enabled after Talos is installed and stable
 ```
+
+If the first cluster needs more disk later:
+
+```bash
+qm resize 130 scsi0 +20G
+```
+
+Then grow the filesystem from inside the guest if required. Talos and Kubernetes
+usually see the expanded block device, but workload PVC/filesystem expansion still
+depends on the storage layer. Do not expand aggressively until the 1.9TB secondary
+SSD is explicitly repurposed for Proxmox or additional storage is added.
 
 When the VM exists and is stable, configure Proxmox autostart:
 
@@ -241,9 +268,9 @@ If you want a more realistic first cluster:
 
 | VM | Role | vCPU | RAM | Disk |
 |----|------|------|-----|------|
-| `talos-desktop-cp-01` | control plane | 4 | 8GB | 80GB |
-| `talos-desktop-worker-01` | worker | 4 | 8GB | 80GB |
-| `talos-desktop-worker-02` | worker | 4 | 8GB | 80GB |
+| `talos-desktop-cp-01` | control plane | 8 | 24GB | 48GB thin |
+| `talos-desktop-worker-01` | worker | 8 | 24GB | 48GB thin |
+| `talos-desktop-worker-02` | worker | 8 | 24GB | 48GB thin |
 
 Use UEFI, q35 machine type if available, virtio disk, virtio NIC, and bridge to
 `vmbr0`.
@@ -489,13 +516,20 @@ nqlabs-staging
 nqlabs-production
 ```
 
-Suggested VM sizing on 128GB RAM:
+Suggested lean VM sizing on 124GB RAM and 130GB active VM storage:
 
 | Cluster | Initial VMs | Purpose |
 |---------|-------------|---------|
-| `nqlabs-management` | 1-3 VMs | ArgoCD, monitoring, DNS, shared platform tools |
-| `nqlabs-staging` | 1-2 VMs | staging app workloads |
-| `nqlabs-production` | 1-2 VMs | production app workloads |
+| `nqlabs-management` | 1 VM, 4 vCPU, 16GB RAM, 40GB thin disk | ArgoCD, monitoring, DNS, shared platform tools |
+| `nqlabs-staging` | 1 VM, 4 vCPU, 12GB RAM, 28GB thin disk | staging app workloads |
+| `nqlabs-production` | 1 VM, 4-6 vCPU, 16GB RAM, 40GB thin disk | production app workloads |
+
+This keeps the first full three-cluster rehearsal near 108GB of thin-provisioned VM
+disk declarations. Thin allocation means actual used storage starts lower, but do
+not overcommit aggressively until usage is measured.
+
+If the 1.9TB secondary SSD is explicitly repurposed for Proxmox storage later, the
+VM disk plan can become much less constrained.
 
 Do not over-allocate at first. Prove the lifecycle and GitOps model, then scale VM
 counts. The desktop rehearsal should answer the architecture questions before the

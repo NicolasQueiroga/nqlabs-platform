@@ -17,7 +17,7 @@
 #   192.168.15.201 — platform Gateway LoadBalancer (HTTPS entry point)
 #   192.168.15.202-215 — reserved for future LB services
 
-apiVersion: "cilium.io/v2alpha1"
+apiVersion: "cilium.io/v2"
 kind: CiliumLoadBalancerIPPool
 metadata:
   name: lab-pool
