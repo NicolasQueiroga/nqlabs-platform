@@ -1,60 +1,9 @@
-# Expose platform-gateway via Tailscale
-# All HTTPS platform services route through this single gateway.
-# DNS (nqlabs.network) records are managed by CoreDNS template plugin — all
-# *.platform / *.staging / *.production resolve to this Tailscale IP (100.123.152.13)
-# so clients ALWAYS connect via Tailscale regardless of LAN presence.
+# REMOVED from GitOps render.
 #
-# Architecture:
-#   Tailscale client → 100.123.152.13 (this device) → Cilium Gateway LB (192.168.15.193)
-#   → cilium-envoy → HTTPRoute → backend pod
+# Platform HTTPS ingress is now exposed through Proxmox HAProxy bound only to
+# tailscale0 (100.105.35.84:443/80), forwarding TCP passthrough to the Cilium
+# Gateway LB IP (192.168.15.193).
 #
-# The Service has NO selector because the Cilium Gateway API uses eBPF internally
-# and does not expose pods with gateway labels. Endpoints are managed manually,
-# pointing to the Cilium Gateway LB IP (192.168.15.193).
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: platform-gateway-tailscale
-  namespace: platform
-  annotations:
-    tailscale.com/expose: "true"
-    tailscale.com/hostname: "platform-ingress"
-    tailscale.com/tags: "tag:k8s"
-    tailscale.com/proxy-group: "platform-gateway"
-spec:
-  type: LoadBalancer
-  loadBalancerClass: tailscale
-  # No selector — endpoints managed below (Cilium Gateway LB IP)
-  ports:
-    - name: https
-      port: 443
-      targetPort: 443
-    - name: http
-      port: 80
-      targetPort: 80
----
-# Manual EndpointSlice: forward Tailscale proxy traffic to the Cilium Gateway LB IP.
-# Cilium eBPF intercepts traffic to 192.168.15.193 and routes to cilium-envoy.
-# Uses EndpointSlice (v1) — Endpoints API deprecated in K8s 1.33+.
-# Update the address if the Cilium LB pool or Gateway service IP changes.
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: platform-gateway-tailscale-manual
-  namespace: platform
-  labels:
-    kubernetes.io/service-name: platform-gateway-tailscale
-addressType: IPv4
-endpoints:
-  - addresses:
-      - 192.168.15.193
-    conditions:
-      ready: true
-ports:
-  - name: https
-    port: 443
-    protocol: TCP
-  - name: http
-    port: 80
-    protocol: TCP
+# Reason: Tailscale operator Service/ProxyGroup VIP path was not consistently
+# routable from tailnet clients in this environment, while HAProxy on Proxmox is
+# deterministic, boot-persistent, and still Tailscale-only.

@@ -10,7 +10,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - platform-gateway-proxygroup.yaml # ProxyGroup — durable Tailscale ingress proxy for platform gateway
   - subnet-router.yaml        # Connector — subnet router (update routes before bootstrap)
   - coredns-svc.yaml          # LoadBalancer Service exposing CoreDNS on Tailscale (split DNS)
-  - platform-gateway-svc.yaml # LoadBalancer Service exposing platform HTTPS Gateway on Tailscale
