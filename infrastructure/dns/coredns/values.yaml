@@ -38,10 +38,31 @@ servers:
       - name: ready
       # Static records for infrastructure hosts not managed by external-dns.
       # proxmox.platform.nqlabs.network → Proxmox host Tailscale IP (permanent management address).
+      # Must be evaluated BEFORE the template rules below so proxmox gets its own IP.
       - name: hosts
         configBlock: |-
           100.105.35.84 proxmox.platform.nqlabs.network
           fallthrough
+      # Tailscale-only enforcement — return the Tailscale platform-gateway IP for all
+      # platform/staging/production subdomains so clients ALWAYS connect via Tailscale
+      # regardless of whether they are on the LAN.  proxmox.platform is already handled
+      # above and will NOT fall through to these templates.
+      # platform-gateway Tailscale IP: 100.123.152.13
+      - name: template
+        parameters: IN A platform.nqlabs.network
+        configBlock: |-
+          match ^[a-z0-9-]+\.platform\.nqlabs\.network\.$
+          answer "{{ .Name }} 60 IN A 100.123.152.13"
+      - name: template
+        parameters: IN A staging.nqlabs.network
+        configBlock: |-
+          match ^[a-z0-9-]+\.staging\.nqlabs\.network\.$
+          answer "{{ .Name }} 60 IN A 100.123.152.13"
+      - name: template
+        parameters: IN A production.nqlabs.network
+        configBlock: |-
+          match ^[a-z0-9-]+\.production\.nqlabs\.network\.$
+          answer "{{ .Name }} 60 IN A 100.123.152.13"
       # Authoritative zone for nqlabs.network — reads from etcd (SkyDNS format).
       # NOTE: endpoint uses ClusterIP instead of hostname to avoid a Talos hostDNS
       # bootstrap loop: the platform CoreDNS pod itself cannot resolve cluster.local
