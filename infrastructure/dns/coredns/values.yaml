@@ -36,13 +36,25 @@ servers:
         configBlock: |-
           lameduck 5s
       - name: ready
-      # Authoritative zone for nqlabs.network — reads from etcd (SkyDNS format)
+      # Static records for infrastructure hosts not managed by external-dns.
+      # proxmox.platform.nqlabs.network → Proxmox host Tailscale IP (permanent management address).
+      - name: hosts
+        configBlock: |-
+          100.105.35.84 proxmox.platform.nqlabs.network
+          fallthrough
+      # Authoritative zone for nqlabs.network — reads from etcd (SkyDNS format).
+      # NOTE: endpoint uses ClusterIP instead of hostname to avoid a Talos hostDNS
+      # bootstrap loop: the platform CoreDNS pod itself cannot resolve cluster.local
+      # hostnames via 169.254.116.108 at startup time because the host DNS cache is
+      # not yet ready when CoreDNS first initialises. Using the ClusterIP breaks
+      # that dependency. Update this if the etcd-dns Service is ever recreated.
+      # etcd-dns ClusterIP: 10.105.253.211
       - name: etcd
         parameters: nqlabs.network
         configBlock: |-
           stubzones
           path /skydns
-          endpoint http://etcd-dns.dns.svc.cluster.local:2379
+          endpoint http://10.105.253.211:2379
       # Forward everything else to upstream resolvers
       - name: forward
         parameters: . 1.1.1.1 8.8.8.8
