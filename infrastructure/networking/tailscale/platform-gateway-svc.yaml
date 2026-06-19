@@ -21,6 +21,7 @@ metadata:
     tailscale.com/expose: "true"
     tailscale.com/hostname: "platform-gateway"
     tailscale.com/tags: "tag:k8s"
+    tailscale.com/proxy-group: "platform-gateway"
 spec:
   type: LoadBalancer
   loadBalancerClass: tailscale

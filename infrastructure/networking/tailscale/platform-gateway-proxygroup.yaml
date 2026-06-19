@@ -1,0 +1,19 @@
+# Tailscale Operator ProxyGroup for the platform Gateway.
+#
+# This replaces the fragile single-service proxy state with the operator-native
+# ingress ProxyGroup model. The Service below uses annotation:
+#   tailscale.com/proxy-group: platform-gateway
+#
+# The operator creates one or more durable ingress proxy devices and configures
+# serving automatically from the Service ports to the Service ClusterIP. No
+# manual `tailscale serve` commands are required after pod restarts.
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyGroup
+metadata:
+  name: platform-gateway
+spec:
+  type: ingress
+  replicas: 1
+  hostnamePrefix: platform-gateway
+  tags:
+    - tag:k8s
