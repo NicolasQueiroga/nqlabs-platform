@@ -49,8 +49,8 @@ Completed on desktop Proxmox:
 - ArgoCD v3.4.3 installed via Helm chart `argo-cd` 9.5.21.
 - ArgoCD admin password rotated into 1Password; initial bootstrap secret deleted.
 - ArgoCD server responds HTTP 200 inside the cluster.
-- Constrained management root app-of-apps applied and Healthy; it currently includes only `projects.yaml` and `argocd.yaml`.
-- Legacy desktop-lab root remains intentionally unapplied to management; platform apps must be made cluster-aware before expanding the root include list.
+- Cluster-aware management root app-of-apps applied and Healthy; it watches `clusters/nqlabs-management/argocd/apps`.
+- Legacy desktop-lab root remains intentionally unapplied to management; additional platform apps should be added through cluster-local wrappers or cluster-aware shared definitions.
 
 1Password items:
 
