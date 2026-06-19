@@ -45,13 +45,13 @@ If it is not in this repository, it does not exist.
 |-------|-----------|
 | Secrets Operator | [External Secrets Operator](https://external-secrets.io/) |
 | Secrets Backend (Phase 0–1) | 1Password SDK provider + service account token |
-| Secrets Backend (Phase 2) | [OpenBao](https://openbao.org/) — self-hosted OSS Vault fork |
+| Secrets Backend (future) | [OpenBao](https://openbao.org/) — self-hosted OSS Vault fork |
 
 ### Storage
 | Layer | Technology |
 |-------|-----------|
 | Storage (Phase 0) | local-path-provisioner |
-| Storage (Phase 1+) | [Rook/Ceph](https://rook.io/) — block, filesystem, and object storage |
+| Distributed Storage | [Rook/Ceph](https://rook.io/) — block, filesystem, and object storage |
 | Backup | [Velero](https://velero.io/) |
 
 ### Observability
@@ -59,7 +59,7 @@ If it is not in this repository, it does not exist.
 |-------|-----------|
 | Metrics | [kube-prometheus-stack](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack) — Prometheus + Grafana + Alertmanager |
 | Logging | [Loki](https://grafana.com/oss/loki/) + Promtail |
-| Tracing (Phase 2) | [Grafana Tempo](https://grafana.com/oss/tempo/) + [OpenTelemetry Collector](https://opentelemetry.io/) |
+| Tracing | [Grafana Tempo](https://grafana.com/oss/tempo/) + [OpenTelemetry Collector](https://opentelemetry.io/) |
 
 ### Security
 | Layer | Technology |
@@ -105,10 +105,10 @@ nqlabs-platform/
 │   └── lab/               # Local development cluster (laptop/VM)
 ├── infrastructure/        # Platform services managed by ArgoCD
 │   ├── networking/        # Cilium, Gateway API, external-dns
-│   ├── storage/           # local-path (Phase 0), Rook/Ceph (Phase 1)
+│   ├── storage/           # local-path now, Rook/Ceph distributed storage
 │   ├── monitoring/        # Prometheus, Grafana, Alertmanager, Loki/Promtail
 │   ├── security/          # cert-manager, External Secrets, Kyverno, Falco, Harbor
-│   └── identity/          # OpenBao, SSO, workload identity (Phase 2)
+│   └── identity/          # Authentik/SSO, OpenBao, workload identity
 ├── platform/
 │   └── argocd/            # ArgoCD itself — app-of-apps root
 ├── apps/                  # Service environment contracts consumed by ApplicationSet
@@ -148,9 +148,9 @@ See `.gitignore` for the full exclusion list.
 | Phase | Target | Status |
 |-------|--------|--------|
 | 0 — Foundation | Single-node Talos on Mac laptop (UTM/ARM64) | 🔧 In progress — core platform operational, readiness backlog remains |
-| 0.7 — Fixed-IP Desktop Lab | Ryzen 9 7950X / 124GB RAM Proxmox/Talos VM host; active Proxmox VM storage is currently 130GB thin LVM | ⏳ Planned virtualized NUC architecture rehearsal |
-| 1 — NUC Cluster | Dell NUC-class three-cluster private cloud | ⏳ Planned bare-metal implementation of the rehearsed topology |
-| 2 — Operations | Full automation, DR, multi-cluster | ⏳ Planned |
+| 0.7 — Fixed-IP Desktop Full Architecture | Ryzen 9 7950X / 124GB RAM Proxmox/Talos VM host; active Proxmox VM storage is currently 130GB thin LVM | 🔧 Active — desktop-lab live; full three-cluster architecture next |
+| 1 — Hardware Node Expansion | Dell NUC-class node pool | ⏳ Add/replace nodes in the desktop-proven architecture; no new platform capabilities are gated here |
+| 2 — Operations/Security Hardening | Same architecture, starting on desktop | ⏳ Buildable on desktop after multi-cluster baseline; not NUC-gated |
 
 Current IP plan and migration notes: [`docs/decisions/ip-address-plan.md`](./docs/decisions/ip-address-plan.md)
 
@@ -161,8 +161,14 @@ Service namespace model: [`docs/decisions/service-namespace-model.md`](./docs/de
 The environment progression is:
 
 ```text
-Mac laptop / UTM lab → desktop virtualized NUC rehearsal → NUC bare-metal private cloud
+Mac laptop / UTM lab → desktop full architecture on Proxmox VMs → NUCs added as bare-metal nodes/capacity
 ```
+
+
+The desktop phase is not blocked by the NUCs. The desktop has enough CPU/RAM to run
+`nqlabs-management`, `nqlabs-staging`, and `nqlabs-production` as Talos VM clusters.
+NUCs later add bare-metal nodes/capacity to the same architecture; they should not
+introduce new platform capabilities or a separate design.
 
 Target cluster model:
 

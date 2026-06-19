@@ -3,7 +3,7 @@
 # Version: v0.0.36
 #
 # Phase 0 only — single-node lab storage.
-# Replaced by Rook/Ceph in Phase 1 (NUC cluster).
+# Replaced by Rook/Ceph after distributed storage is designed/rehearsed on desktop.
 #
 # Volumes are backed by hostPath on the node disk (/opt/local-path-provisioner).
 # No replication — data is lost if the node disk fails.

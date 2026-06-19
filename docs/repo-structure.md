@@ -39,6 +39,44 @@ nqlabs-platform/
 └── scripts/
 ```
 
+
+## Target repository boundary
+
+The long-term target is that this repository contains **platform architecture,
+SRE/infrastructure, cluster lifecycle, reusable platform charts, policies, runbooks,
+and educational material only**.
+
+Application source code should live in application-owned repositories. A service repo
+owns its app code, tests, Dockerfile, and GitHub Actions release workflow. That
+workflow should build/publish the image and then trigger the GitOps delivery path
+(for example by opening a PR against the appropriate deployment source or calling an
+ArgoCD sync/refresh mechanism that still preserves auditable desired state).
+
+Initial external app repository reserved for this migration:
+
+```text
+NicolasQueiroga/nqlabs-demo  # private; GitHub Actions enabled with read/write workflow permissions
+```
+
+This platform repository may contain temporary bootstrap/demo material while the
+service factory and release model are being proven, but that material must not become
+permanent product code. When the architecture is complete enough to operate from the
+new model, clean the repository so it contains exactly what the platform needs and no
+more:
+
+- keep cluster inventory, Talos patches, ArgoCD platform apps, infra manifests,
+  reusable charts, Terraform/OpenTofu platform onboarding modules, docs, runbooks,
+  guides, and scripts;
+- remove or migrate app source/build contexts such as `services/demo/` to their own
+  service repositories;
+- remove or convert example app environment contracts under `apps/` if the final
+  model points ArgoCD directly at external service repos;
+- keep only minimal examples/templates if they teach or validate the platform and are
+  explicitly labeled as examples.
+
+The cleanup itself is a platform milestone. Do not let proof/demo files silently
+become production structure.
+
 ## `.github/workflows/`
 
 CI and release automation.
@@ -70,13 +108,18 @@ This folder contains laptop/VM bootstrap material for the Phase 0 Talos cluster.
 It should not contain plaintext Talos secrets. Secrets belong in 1Password or a
 future self-hosted secret backend.
 
-Future clusters should get their own folders, for example:
+Desktop multi-cluster rehearsal folders:
 
 ```text
-clusters/desktop-lab/
-clusters/nuc-production/
-clusters/nuc-staging/
+clusters/desktop-lab/        # active one-cluster substrate validation
+clusters/nqlabs-management/  # planned management/platform cluster
+clusters/nqlabs-staging/     # planned staging workload cluster
+clusters/nqlabs-production/  # planned production workload cluster
 ```
+
+NUC-era folders should preserve the same cluster names unless there is a deliberate
+rename decision. The NUCs are a hardware migration of the desktop-rehearsed topology,
+not a separate architecture.
 
 ## `infrastructure/`
 
@@ -126,7 +169,7 @@ If it tells ArgoCD how to manage the platform, it belongs in platform/.
 
 ## `apps/`
 
-Service environment contracts.
+Current bootstrap/demo service environment contracts.
 
 Example:
 
@@ -136,29 +179,19 @@ apps/demo/environments/production.yaml
 ```
 
 These files are not application source code. They are declarative deployment
-contracts consumed by the service ApplicationSet.
+contracts consumed by the current service ApplicationSet proof path.
 
-They define:
+Target direction: real applications should live in their own repositories, including
+their source code and release workflow. If the final multi-repo model has ArgoCD read
+service deployment state directly from those repositories, `apps/` should be removed
+or reduced to explicitly labeled examples/templates during the repo cleanup milestone.
 
-- service name
-- target environment
-- target namespace
-- ArgoCD project
-- Helm values file path
-- image repository/tag
-- route hostname
-- rollout/service settings
-
-Rule of thumb:
-
-```text
-If changing it should cause ArgoCD to deploy or update a service environment,
-it belongs in apps/.
-```
+Until that migration happens, files under `apps/` are bootstrap contracts only. They
+should not become a dumping ground for product/application ownership.
 
 ## `services/`
 
-First-party service source/build contexts.
+Temporary first-party demo service source/build contexts.
 
 Example:
 
@@ -167,13 +200,17 @@ services/demo/Dockerfile
 services/demo/index.html
 ```
 
-The release workflow builds images from here and pushes them to GHCR. The workflow
-then opens a PR against `apps/<service>/environments/<environment>.yaml`.
+This exists to prove the service factory and release automation. It is not the
+long-term application ownership model. Real applications should have their own
+repositories with their own GitHub Actions workflows. After the multi-repo delivery
+model is proven, migrate demo/product code out of this repository or keep only a
+minimal explicitly labeled example.
 
 Rule of thumb:
 
 ```text
-If it is app code or image build input, it belongs in services/.
+Architecture, SRE, infrastructure, and reusable platform tooling belong here.
+Application/product code belongs in application repositories.
 ```
 
 ## `charts/`

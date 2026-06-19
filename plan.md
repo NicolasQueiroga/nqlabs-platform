@@ -10,15 +10,22 @@ organized by phase and layer. It evolves as work progresses.
 | Phase | Target Environment | Lifecycle Level | Goal |
 |-------|--------------------|-----------------|------|
 | **0 — Foundation** | Mac laptop / UTM | L1 → L2 | Prove the stack works end-to-end on a single node |
-| **0.7 — Fixed-IP Desktop Lab** | Ryzen 9 7950X / 124GB RAM desktop; 130GB active Proxmox thin VM storage | L2 → L3 | Virtualized NUC architecture rehearsal on Proxmox/Talos VMs with lean disk sizing |
-| **1 — NUC Cluster** | Dell NUC-class node pool | L2 → L4 | Production-grade three-cluster private cloud |
-| **2 — Operations** | NUC Cluster | L4 → L6 | Full automation, DR, multi-cluster readiness |
+| **0.7 — Fixed-IP Desktop Full Architecture** | Ryzen 9 7950X / 124GB RAM desktop; 130GB active Proxmox thin storage | L2 → L5 | Build the full management/staging/production platform as Talos VM clusters |
+| **1 — Hardware Node Expansion** | Dell NUC-class node pool | L5 → L5/L6 | Add bare-metal capacity/nodes to the already-built architecture; do not gate capabilities here |
+| **2 — Operations/Security Hardening** | Same architecture, beginning on desktop | L5 → L6 | Full automation, DR, security, registry, policy, tracing, and lifecycle maturity |
 
 Progress language matters: “operationally live” is not the same as “complete.” A
 capability is complete only when it is implemented, validated, documented, and its
 known production-readiness gaps are explicitly tracked. Nothing is discarded because
 there are not enough real services yet; the platform should be ready before demand
 arrives.
+
+Repository boundary matters too: the final platform repo should contain architecture,
+SRE/infrastructure, cluster lifecycle, reusable platform tooling, policies, runbooks,
+and guides — not product application code. Current `apps/` and `services/` demo
+content is allowed only as bootstrap/proof material. When the multi-repo service
+delivery model is proven, clean the repo so it contains exactly what the platform
+needs and move real applications to their own repositories.
 
 ---
 
@@ -181,7 +188,7 @@ Tailscale is not strictly needed to access the cluster since you and the VM shar
 same machine. Use `/etc/hosts` during initial bring-up, then add the Tailscale Operator
 once the cluster is healthy to begin testing the full DNS flow.
 
-**Phase 1 (NUC cluster):**
+**Distributed/multi-node target:**
 Full flow active: Tailscale Operator → split DNS → in-cluster CoreDNS ← external-dns.
 
 **Tasks:**
@@ -205,7 +212,7 @@ Persistent storage for stateful workloads.
 - [x] Install **local-path-provisioner** (Rancher) as default StorageClass
 - [x] Validate: PVC creation works, pods mount volumes correctly
 
-**Tasks (Phase 1 — NUC cluster, deferred):**
+**Tasks (distributed storage target — buildable on desktop when storage is allocated):**
 - [ ] Evaluate Longhorn vs Rook/Ceph for distributed storage
   - **Longhorn**: simpler, K8s-native, good UI, adequate for home lab
   - **Rook/Ceph**: more powerful, more complex, better for production-grade needs
@@ -222,7 +229,7 @@ TLS everywhere. No self-signed exceptions in production paths.
 `nqlabs.network` is the owned private/platform/server domain. It stays
 Tailscale/private-network reachable, but uses Let's Encrypt DNS-01 through Cloudflare
 so browsers trust HTTPS without installing the NQLabs internal CA. Public `.io`
-service exposure is deferred until the desktop/NUC public-edge phase.
+public service exposure is deferred until the deliberate public-edge design, which can be rehearsed on desktop before NUCs.
 
 Requires a scoped Cloudflare API token stored in 1Password.
 
@@ -237,7 +244,7 @@ Requires a scoped Cloudflare API token stored in 1Password.
   - `*.production.nqlabs.network`
 - [x] Validate: platform-gateway serves HTTPS with valid Let's Encrypt cert; curl succeeds without `-k`
 
-**Cert strategy:** `nqlabs.network` is the owned private/platform/server domain and uses Let's Encrypt DNS-01 while remaining Tailscale/private-network only. `nqlabs.io` is reserved for public/user-facing endpoints in the desktop/NUC public-edge phase.
+**Cert strategy:** `nqlabs.network` is the owned private/platform/server domain and uses Let's Encrypt DNS-01 while remaining Tailscale/private-network only. `nqlabs.io` is reserved for public/user-facing endpoints in the deliberate public-edge design, which can be rehearsed on desktop before NUCs.
 
 ---
 
@@ -364,22 +371,27 @@ external/client-side endpoint probing
       - [x] Mac lab namespace strategy: `<service>-staging` / `<service>-production`
       - [ ] Multi-cluster namespace strategy: same service namespace name in separate staging/production clusters
 - [ ] Add external/client-side endpoint probing
-- [ ] Add Uptime Kuma status dashboard
+- [x] Add Uptime Kuma status dashboard
 - [ ] Add full GitHub Actions/repository rules/branch protection plan and implementation
-- [ ] Add public `nqlabs.io` service exposure path during desktop/NUC public-edge phase
+- [ ] Define final multi-repo application delivery model
+      - Application/product code lives in app-owned repositories, not this platform repo
+      - App repo GitHub Actions builds/publishes images and triggers the ArgoCD delivery path
+      - Platform repo keeps only infra/SRE/architecture/reusable platform components
+      - After model is proven, clean/migrate temporary `apps/` and `services/` demo material
+- [ ] Add public `nqlabs.io` service exposure path during the deliberate public-edge design
 
 ---
 
-## Phase 0.7 — Fixed-IP Desktop Lab / Virtualized NUC Rehearsal
+## Phase 0.7 — Fixed-IP Desktop Full Architecture
 
 Nick may move the whole NQLabs lab from the Mac laptop to a desktop with a fixed IP
-before the NUCs are ready. Actual active desktop resources: AMD Ryzen 9 7950X,
+before the NUCs are installed. Actual active desktop resources: AMD Ryzen 9 7950X,
 124GB RAM, 223.6GB Proxmox system SSD with 130.3GB `local-lvm` thin storage for VM
 disks. A separate 1.9TB NTFS SSD is present but not assigned to Proxmox and must not
 be repurposed without an explicit decision. Treat this as the virtualized rehearsal
-of the NUC architecture: more stable than the laptop lab, and capable of running the
-same management/staging/production cluster topology as VMs before that topology
-moves to bare metal, as long as disks are sized deliberately.
+of the full target architecture: more stable than the laptop lab, and capable of running
+the management/staging/production cluster topology plus security/operations layers
+as VMs before NUCs are added as bare-metal capacity, as long as disks are sized deliberately.
 
 The goal is not to redesign the platform. The goal is to prove that the same GitOps
 stack and operating model can move from an ephemeral laptop network to a stable host
@@ -388,25 +400,71 @@ workstation; the desktop becomes the always-on infrastructure host.
 
 - [x] Document desktop host fixed IP and network topology
       - Runbook: `docs/runbooks/desktop-lab-bootstrap.md`
-- [ ] Install/configure desktop as a hypervisor host, preferably Proxmox VE, for Talos VM clusters
-- [ ] Define desktop VM/runtime subnet and Cilium LoadBalancer pool
-- [ ] Define desktop Gateway IP, DNS path, and Tailscale routes
-- [ ] Run lean desktop VM disks on `local-lvm`; defer heavy storage/data-platform work until storage expansion or NUC phase
-- [ ] Port Talos/bootstrap procedure from Mac UTM assumptions to desktop assumptions
-- [ ] Bootstrap one `nqlabs-desktop-lab` Talos cluster first to validate Proxmox, Talos, Cilium, DNS, TLS, and GitOps substrate
+- [x] Install/configure desktop as a hypervisor host, preferably Proxmox VE, for Talos VM clusters
+- [x] Define desktop VM/runtime subnet and Cilium LoadBalancer pool
+- [x] Define desktop Gateway IP, DNS path, and Tailscale routes
+- [ ] Run lean desktop VM disks on `local-lvm`; defer heavy storage/data-platform work until storage expansion or explicit 1.9TB SSD repurpose
+- [x] Port Talos/bootstrap procedure from Mac UTM assumptions to desktop assumptions
+- [x] Bootstrap one `nqlabs-desktop-lab` Talos cluster first to validate Proxmox, Talos, Cilium, DNS, TLS, and GitOps substrate
 - [ ] Rehearse the final three-cluster topology as Talos VMs: `nqlabs-management`, `nqlabs-staging`, `nqlabs-production`
-- [ ] Re-run full ArgoCD app-of-apps bootstrap on desktop lab and then multi-cluster desktop topology
-- [ ] Validate DNS, Gateway, TLS, service factory, Blackbox probes, Discord alerts, and release automation on desktop lab/topology
+      - [x] Add cluster folder scaffolds and initial VM/IP inventory
+      - [x] Create/bootstrap `nqlabs-management`
+      - [x] Install/validate Gateway API CRDs + Cilium baseline on `nqlabs-management`
+      - [ ] Create/bootstrap `nqlabs-staging`
+      - [ ] Create/bootstrap `nqlabs-production`
+      - [x] Install/bootstrap ArgoCD on `nqlabs-management` without applying desktop-lab root
+      - [x] Create/apply constrained management ArgoCD root (`projects.yaml` + `argocd.yaml`)
+      - [x] Add `local-path-provisioner` to management root and validate default StorageClass
+      - [x] Install External Secrets Operator on management and validate `nqlabs-1password` ClusterSecretStore
+      - [x] Install cert-manager on management and validate Cloudflare ExternalSecret + ClusterIssuers
+      - [ ] Expand cluster-aware management ArgoCD app model beyond safe bootstrap apps
+      - [ ] Configure management ArgoCD to manage staging/production clusters
+- [x] Re-run full ArgoCD app-of-apps bootstrap on desktop lab
+- [ ] Re-run app-of-apps bootstrap / cluster registration for the multi-cluster desktop topology
+- [x] Validate DNS, Gateway, TLS, service factory, Blackbox probes, Discord alerts, release automation, and Uptime Kuma on desktop-lab
+- [ ] Validate DNS, Gateway, TLS, service factory, probes, alerts, and release automation across the three-cluster desktop topology
 - [ ] Document differences between Mac lab and desktop lab
 
 ---
 
-## Phase 1 — NUC Cluster
 
-Builds on Phase 0 and the fixed-IP desktop rehearsal. Same stack and cluster topology,
-now running on real bare metal instead of Proxmox VMs.
+### Problem: Repository cleanup after architecture completion
 
-Target topology:
+The current repository contains some bootstrap/demo application material so the
+service factory, release workflow, and monitoring can be validated end-to-end. That
+is acceptable during platform construction, but it is not the final ownership model.
+
+Target final state:
+
+- `nqlabs-platform` contains architecture, SRE/infrastructure, cluster lifecycle,
+  reusable charts/modules, policies, docs, runbooks, guides, and bootstrap scripts.
+- Real applications live in their own repositories.
+- Application repositories own source code, Dockerfiles, tests, and GitHub Actions.
+- Application repository workflows build/publish images and trigger the ArgoCD/GitOps
+  delivery path.
+- Temporary in-repo demo app code and contracts are removed, migrated, or explicitly
+  labeled as examples/templates.
+
+**Tasks:**
+- [x] Create private external demo app repo `NicolasQueiroga/nqlabs-demo` with GitHub Actions enabled and read/write workflow permissions.
+- [ ] Decide exact ArgoCD source-of-truth model for external app repositories.
+- [ ] Migrate `services/demo` to `NicolasQueiroga/nqlabs-demo` or relabel it as
+      a minimal platform example.
+- [ ] Remove or migrate `apps/demo` contracts if final service state lives in app repos.
+- [ ] Update Terraform/OpenTofu onboarding to create external-repo registration data,
+      not permanent app manifests inside the platform repo unless intentionally chosen.
+- [ ] Update docs/runbooks/guides after cleanup so the repo structure matches reality.
+
+---
+
+## Phase 1 — Hardware Node Expansion / NUC Addition
+
+Builds on the fixed-IP desktop full architecture. Phase 1 must not introduce new
+platform capabilities. Its job is to add NUC-class bare-metal nodes/capacity to the
+already-built `nqlabs-management`, `nqlabs-staging`, and `nqlabs-production`
+clusters, or to replace Proxmox VM nodes with bare-metal nodes after validation.
+
+Target topology remains:
 
 ```text
 nqlabs-management
@@ -414,7 +472,7 @@ nqlabs-staging
 nqlabs-production
 ```
 
-If the NUC pool has 18 machines, the starting allocation is:
+If the NUC pool has 18 machines, a possible node allocation across the existing clusters is:
 
 ```text
 nqlabs-management: 3 nodes
@@ -424,12 +482,12 @@ nqlabs-production: 9 nodes
 
 ### Problem: Hardware Planning
 
-- [ ] Define node roles (e.g. 3x control plane, 3x worker — or all 6 as workers with NUC as control plane)
+- [ ] Define whether each NUC joins an existing cluster as a new node or replaces a VM node
 - [ ] Assign static IPs or DHCP reservations for each NUC
-- [ ] Document hardware inventory: hostname, MAC address, IP, role
+- [ ] Document hardware inventory: hostname, MAC address, IP, role, target cluster
 - [ ] Define naming convention for nodes (e.g. `nuc-01.infra.nqlabs.network`)
-- [ ] Document how to create a new cluster from new machines
-- [ ] Document how to drain/re-provision machines into a different cluster
+- [ ] Document how to add NUCs to existing Talos clusters
+- [ ] Document how to drain/remove Proxmox VM nodes after bare-metal replacement
 
 ### Problem: Network Infrastructure
 
@@ -444,20 +502,38 @@ nqlabs-production: 9 nodes
 
 ### Problem: Talos on Bare Metal
 
-- [ ] Generate Talos configs for all nodes
-- [ ] Flash Talos onto NUCs (USB or PXE — targeting L4 eventually)
-- [ ] Apply machine configs per node
-- [ ] Bootstrap etcd and join worker nodes
-- [ ] Validate multi-node cluster health
+- [ ] Reuse the existing cluster secrets/config generation model for each target cluster
+- [ ] Generate machine configs for NUC nodes using the target cluster secrets
+- [ ] Flash/install Talos onto NUCs (USB first, PXE/iPXE later)
+- [ ] Join NUCs to the existing management/staging/production clusters as intended
+- [ ] Validate mixed Proxmox VM + bare-metal node health during transition
+- [ ] Drain/remove VM nodes only after bare-metal nodes are healthy
+
+### Problem: Network-Based Provisioning (L4)
+
+- [ ] Set up PXE/iPXE server (or use Sidero Metal / Omni for Talos)
+- [ ] Automate Talos image serving over network
+- [ ] Test: plug in bare NUC → boots → installs Talos → joins cluster
+
+---
+
+## Phase 2 — Operations and Security Hardening
+
+Phase 2 capabilities are not NUC-gated. Build them on the desktop after the
+management/staging/production baseline is stable, then carry them forward as NUCs
+are added as nodes/capacity.
 
 ### Problem: Distributed Storage
 
 Storage decision: **Rook/Ceph** (not Longhorn).
 Longhorn is easier to start but migration from Longhorn to Ceph is high-complexity.
-Since the NUC cluster is the first time persistent data matters, start with Ceph
-and avoid the migration entirely.
+Distributed storage should be designed and rehearsed on desktop once enough disk is
+allocated (for example after repurposing the 1.9TB SSD or adding dedicated virtual
+disks). NUCs later add physical disks/capacity; they are not the first moment the
+storage architecture can exist. Start with Ceph and avoid a Longhorn→Ceph migration.
 
-- [ ] Dedicate storage disk(s) on each NUC (separate from OS disk — minimum 3 nodes for Ceph replication)
+- [ ] On desktop: allocate dedicated virtual disks or repurpose the 1.9TB SSD before serious Ceph testing
+- [ ] On NUCs later: dedicate storage disk(s) on each NUC (separate from OS disk — minimum 3 nodes for Ceph replication)
 - [ ] Install **Rook/Ceph** via ArgoCD
 - [ ] Define StorageClasses: `ceph-block` (RWO), `ceph-filesystem` (RWX), `ceph-bucket` (S3-compatible object storage)
 - [ ] Validate replication, PVC creation, and failover
@@ -471,15 +547,6 @@ and avoid the migration entirely.
 - [ ] Test restore procedure (this is mandatory — unverified backups are not backups)
 - [ ] Document DR runbook
 
-### Problem: Network-Based Provisioning (L4)
-
-- [ ] Set up PXE/iPXE server (or use Sidero Metal / Omni for Talos)
-- [ ] Automate Talos image serving over network
-- [ ] Test: plug in bare NUC → boots → installs Talos → joins cluster
-
----
-
-## Phase 2 — Operations and Maturity
 
 ### Problem: Cluster Lifecycle Management (L6)
 
@@ -545,9 +612,9 @@ provisioned automatically, with DNS, TLS, RBAC, and ArgoCD sync — no manual st
       - [ ] Add `HorizontalPodAutoscaler` support, disabled by default until `metrics-server` or another metrics API exists
       - [ ] Evolve single `route` into internal/public route schema; keep public `.io` disabled until public edge exists
       - [ ] Add chart rendering and policy validation in CI
-      - [ ] Add external app repository release example that opens PRs into `nqlabs-platform`
+      - [ ] Add external app repository release example that triggers the ArgoCD delivery path without making app code part of `nqlabs-platform`
 
-**Phase 1 (cluster-based, true isolation):**
+**Multi-cluster target (cluster-based, true isolation):**
 - [ ] Define `nqlabs-management`, `nqlabs-staging`, and `nqlabs-production` clusters
 - [ ] Configure ArgoCD multi-cluster management
 - [ ] Update Terraform `product` module to target staging cluster vs production cluster
@@ -623,7 +690,7 @@ None. All decisions locked. ✓
 | Cert Management | cert-manager + Cloudflare DNS-01 + internal CA fallback | Publicly trusted certs for owned private `.network`; `.io` waits for public edge |
 | Secrets Operator | External Secrets Operator | Decouples secrets from manifests |
 | Secrets Backend (now) | 1Password SDK provider | Personal-plan compatible; service account token bootstrapped once |
-| Secrets Backend (future) | **OpenBao** | Self-hosted OSS Vault fork; after NUC cluster is stable |
+| Secrets Backend (future) | **OpenBao** | Self-hosted OSS Vault fork; after desktop multi-cluster baseline is stable |
 | Metrics | kube-prometheus-stack | Standard (Prometheus + Grafana + Alertmanager) |
 | Logging | Loki + Promtail | Grafana-native, lightweight |
 | VPN/Access | Tailscale + Tailscale Operator | Access layer for all phases |
@@ -632,17 +699,17 @@ None. All decisions locked. ✓
 | DNS provider (external) | Cloudflare | Public DNS delegation for owned domains; DNS-01 validation for `.network` |
 | DNS resolver (internal) | Tailscale split DNS → in-cluster CoreDNS ← external-dns | Fully automated; no AdGuard Home needed |
 | VM backend (laptop) | UTM | M1 Pro native; ARM64 Talos images |
-| Desktop lab host | AMD Ryzen 9 7950X, 124GB RAM, 130GB active Proxmox thin VM storage, fixed IP | Rehearse stable/multi-cluster operation before NUCs with lean disk sizing |
+| Desktop lab host | AMD Ryzen 9 7950X, 124GB RAM, 130GB active Proxmox thin VM storage, fixed IP | Build full architecture now; NUCs later add/replace nodes |
 | GitHub repository | Public | No deploy key needed; strict secrets discipline required |
 | Laptop architecture | ARM64 (Apple M1 Pro) | Use `metal-arm64` Talos images for local testing |
-| NUC architecture | x86_64 Dell NUC-class node pool | Use `metal-amd64` Talos images for production |
+| NUC node expansion | x86_64 Dell NUC-class node pool | Add bare-metal nodes/capacity to the desktop-proven clusters; use `metal-amd64` Talos images |
 | Target cluster topology | `nqlabs-management`, `nqlabs-staging`, `nqlabs-production` | Separates management, staging, and production control planes |
 | Storage (Phase 0) | local-path-provisioner | Simple, zero overhead for single node |
-| Storage (Phase 1) | **Rook/Ceph** | Production-grade distributed storage; avoids Longhorn→Ceph migration cost |
+| Distributed Storage | **Rook/Ceph** | Production-grade distributed storage; rehearse on desktop when disk is allocated; NUCs add physical capacity later |
 | Container Registry | **Harbor** | CNCF graduated; proxy cache for Docker Hub/ghcr.io/quay.io + internal images + Trivy scanning |
 | Policy Enforcement | **Kyverno** | Admission control, policy-as-code, image verification |
 | Runtime Security | **Falco** | eBPF-based syscall-level anomaly detection |
-| Secrets Backend (Phase 2) | **OpenBao** | Self-hosted OSS Vault fork; replaces 1Password SDK/1Password vault dependency |
+| Secrets Backend | **OpenBao** | Self-hosted OSS Vault fork; replaces 1Password SDK/1Password vault dependency |
 | Tracing | **Grafana Tempo** | Distributed trace storage; pairs with OTel Collector |
 | Telemetry Collection | **OpenTelemetry Collector** | Unified collection layer for metrics, logs, traces |
 | Supply Chain | **Cosign + Trivy** | Image signing and vulnerability scanning |
@@ -650,4 +717,4 @@ None. All decisions locked. ✓
 
 ---
 
-*Last updated: Phase 0 operationally live on Mac laptop — GitOps, DNS, Let's Encrypt TLS for `.network`, secrets, Gateway, metrics, logging, Rollouts, ArgoCD project boundaries, service factory/demo app, Blackbox endpoint probes, Discord alerting, service release automation, production release validation, private image pull support, Terraform service onboarding, and Mac-lab service-environment namespace/CiliumNetworkPolicy isolation scaffolding online. Phase 0 is not complete until the remaining completion backlog is finished: multi-cluster service namespace model, external probes, Uptime Kuma, GitHub repo rules, and future public `.io` edge design.*
+*Last updated: desktop-lab operationally live on Proxmox — GitOps, DNS, Let's Encrypt TLS for `.network`, Tailscale-only HAProxy edge, secrets, Gateway, metrics, logging, Rollouts, ArgoCD project boundaries, service factory/demo app, Blackbox endpoint probes, Discord alerting, Uptime Kuma, service release automation, production release validation, private image pull support, Terraform service onboarding, and service-environment namespace/CiliumNetworkPolicy isolation scaffolding online. Next architectural target: build `nqlabs-management`, `nqlabs-staging`, and `nqlabs-production` plus security/operations layers on the desktop; NUCs later add/replace nodes in that same architecture.*

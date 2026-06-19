@@ -4,7 +4,7 @@
 # Applied after Cilium is bootstrapped manually (Cilium itself is not ArgoCD-managed).
 #
 # UPDATE before desktop bootstrap (Phase F of docs/runbooks/desktop-lab-bootstrap.md):
-#   pool.yaml          — replace 192.168.64.200/28 with desktop Cilium LB pool
+#   pool.yaml          — replace 192.168.64.192/28 with desktop Cilium LB pool
 #   l2-announcement.yaml — replace enp0s1 with the actual Talos VM NIC interface name
 
 apiVersion: kustomize.config.k8s.io/v1beta1

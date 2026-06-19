@@ -1,0 +1,34 @@
+# cert-manager config for nqlabs-management.
+#
+# Requires:
+#   - External Secrets Operator installed
+#   - nqlabs-1password ClusterSecretStore Ready
+#   - cert-manager CRDs installed
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager-config
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: infrastructure/security/cert-manager
+    directory:
+      include: "{cluster-issuers.yaml,externalsecrets.yaml}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -106,3 +106,4 @@ temp/
 *.bak
 *.orig
 clusters/lab/generated/
+clusters/*/generated/

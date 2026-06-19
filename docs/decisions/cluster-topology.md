@@ -13,9 +13,10 @@ nqlabs-production
 ```
 
 The Mac laptop lab remains a single-cluster approximation. The fixed-IP desktop lab
-is the virtualized rehearsal of the NUC architecture: it should first prove one
-desktop Talos cluster, then run the three-cluster model as VMs. The Dell NUC-era
-private cloud implements the same model on bare metal for durable use.
+is where the full architecture is built first: it should first prove one desktop
+Talos cluster, then run the three-cluster model as VMs. NUCs later add bare-metal
+nodes/capacity to that same model or replace VM nodes after validation; they do not
+unlock a separate architecture.
 
 ## What a cluster means
 
@@ -155,12 +156,14 @@ desktop running Talos directly would become one Kubernetes node; it would not pr
 the flexible VM lifecycle needed to rehearse `nqlabs-management`, `nqlabs-staging`,
 and `nqlabs-production` on one physical machine.
 
-### NUC cloud
+### NUC node expansion / hardware migration
 
-The NUC phase should not invent a new topology. It should move the desktop-rehearsed
-management/staging/production model from Proxmox VMs to Talos on bare metal.
+The NUC phase should not invent a new topology or defer platform capabilities. The
+management/staging/production model should already exist on the desktop. NUCs are
+then added as bare-metal nodes to the existing clusters, or used to replace Proxmox
+VM nodes after the bare-metal nodes are healthy.
 
-The NUC-era target is true environment separation:
+The target remains true environment separation:
 
 ```text
 cluster/nqlabs-staging    namespace/<service>
@@ -177,8 +180,9 @@ nqlabs-staging/payment
 nqlabs-production/payment
 ```
 
-NUC nodes should run Talos directly on bare metal. At that phase, each physical
-machine is intended to be a Kubernetes node, not a hypervisor for lab clusters.
+NUC nodes should run Talos directly on bare metal. Each physical machine is intended
+to be a Kubernetes node added to `nqlabs-management`, `nqlabs-staging`, or
+`nqlabs-production`, not a hypervisor for separate lab clusters.
 
 ## Why not one large cluster?
 
@@ -195,9 +199,9 @@ One 18-node cluster would share:
 That is useful for capacity, but weaker for environment isolation. Staging and
 production should not share this control-plane blast radius for serious workloads.
 
-## Hardware allocation starting point
+## Hardware/node allocation starting point
 
-If the NUC pool has 18 machines, a starting allocation is:
+If the NUC pool has 18 machines, a starting node allocation into the existing clusters is:
 
 ```text
 nqlabs-management: 3 nodes
@@ -205,9 +209,19 @@ nqlabs-staging:    6 nodes
 nqlabs-production: 9 nodes
 ```
 
-This can be changed later. The platform documentation should teach how to create new
-clusters from new machines and how to drain/re-provision machines into a different
-cluster when capacity needs change.
+This can be changed later. The platform documentation should teach how to add new
+nodes to existing clusters, how to create an additional cluster only when deliberately
+needed, and how to drain/re-provision machines when capacity needs change.
+
+Node expansion path:
+
+1. Add NUC nodes to the target cluster using that cluster's Talos secrets/configs.
+2. Validate Kubernetes, Cilium, storage, and workload scheduling on the mixed VM +
+   bare-metal cluster.
+3. Drain/remove Proxmox VM nodes only after bare-metal capacity is healthy.
+4. Keep the cluster identity (`nqlabs-management`, `nqlabs-staging`,
+   `nqlabs-production`) stable throughout the transition.
+
 
 ## Policy model
 

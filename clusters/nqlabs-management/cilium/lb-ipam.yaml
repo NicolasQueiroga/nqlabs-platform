@@ -1,0 +1,28 @@
+# Cilium LB IPAM for nqlabs-management.
+#
+# This pool is intentionally separate from the active desktop-lab pool:
+#   desktop-lab:       192.168.15.192-193
+#   nqlabs-management: 192.168.15.194-195
+#
+# Do not let two clusters announce the same LoadBalancer IPs on the LAN.
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: management-pool
+spec:
+  blocks:
+    - start: "192.168.15.194"
+      stop: "192.168.15.195"
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: management-l2-policy
+spec:
+  serviceSelector:
+    matchLabels: {}
+  nodeSelector:
+    matchLabels: {}
+  interfaces:
+    - ens18
+  loadBalancerIPs: true

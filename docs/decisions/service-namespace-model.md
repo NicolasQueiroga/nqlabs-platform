@@ -5,7 +5,7 @@ multi-cluster target.
 
 ## Decision
 
-The Mac lab uses one namespace per service/environment:
+The current single-cluster lab uses one namespace per service/environment:
 
 ```text
 <service>-staging
@@ -21,7 +21,7 @@ payment-staging
 payment-production
 ```
 
-This is the single-cluster approximation of the future multi-cluster model:
+This is the single-cluster approximation of the target multi-cluster model:
 
 ```text
 nqlabs-staging/<service>
@@ -29,6 +29,29 @@ nqlabs-production/<service>
 ```
 
 Staging and production workloads must never share a namespace or environment boundary.
+
+
+## Desktop multi-cluster rehearsal
+
+The desktop can run the target model now as Proxmox-hosted Talos VM clusters:
+
+```text
+nqlabs-management  # platform/control services
+nqlabs-staging     # staging workloads
+nqlabs-production  # production workloads
+```
+
+In that topology, services should use the same namespace name in staging and
+production because the cluster boundary separates the environments:
+
+```text
+nqlabs-staging/demo
+nqlabs-production/demo
+```
+
+The existing `<service>-staging` and `<service>-production` pattern remains valid for
+single-cluster approximations only. It should not be carried forward as the final
+multi-cluster service namespace model.
 
 ## Namespaces are not connection requirements
 

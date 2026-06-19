@@ -1,0 +1,45 @@
+# cert-manager for nqlabs-management.
+#
+# Management currently does not have kube-prometheus-stack/ServiceMonitor CRDs.
+# The shared values file enables ServiceMonitor, so this app disables that chart
+# feature until monitoring CRDs are present in the management cluster.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://charts.jetstack.io
+      chart: cert-manager
+      targetRevision: "v1.20.2"
+      helm:
+        releaseName: cert-manager
+        valueFiles:
+          - $values/infrastructure/security/cert-manager/values.yaml
+        parameters:
+          - name: prometheus.servicemonitor.enabled
+            value: "false"
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -1,0 +1,41 @@
+# Management root Application — safe first app-of-apps seed for nqlabs-management.
+#
+# This intentionally does NOT watch all of platform/argocd/apps yet. The legacy
+# root Application watches the whole directory and is desktop-lab oriented; applying
+# it to nqlabs-management would try to sync desktop-lab Cilium/DNS/Gateway/Tailscale
+# settings and could cause IP or access-layer collisions.
+#
+# Initial safe include list:
+#   - projects.yaml  — AppProjects / ArgoCD security boundaries
+#   - argocd.yaml    — ArgoCD self-management using the existing Helm values
+#
+# Expand this include list only after platform Applications become cluster-aware.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: platform/argocd/apps
+    directory:
+      include: "{projects.yaml,argocd.yaml,local-path-provisioner.yaml}"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

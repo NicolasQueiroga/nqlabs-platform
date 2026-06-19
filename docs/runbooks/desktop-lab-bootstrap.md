@@ -1,6 +1,6 @@
 # Runbook: Desktop Lab Bootstrap — Proxmox + Talos VMs
 
-Status: planned for Phase 0.7.
+Status: active for Phase 0.7. The first desktop Talos cluster is live; the next target is the three-cluster VM rehearsal.
 
 This runbook moves NQLabs from the Mac/UTM proof lab to a stable fixed-IP desktop
 host while keeping the Mac as the development and operations workstation.
@@ -55,9 +55,10 @@ we are disk-conscious:
 
 ## Recommended approach
 
-Treat the desktop as the virtualized NUC architecture rehearsal. Start with one
-desktop Talos cluster first to prove the substrate, then run the final three-cluster
-topology as VMs.
+Treat the desktop as the place where the full architecture is built first. Start
+with one desktop Talos cluster to prove the substrate, then run the final
+three-cluster topology as VMs. NUCs later add/replace nodes in this architecture;
+do not wait for them to implement platform capabilities.
 
 ```text
 Step 1: nqlabs-desktop-lab       # one cluster, proves Proxmox + Talos + GitOps migration
@@ -69,7 +70,8 @@ Step 2: nqlabs-management        # platform/control services
 Do not debug Proxmox, desktop networking, Talos, Cilium, ArgoCD, DNS, TLS, and
 multi-cluster all at once. First prove the desktop substrate with one cluster.
 After that substrate is boring, the desktop target is not merely “a better Mac lab”;
-it is the full virtualized version of the future NUC private cloud.
+it is the full private-cloud architecture. The future NUCs provide bare-metal
+capacity and durability for the same clusters.
 
 ## Required decisions before install
 
@@ -83,9 +85,9 @@ Fill these values before creating VMs:
 | LAN DNS | router / public resolver | `192.168.15.1` |
 | Proxmox bridge | `vmbr0` | `vmbr0` → `nic0` |
 | Talos node IP range | `192.168.1.20-39` | `192.168.15.30-49` |
-| Cilium LB pool | `192.168.1.200-220` | `192.168.15.200/28` |
-| Desktop CoreDNS LB IP | `192.168.1.200` | `192.168.15.200` |
-| Desktop Gateway LB IP | `192.168.1.201` | `192.168.15.201` |
+| Cilium LB pool | `192.168.1.192/28` | `192.168.15.192/28` |
+| Desktop CoreDNS LB IP | `192.168.1.192` | `192.168.15.192` |
+| Desktop Gateway LB IP | `192.168.1.193` | `192.168.15.193` |
 | Tailscale subnet route | chosen LAN/subnet | `192.168.15.0/24` |
 
 Temporary pre-Kubernetes management DNS:
@@ -505,10 +507,13 @@ scutil --dns | grep -A5 nqlabs.network
 dig argocd.platform.nqlabs.network @<new-desktop-coredns-tailscale-ip>
 ```
 
-## Phase I — Rehearse the NUC topology in VMs
+## Phase I — Rehearse the full topology in desktop VMs
 
-Only after the single desktop cluster is boring, rehearse the same target topology
-that will later move to NUC bare metal:
+The desktop is powerful enough to run the full target architecture now. NUCs are
+later bare-metal node/capacity expansion, not a blocker for multi-cluster design or
+Phase 2 security/operations capabilities.
+
+Target clusters:
 
 ```text
 nqlabs-management
@@ -516,26 +521,94 @@ nqlabs-staging
 nqlabs-production
 ```
 
-Suggested lean VM sizing on 124GB RAM and 130GB active VM storage:
+Initial lean VM sizing on 124GB RAM and 130GB active `local-lvm` thin storage:
 
-| Cluster | Initial VMs | Purpose |
-|---------|-------------|---------|
-| `nqlabs-management` | 1 VM, 4 vCPU, 16GB RAM, 40GB thin disk | ArgoCD, monitoring, DNS, shared platform tools |
-| `nqlabs-staging` | 1 VM, 4 vCPU, 12GB RAM, 28GB thin disk | staging app workloads |
-| `nqlabs-production` | 1 VM, 4-6 vCPU, 16GB RAM, 40GB thin disk | production app workloads |
+| Cluster | VMID | VM | IP | Initial sizing | Purpose |
+|---------|------|----|----|----------------|---------|
+| `nqlabs-management` | `131` | `talos-management-cp-01` / `BC:24:11:15:00:31` | `192.168.15.31` | 8 vCPU / 32GB RAM / 48GB thin | ArgoCD, DNS, shared platform tools |
+| `nqlabs-staging` | `132` | `talos-staging-cp-01` | `192.168.15.32` | 8 vCPU / 24GB RAM / 32GB thin | staging workloads |
+| `nqlabs-production` | `133` | `talos-production-cp-01` | `192.168.15.33` | 12 vCPU / 40GB RAM / 48GB thin | production workloads |
 
-This keeps the first full three-cluster rehearsal near 108GB of thin-provisioned VM
-disk declarations. Thin allocation means actual used storage starts lower, but do
-not overcommit aggressively until usage is measured.
+This is the max recommended CPU/RAM profile for the desktop before repurposing the
+1.9TB SSD. It uses 28 vCPU and 96GB RAM across the three target clusters, leaving
+headroom for Proxmox and host services on a 32-thread / 124GB system.
 
-If the 1.9TB secondary SSD is explicitly repurposed for Proxmox storage later, the
-VM disk plan can become much less constrained.
+It also declares 128GB of thin VM disks. Thin allocation means actual storage starts
+lower, but disk usage must be watched because the active thin pool is about 130GB.
+The existing `desktop-lab` VM 130 is a temporary substrate proof; once the
+management/staging/production topology takes over, either stop/reduce VM 130 or move
+VM storage to the 1.9TB SSD before adding storage-heavy platform services or long
+observability retention.
 
-Do not over-allocate at first. Prove the lifecycle and GitOps model, then scale VM
-counts. The desktop rehearsal should answer the architecture questions before the
-NUCs exist: multi-cluster ArgoCD, cluster-specific AppProjects/destinations,
-staging/production separation by control plane, shared management services, and
-cross-cluster operational workflows.
+### Phase I.1 — Prepare cluster folders and inventory
+
+Each target cluster gets a folder under `clusters/`:
+
+```text
+clusters/nqlabs-management/
+clusters/nqlabs-staging/
+clusters/nqlabs-production/
+```
+
+Each folder documents VMID, IP, endpoint, purpose, and generated-file handling.
+Generated secrets/configs must remain under `generated/` and in 1Password.
+
+### Phase I.2 — Bootstrap order
+
+Do not create all clusters simultaneously. Build and validate one at a time:
+
+1. `nqlabs-management`
+2. `nqlabs-staging`
+3. `nqlabs-production`
+
+For each cluster:
+
+1. Create the Proxmox VM.
+2. Generate Talos secrets and machine configs from the Mac.
+3. Store Talos secrets in 1Password.
+4. Apply Talos config and bootstrap Kubernetes.
+5. Install Gateway API CRDs and Cilium.
+6. Validate node Ready, pod networking, DNS, and Cilium health.
+7. Only then proceed to the next cluster.
+
+Detailed lifecycle: `docs/runbooks/cluster-lifecycle.md`.
+
+### Phase I.3 — Multi-cluster ingress model
+
+Keep the Tailscale-only external edge on Proxmox:
+
+```text
+client on tailnet
+  -> *.nqlabs.network resolves to 100.105.35.84
+  -> HAProxy on Proxmox tailscale0
+  -> SNI routes to the correct cluster Gateway
+```
+
+Initial Gateway allocation:
+
+| Hostname pattern | Cluster | Planned Gateway IP |
+|------------------|---------|--------------------|
+| `*.platform.nqlabs.network` | `nqlabs-management` | `192.168.15.195` |
+| `*.staging.nqlabs.network` | `nqlabs-staging` | `192.168.15.196` |
+| `*.production.nqlabs.network` | `nqlabs-production` | `192.168.15.197` |
+
+Current desktop-lab HAProxy forwards all HTTP(S) traffic to the single desktop-lab
+Gateway at `192.168.15.193`. During multi-cluster migration, change HAProxy from a
+single backend to SNI-based backends only after each target cluster Gateway is live.
+
+### Phase I.4 — GitOps model
+
+Final rehearsal target:
+
+- `nqlabs-management` runs ArgoCD and platform/control services.
+- `nqlabs-staging` and `nqlabs-production` are registered to management ArgoCD.
+- Staging service Applications target the staging cluster.
+- Production service Applications target the production cluster.
+- Service namespaces become `namespace/<service>` in each environment cluster, not
+  `<service>-staging` and `<service>-production` inside one cluster.
+
+Do not migrate workloads to multi-cluster GitOps until management ArgoCD can see all
+clusters and the service ApplicationSet has explicit cluster destinations.
 
 ## Success criteria
 

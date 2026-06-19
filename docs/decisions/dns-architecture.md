@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — Phase 0 implemented.
+Accepted — active on desktop-lab; multi-cluster desktop fanout planned.
 
 ## Context
 
@@ -17,7 +17,7 @@ the private/platform/server domain. Service records are resolved through the pri
 access layer, not published as public application A records.
 
 `nqlabs.io` is the public/user-facing domain. Its DNS is managed by Cloudflare, but
-application exposure on `.io` is deferred until the desktop/NUC public-edge phase.
+application exposure on `.io` is deferred until the deliberate public-edge design, which can be rehearsed on desktop before NUCs.
 
 ## Decision
 
@@ -27,12 +27,12 @@ Use Tailscale split DNS plus an in-cluster authoritative DNS stack for private n
 Tailnet client
     ↓ query *.nqlabs.network
 Tailscale split DNS
-    ↓ nameserver 100.125.207.63
+    ↓ nameserver: Kubernetes CoreDNS Tailscale IP
 CoreDNS (standalone, dns namespace)
-    ↓ reads records
-etcd DNS backend
-    ↑ records written by
-external-dns watching Gateway API HTTPRoutes
+    ↓ answers platform/staging/production with Proxmox tailscale0 IP
+Proxmox HAProxy (100.105.35.84:80/443)
+    ↓ TCP passthrough / future SNI fanout
+Cilium Gateway API in the target cluster
 ```
 
 Private internal naming:
@@ -47,15 +47,16 @@ Use `production` in full. Do not use `prod`.
 
 ## Implemented components
 
-| Component | Current value |
-|-----------|---------------|
+| Component | Desktop-lab value |
+|-----------|-------------------|
 | Standalone CoreDNS namespace | `dns` |
-| CoreDNS LoadBalancer IP | `192.168.64.192` |
-| CoreDNS Tailscale IP | `100.125.207.63` |
-| etcd backend service | ClusterIP `10.103.246.202` |
+| CoreDNS LoadBalancer IP | `192.168.15.192` |
+| CoreDNS Tailscale IP | `100.114.154.64` |
+| etcd backend service | ClusterIP `10.105.253.211` |
 | external-dns provider | CoreDNS/etcd |
-| Tailscale split DNS | `nqlabs.network` → `100.125.207.63` |
-| Gateway IP | `192.168.64.193` |
+| Tailscale split DNS | `nqlabs.network` → `100.114.154.64` |
+| Proxmox Tailscale edge | `100.105.35.84` |
+| Desktop-lab Gateway IP | `192.168.15.193` |
 
 ## TLS model
 
@@ -67,7 +68,7 @@ Current wildcard cert SANs:
 - `*.staging.nqlabs.network`
 - `*.production.nqlabs.network`
 
-The NQLabs Internal CA remains available for future purely internal bootstrap use. Public/user-facing `.io` endpoints are deferred until the desktop/NUC public-edge phase.
+The NQLabs Internal CA remains available for future purely internal bootstrap use. Public/user-facing `.io` endpoints are deferred until the deliberate public-edge design, which can be rehearsed on desktop before NUCs.
 
 ## Why not `*.lab.nqlabs.network`?
 
@@ -88,7 +89,7 @@ dig argocd.platform.nqlabs.network +short
 Check CoreDNS directly:
 
 ```bash
-dig @192.168.64.192 argocd.platform.nqlabs.network +short
+dig @100.114.154.64 argocd.platform.nqlabs.network +short
 ```
 
 Check Gateway and routes:
@@ -103,6 +104,29 @@ Check external-dns:
 ```bash
 kubectl logs -n dns deployment/external-dns --tail=50
 ```
+
+
+## Desktop multi-cluster DNS / ingress target
+
+During the three-cluster desktop rehearsal, keep one private Tailscale DNS answer for
+user-facing hostnames:
+
+```text
+*.platform.nqlabs.network    -> 100.105.35.84
+*.staging.nqlabs.network     -> 100.105.35.84
+*.production.nqlabs.network  -> 100.105.35.84
+```
+
+Then use HAProxy on Proxmox to route by TLS SNI:
+
+| Hostname pattern | Target cluster |
+|------------------|----------------|
+| `*.platform.nqlabs.network` | `nqlabs-management` |
+| `*.staging.nqlabs.network` | `nqlabs-staging` |
+| `*.production.nqlabs.network` | `nqlabs-production` |
+
+This preserves a single Tailscale-only edge while separating environments by
+Kubernetes control plane.
 
 ## Consequences
 

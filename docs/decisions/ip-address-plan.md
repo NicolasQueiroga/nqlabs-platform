@@ -1,7 +1,8 @@
 # IP Address Plan
 
-Status: active for Phase 0 Mac laptop lab; must be revised for the fixed-IP
-desktop lab and expanded again for the NUC cloud.
+Status: active for the desktop fixed-IP lab. The desktop is the current
+host for the full three-cluster architecture; NUCs later add/replace bare-metal
+nodes in the same topology.
 
 ## Purpose
 
@@ -15,19 +16,15 @@ NQLabs is intentionally moving through environments:
 
 ```text
 Mac laptop / UTM lab
-  → desktop fixed-IP virtualized NUC rehearsal (Ryzen 9 7950X, 124GB RAM, 130GB active VM thin pool)
-  → NUC bare-metal implementation (`nqlabs-management`, `nqlabs-staging`, `nqlabs-production`)
+  → desktop fixed-IP full architecture (Ryzen 9 7950X, 124GB RAM, Proxmox/Talos VMs)
+  → NUC bare-metal nodes added to the same clusters
 ```
 
-The current IPs are valid for the Mac laptop test environment only. They prove the
-architecture, but they are not the final production addressing plan.
-
-When the platform moves to the desktop, use
-`docs/runbooks/desktop-lab-bootstrap.md` and add a filled desktop section with the
-desktop host IP, desktop VM/runtime subnet, LoadBalancer pool, Tailscale routes,
-and DNS records.
-When the platform moves to NUCs, preserve the desktop-rehearsed cluster topology but
-replace VM/LAN assumptions with the final bare-metal VLAN/subnet plan.
+The Mac laptop IPs are retained as historical Phase 0 context. The active platform
+now runs on the desktop Proxmox host. The desktop plan is not blocked by NUCs: it
+can run the full management/staging/production topology as Talos VMs. When NUCs
+arrive, add them as nodes/capacity to the existing architecture and replace VM/LAN
+assumptions with the final bare-metal VLAN/subnet plan only where needed.
 
 ## Phase 0 Mac laptop network model
 
@@ -112,7 +109,7 @@ inside the cluster and LoadBalancer/Gateway addresses outside the cluster.
 ## Desktop fixed-IP lab — active
 
 The Mac remains the development/control workstation. The desktop is the stable
-Proxmox/KVM host for Talos VMs and the virtualized rehearsal of the NUC topology.
+Proxmox/KVM host for Talos VMs and the first full implementation of the topology.
 
 Host: `nqlabs-desktop`
 Hardware: AMD Ryzen 9 7950X, 32 threads, 124GB RAM
@@ -128,10 +125,10 @@ Proxmox host:          192.168.15.20   (fixed)
 LAN subnet:            192.168.15.0/24
 Gateway:               192.168.15.1
 Talos VM range:        192.168.15.30-49
-Cilium LB pool:        192.168.15.200/28   (200-215)
-CoreDNS LB IP:         192.168.15.200      (future cluster split DNS backend)
-platform Gateway LB:   192.168.15.201      (HTTPS entry point)
-Reserved LB:           192.168.15.202-215
+Cilium LB pool:        192.168.15.192/28   (192-207)
+CoreDNS LB IP:         192.168.15.192      (desktop-lab authoritative DNS)
+platform Gateway LB:   192.168.15.193      (desktop-lab HTTPS Gateway)
+Reserved LB:           192.168.15.194-207
 ```
 
 ### Temporary Proxmox DNS before Kubernetes CoreDNS
@@ -149,26 +146,32 @@ Tailscale split DNS currently routes:
 nqlabs.network → 100.105.35.84
 ```
 
-This is temporary. After the desktop cluster creates the Kubernetes CoreDNS
-Tailscale Service, update Tailscale split DNS from `100.105.35.84` to the new
-CoreDNS Tailscale IP.
+This was the pre-Kubernetes bootstrap state. Current desktop-lab DNS uses the
+Kubernetes CoreDNS Tailscale Service for split DNS, and CoreDNS returns the
+Proxmox Tailscale IP `100.105.35.84` for platform/staging/production hostnames.
+HAProxy on Proxmox then forwards HTTPS to the active cluster Gateway.
 
 ### Reserved desktop LoadBalancer assignments
 
 | IP | Resource | Namespace | Purpose |
 |----|----------|-----------|---------|
-| `192.168.15.200` | CoreDNS LoadBalancer | `dns` | authoritative DNS / future Tailscale split DNS target |
-| `192.168.15.201` | platform Gateway LoadBalancer | `platform` | HTTPS Gateway |
-| `192.168.15.202-215` | unassigned | n/a | reserved for future LB services |
+| `192.168.15.192` | CoreDNS LoadBalancer | `dns` | desktop-lab authoritative DNS |
+| `192.168.15.193` | platform Gateway LoadBalancer | `platform` | desktop-lab HTTPS Gateway |
+| `192.168.15.194-207` | planned/reserved | multi-cluster rehearsal | unique future Gateway/LB IPs |
 
-Do not assign another service inside `192.168.15.200/28` without documenting it here.
+Do not assign another service inside `192.168.15.192/28` without documenting it here.
 
 ### Talos VM IP plan
 
 | IP | VM | Cluster | Role |
 |----|----|---------|------|
 | `192.168.15.30` | `talos-desktop-cp-01` / VMID `130` / MAC `BC:24:11:15:00:30` | `nqlabs-desktop-lab` | large all-in-one bootstrap node; 16 vCPU, 64GB RAM, 96GB thin disk |
-| `192.168.15.31-39` | TBD | desktop multi-cluster rehearsal | management / staging / production VMs |
+| `192.168.15.31` | `talos-management-cp-01` / VMID `131` / MAC `BC:24:11:15:00:31` | `nqlabs-management` | initial single-node management cluster; 8 vCPU, 32GB RAM, 48GB thin disk |
+| `192.168.15.32` | `talos-staging-cp-01` / VMID `132` | `nqlabs-staging` | initial single-node staging cluster; 8 vCPU, 24GB RAM, 32GB thin disk |
+| `192.168.15.33` | `talos-production-cp-01` / VMID `133` | `nqlabs-production` | initial single-node production cluster; 12 vCPU, 40GB RAM, 48GB thin disk |
+| `192.168.15.34-39` | TBD | desktop multi-cluster expansion | additional control-plane/worker VMs |
+
+The management/staging/production VM sizes are the max recommended CPU/RAM profile for the current desktop before repurposing the 1.9TB SSD: 28 vCPU / 96GB RAM / 128GB thin disk declared across the three clusters. Keep VM 130 as a temporary substrate proof, not a permanent fourth large cluster, unless RAM/storage pressure is explicitly reviewed.
 
 Wake-on-LAN for the desktop host:
 
@@ -179,10 +182,29 @@ wakeonlan 74:56:3c:f7:32:39
 BIOS must also be configured with AC power recovery enabled so the host powers back
 on after an outage.
 
-## Phase 1 NUC planning placeholder
 
-Phase 1 must define a separate address plan before bare-metal installation. The
-target is three Kubernetes clusters, not one large cluster:
+### Planned desktop multi-cluster LoadBalancer assignments
+
+The current HAProxy edge binds only to Proxmox `tailscale0` (`100.105.35.84`). In
+the three-cluster rehearsal, keep this Tailscale-only edge and route by TLS SNI to
+unique Gateway IPs per cluster:
+
+| IP | Planned owner | Purpose |
+|----|---------------|---------|
+| `192.168.15.194` | `nqlabs-management` CoreDNS | future authoritative DNS if/when management replaces desktop-lab DNS |
+| `192.168.15.195` | `nqlabs-management` Gateway | `*.platform.nqlabs.network` |
+| `192.168.15.196` | `nqlabs-staging` Gateway | `*.staging.nqlabs.network` |
+| `192.168.15.197` | `nqlabs-production` Gateway | `*.production.nqlabs.network` |
+| `192.168.15.198-207` | reserved | future LB services / expansion |
+
+Do not let two clusters announce the same LoadBalancer IP on the LAN. Each cluster
+needs its own Cilium LB IPAM pool or explicitly reserved IP range.
+
+## NUC node expansion planning placeholder
+
+NUCs should be planned as nodes/capacity for the existing architecture, not as a
+separate platform capability phase. Before bare-metal installation, define how each
+NUC joins one of the three existing clusters:
 
 ```text
 nqlabs-management
@@ -200,6 +222,8 @@ Required decisions:
 - Tailscale subnet routes
 - DHCP reservations or static IP assignments
 - DNS names for each node
+- target cluster for each NUC
+- whether the NUC adds capacity or replaces a Proxmox VM node
 
 The Phase 0 `192.168.64.0/24` UTM range should not be carried into the desktop or
 NUC environments as-is unless explicitly chosen and documented. It is a Mac laptop
