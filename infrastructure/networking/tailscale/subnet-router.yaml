@@ -19,4 +19,4 @@ spec:
   hostname: nqlabs-lab-router
   subnetRouter:
     advertiseRoutes:
-      - 192.168.1.0/24   # TODO: replace with desktop LAN subnet before bootstrap
+      - 192.168.15.0/24   # desktop LAN — nqlabs-desktop (192.168.15.20), Talos VMs (.30-49), LB pool (.200-215)

@@ -109,24 +109,63 @@ CoreDNS ClusterIP: 10.103.246.202
 Do not build external dependencies on ClusterIP addresses. Use Services/DNS names
 inside the cluster and LoadBalancer/Gateway addresses outside the cluster.
 
-## Desktop fixed-IP lab placeholder
+## Desktop fixed-IP lab — active
 
-The Mac remains the development/control workstation. The desktop becomes the stable
+The Mac remains the development/control workstation. The desktop is the stable
 Proxmox/KVM host for Talos VMs and the virtualized rehearsal of the NUC topology.
-Before moving workloads from the Mac to the desktop, document:
 
-- desktop fixed IP
-- VM/runtime networking model on the desktop
-- Kubernetes node IPs
-- Cilium LoadBalancer pool
-- platform Gateway IP
-- DNS names and Tailscale routes
-- any firewall/router changes
-- whether the desktop lab will run one Talos VM cluster first or rehearse the full
-  three-cluster topology (`nqlabs-management`, `nqlabs-staging`, `nqlabs-production`)
+Host: `nqlabs-desktop`
+Hardware: AMD Ryzen 9 7950X, 32 threads, 124GB RAM
+Proxmox: VE 9.2.2
+Ethernet: `nic0` bridged into `vmbr0`
+Tailscale: `100.105.35.84`
 
-The desktop environment should be treated as an intermediate durability test: more
-stable than the Mac laptop, but still not the final NUC cloud.
+```text
+Proxmox host:          192.168.15.20   (fixed)
+LAN subnet:            192.168.15.0/24
+Gateway:               192.168.15.1
+Talos VM range:        192.168.15.30-49
+Cilium LB pool:        192.168.15.200/28   (200-215)
+CoreDNS LB IP:         192.168.15.200      (future cluster split DNS backend)
+platform Gateway LB:   192.168.15.201      (HTTPS entry point)
+Reserved LB:           192.168.15.202-215
+```
+
+### Temporary Proxmox DNS before Kubernetes CoreDNS
+
+Until the desktop Kubernetes cluster exists, Proxmox itself runs a temporary CoreDNS
+service for the desktop management hostname:
+
+```text
+proxmox.platform.nqlabs.network → 100.105.35.84
+```
+
+Tailscale split DNS currently routes:
+
+```text
+nqlabs.network → 100.105.35.84
+```
+
+This is temporary. After the desktop cluster creates the Kubernetes CoreDNS
+Tailscale Service, update Tailscale split DNS from `100.105.35.84` to the new
+CoreDNS Tailscale IP.
+
+### Reserved desktop LoadBalancer assignments
+
+| IP | Resource | Namespace | Purpose |
+|----|----------|-----------|---------|
+| `192.168.15.200` | CoreDNS LoadBalancer | `dns` | authoritative DNS / future Tailscale split DNS target |
+| `192.168.15.201` | platform Gateway LoadBalancer | `platform` | HTTPS Gateway |
+| `192.168.15.202-215` | unassigned | n/a | reserved for future LB services |
+
+Do not assign another service inside `192.168.15.200/28` without documenting it here.
+
+### Talos VM IP plan
+
+| IP | VM | Cluster | Role |
+|----|----|---------|------|
+| `192.168.15.30` | `talos-desktop-cp-01` | `nqlabs-desktop-lab` | control-plane + worker bootstrap node |
+| `192.168.15.31-39` | TBD | desktop multi-cluster rehearsal | management / staging / production VMs |
 
 ## Phase 1 NUC planning placeholder
 

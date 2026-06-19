@@ -11,7 +11,11 @@
 #   Example: if desktop LAN is 192.168.1.0/24 and DHCP is .2-.99, use 192.168.1.200/28
 #   See docs/runbooks/desktop-lab-bootstrap.md for the decision table.
 #
-# Current value is Mac UTM lab only — must be updated before desktop bootstrap.
+# Desktop: 192.168.15.200/28 — safe range above typical DHCP allocation on 192.168.15.0/24.
+# Assignments:
+#   192.168.15.200 — CoreDNS LoadBalancer (Tailscale split DNS target)
+#   192.168.15.201 — platform Gateway LoadBalancer (HTTPS entry point)
+#   192.168.15.202-215 — reserved for future LB services
 
 apiVersion: "cilium.io/v2alpha1"
 kind: CiliumLoadBalancerIPPool
@@ -19,4 +23,4 @@ metadata:
   name: lab-pool
 spec:
   blocks:
-    - cidr: "192.168.64.200/28"   # TODO: replace with desktop LB pool before bootstrap
+    - cidr: "192.168.15.200/28"   # 192.168.15.200-215 — desktop LAN (nqlabs-desktop)

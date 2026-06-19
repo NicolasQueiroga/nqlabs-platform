@@ -11,7 +11,9 @@
 #   To find the name after Talos boots: talosctl get links --nodes <IP>
 #   See docs/runbooks/desktop-lab-bootstrap.md Phase F.
 #
-# Current value is Mac UTM lab only (enp0s1 = UTM virtio NIC).
+# Desktop: must be set to the NIC name inside the Talos VM, not the Proxmox host
+# interface. Find it after Talos boots with:
+#   talosctl get links --nodes <TALOS_CP_IP>
 
 apiVersion: "cilium.io/v2alpha1"
 kind: CiliumL2AnnouncementPolicy
@@ -23,5 +25,5 @@ spec:
   nodeSelector:
     matchLabels: {}
   interfaces:
-    - enp0s1   # TODO: replace with desktop Talos VM NIC interface name before bootstrap
+    - eth0   # TODO: replace with actual Talos VM NIC name before ArgoCD sync
   loadBalancerIPs: true

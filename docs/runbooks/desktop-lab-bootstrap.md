@@ -62,16 +62,25 @@ Fill these values before creating VMs:
 
 | Value | Example | Actual |
 |-------|---------|--------|
-| Desktop hostname | `nqlabs-desktop` | TBD |
-| Desktop LAN IP | `192.168.1.10` | TBD |
-| LAN gateway | `192.168.1.1` | TBD |
-| LAN DNS | router / public resolver | TBD |
-| Proxmox bridge | `vmbr0` | TBD |
-| Talos node IP range | `192.168.1.20-39` | TBD |
-| Cilium LB pool | `192.168.1.200-220` | TBD |
-| Desktop CoreDNS LB IP | `192.168.1.200` | TBD |
-| Desktop Gateway LB IP | `192.168.1.201` | TBD |
-| Tailscale subnet route | chosen LAN/subnet | TBD |
+| Desktop hostname | `nqlabs-desktop` | `nqlabs-desktop.nqlabs.network` |
+| Desktop LAN IP | `192.168.1.10` | `192.168.15.20` |
+| LAN gateway | `192.168.1.1` | `192.168.15.1` |
+| LAN DNS | router / public resolver | `192.168.15.1` |
+| Proxmox bridge | `vmbr0` | `vmbr0` → `nic0` |
+| Talos node IP range | `192.168.1.20-39` | `192.168.15.30-49` |
+| Cilium LB pool | `192.168.1.200-220` | `192.168.15.200/28` |
+| Desktop CoreDNS LB IP | `192.168.1.200` | `192.168.15.200` |
+| Desktop Gateway LB IP | `192.168.1.201` | `192.168.15.201` |
+| Tailscale subnet route | chosen LAN/subnet | `192.168.15.0/24` |
+
+Temporary pre-Kubernetes management DNS:
+
+```text
+proxmox.platform.nqlabs.network → 100.105.35.84
+```
+
+This is served by a temporary CoreDNS systemd service on Proxmox. Replace Tailscale
+split DNS with the Kubernetes CoreDNS Tailscale IP after the desktop cluster is up.
 
 The Mac lab currently uses `192.168.64.0/24` because UTM creates that NAT network.
 Do not reuse those addresses on the desktop unless the desktop LAN really uses them.
