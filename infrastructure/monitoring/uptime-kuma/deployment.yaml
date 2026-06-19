@@ -32,6 +32,22 @@ spec:
     spec:
       securityContext:
         fsGroup: 1000
+      # hostAliases resolve platform/staging/production hostnames to the Cilium Gateway
+      # LB IP (192.168.15.193) directly from inside the cluster.  The platform CoreDNS
+      # returns Tailscale IPs (100.105.35.84) for external clients, but pods are not
+      # Tailscale members so they must use the LAN-side gateway address instead.
+      # Proxmox is intentionally excluded — its port 8006 is Tailscale-only and cannot
+      # be reached from cluster pods.
+      hostAliases:
+        - ip: "192.168.15.193"
+          hostnames:
+            - argocd.platform.nqlabs.network
+            - grafana.platform.nqlabs.network
+            - prometheus.platform.nqlabs.network
+            - alertmanager.platform.nqlabs.network
+            - rollouts.platform.nqlabs.network
+            - demo.staging.nqlabs.network
+            - demo.production.nqlabs.network
       containers:
         - name: uptime-kuma
           image: louislam/uptime-kuma:1.23.16
