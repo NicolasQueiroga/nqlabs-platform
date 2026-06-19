@@ -1,6 +1,16 @@
 # Expose platform-gateway via Tailscale
 # All HTTPS platform services route through this single gateway.
-# external-dns creates per-service records pointing to this Tailscale IP.
+# DNS (nqlabs.network) records are managed by CoreDNS template plugin — all
+# *.platform / *.staging / *.production resolve to this Tailscale IP (100.123.152.13)
+# so clients ALWAYS connect via Tailscale regardless of LAN presence.
+#
+# Architecture:
+#   Tailscale client → 100.123.152.13 (this device) → Cilium Gateway LB (192.168.15.193)
+#   → cilium-envoy → HTTPRoute → backend pod
+#
+# The Service has NO selector because the Cilium Gateway API uses eBPF internally
+# and does not expose pods with gateway labels. Endpoints are managed manually,
+# pointing to the Cilium Gateway LB IP (192.168.15.193).
 
 apiVersion: v1
 kind: Service
@@ -11,16 +21,10 @@ metadata:
     tailscale.com/expose: "true"
     tailscale.com/hostname: "platform-gateway"
     tailscale.com/tags: "tag:k8s"
-    # All platform service hostnames route through this gateway.
-    # Add new hostnames here as comma-separated values when adding new HTTPRoutes.
-    # This service exposes the Gateway on Tailscale for MagicDNS access only.
-    # DNS records (nqlabs.network) are managed by external-dns via service annotations.
-    # Subnet routing (desktop LAN — see subnet-router.yaml) handles external-device access to Gateway LB IPs.
 spec:
   type: LoadBalancer
   loadBalancerClass: tailscale
-  selector:
-    gateway.networking.k8s.io/gateway-name: platform-gateway
+  # No selector — endpoints managed below (Cilium Gateway LB IP)
   ports:
     - name: https
       port: 443
@@ -28,3 +32,22 @@ spec:
     - name: http
       port: 80
       targetPort: 80
+---
+# Manual endpoints: forward Tailscale proxy traffic to the Cilium Gateway LB IP.
+# Cilium eBPF intercepts traffic to 192.168.15.193 and routes to cilium-envoy.
+# Update if the Cilium LB pool or Gateway service IP changes.
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: platform-gateway-tailscale
+  namespace: platform
+subsets:
+  - addresses:
+      - ip: 192.168.15.193
+    ports:
+      - name: https
+        port: 443
+        protocol: TCP
+      - name: http
+        port: 80
+        protocol: TCP
