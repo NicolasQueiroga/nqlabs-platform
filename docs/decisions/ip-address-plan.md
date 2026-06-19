@@ -118,6 +118,7 @@ Host: `nqlabs-desktop`
 Hardware: AMD Ryzen 9 7950X, 32 threads, 124GB RAM
 Proxmox: VE 9.2.2
 Ethernet: `nic0` bridged into `vmbr0`
+Ethernet MAC: `74:56:3c:f7:32:39`
 Tailscale: `100.105.35.84`
 
 ```text
@@ -164,8 +165,17 @@ Do not assign another service inside `192.168.15.200/28` without documenting it 
 
 | IP | VM | Cluster | Role |
 |----|----|---------|------|
-| `192.168.15.30` | `talos-desktop-cp-01` | `nqlabs-desktop-lab` | control-plane + worker bootstrap node |
+| `192.168.15.30` | `talos-desktop-cp-01` / VMID `130` / MAC `BC:24:11:15:00:30` | `nqlabs-desktop-lab` | control-plane + worker bootstrap node |
 | `192.168.15.31-39` | TBD | desktop multi-cluster rehearsal | management / staging / production VMs |
+
+Wake-on-LAN for the desktop host:
+
+```bash
+wakeonlan 74:56:3c:f7:32:39
+```
+
+BIOS must also be configured with AC power recovery enabled so the host powers back
+on after an outage.
 
 ## Phase 1 NUC planning placeholder
 

@@ -149,6 +149,57 @@ On the Mac:
 
 `vmbr0` should bridge VMs onto the LAN so Talos nodes can get normal LAN IPs.
 
+## Phase B.1 — Host boot and recovery policy
+
+The desktop should try to recover automatically because it is now the always-on
+infrastructure host.
+
+Current host values:
+
+```text
+hostname:          nqlabs-desktop
+LAN IP:            192.168.15.20
+Tailscale IP:      100.105.35.84
+Ethernet NIC:      nic0
+Ethernet MAC:      74:56:3c:f7:32:39
+Proxmox bridge:    vmbr0 → nic0
+```
+
+Configured on Proxmox:
+
+```text
+nqlabs-wol.service
+  enables Wake-on-LAN on nic0 at boot
+
+/usr/lib/systemd/system-shutdown/nqlabs-rtc-wake
+  on clean poweroff/halt, schedules RTC wake about 5 minutes later
+```
+
+Verify:
+
+```bash
+ssh root@100.105.35.84 'ethtool nic0 | grep Wake-on; systemctl is-active nqlabs-wol.service'
+```
+
+Wake from the Mac if the desktop is powered off but still connected to power and
+Ethernet:
+
+```bash
+brew install wakeonlan
+wakeonlan 74:56:3c:f7:32:39
+```
+
+Manual BIOS/UEFI settings still required:
+
+```text
+Restore on AC Power Loss: Power On / Always On
+Wake on LAN / PCI-E wake: Enabled
+ErP: Disabled if it prevents Wake-on-LAN from S5
+```
+
+OS-level automation cannot recover from sudden power loss if firmware stays off.
+The BIOS AC-power setting is the required guarantee for outage recovery.
+
 ## Phase C — Create the first Talos desktop cluster
 
 Create one cluster first:
@@ -162,7 +213,29 @@ Recommended initial VM sizing:
 
 | VM | Role | vCPU | RAM | Disk | Notes |
 |----|------|------|-----|------|-------|
-| `talos-desktop-cp-01` | control plane + worker | 4 | 8-12GB | 80GB | first single-node cluster |
+| `talos-desktop-cp-01` | control plane + worker | 4 | 12GB | 80GB | first single-node cluster |
+
+Planned first VM identity:
+
+```text
+VMID:       130
+Name:       talos-desktop-cp-01
+MAC:        BC:24:11:15:00:30
+IP:         192.168.15.30/24
+Gateway:    192.168.15.1
+DNS:        192.168.15.1, 1.1.1.1
+Storage:    local-lvm
+Bridge:     vmbr0
+Autostart:  enabled after Talos is installed and stable
+```
+
+When the VM exists and is stable, configure Proxmox autostart:
+
+```bash
+qm set 130 --onboot 1 --startup order=10,up=120,down=120
+```
+
+This makes the first Talos cluster start automatically whenever Proxmox boots.
 
 If you want a more realistic first cluster:
 
