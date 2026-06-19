@@ -1,10 +1,11 @@
 # Monitoring stack — kube-prometheus-stack + config
 #
-# Three Applications (sync-wave ordered):
+# Four Applications (sync-wave ordered):
 #   wave 2: monitoring-config      — ExternalSecrets + HTTPRoutes
 #                                    (after external-secrets-config wave 1 creates ClusterSecretStore)
 #   wave 3: kube-prometheus-stack  — Helm chart (needs grafana-admin-credentials secret from ESO)
 #   wave 3: blackbox-exporter      — endpoint probes (needs kube-prometheus-stack CRDs)
+#   wave 3: uptime-kuma            — human-friendly status dashboard, second probe vantage point
 
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -24,6 +25,37 @@ spec:
     path: infrastructure/monitoring
     directory:
       include: "{externalsecrets.yaml,routes.yaml,datasources.yaml,blackbox-probes.yaml,blackbox-rules.yaml,alertmanager-discord.yaml}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/enforce-version: latest
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: uptime-kuma
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: infrastructure/monitoring/uptime-kuma
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring

@@ -1,0 +1,68 @@
+# Uptime Kuma — self-hosted uptime monitor and status page.
+#
+# Provides a human-friendly status dashboard and second vantage point
+# for endpoint probing, complementing the internal Blackbox Exporter.
+#
+# UI: https://uptime.platform.nqlabs.network (Tailscale-only, via HAProxy)
+# Data: PVC uptime-kuma-data (local-path, 2Gi, not replicated)
+# Port: 3001
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: uptime-kuma
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: uptime-kuma
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: nqlabs-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: uptime-kuma
+  # Recreate because PVC is ReadWriteOnce — only one pod can write at a time.
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: uptime-kuma
+        app.kubernetes.io/component: monitoring
+        app.kubernetes.io/part-of: nqlabs-platform
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: uptime-kuma
+          image: louislam/uptime-kuma:1.23.16
+          ports:
+            - name: http
+              containerPort: 3001
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: uptime-kuma-data

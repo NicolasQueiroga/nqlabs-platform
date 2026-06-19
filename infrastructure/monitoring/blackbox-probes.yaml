@@ -33,3 +33,4 @@ spec:
         - https://rollouts.platform.nqlabs.network
         - https://demo.staging.nqlabs.network
         - https://demo.production.nqlabs.network
+        - https://uptime.platform.nqlabs.network
