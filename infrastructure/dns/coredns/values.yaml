@@ -50,6 +50,7 @@ servers:
         configBlock: |-
           match ^proxmox\.platform\.nqlabs\.network\.$
           answer "{{ .Name }} 60 IN A 100.105.35.84"
+          fallthrough
       - name: template
         parameters: IN A platform.nqlabs.network
         configBlock: |-
