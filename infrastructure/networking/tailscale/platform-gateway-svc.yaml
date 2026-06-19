@@ -33,21 +33,27 @@ spec:
       port: 80
       targetPort: 80
 ---
-# Manual endpoints: forward Tailscale proxy traffic to the Cilium Gateway LB IP.
+# Manual EndpointSlice: forward Tailscale proxy traffic to the Cilium Gateway LB IP.
 # Cilium eBPF intercepts traffic to 192.168.15.193 and routes to cilium-envoy.
-# Update if the Cilium LB pool or Gateway service IP changes.
-apiVersion: v1
-kind: Endpoints
+# Uses EndpointSlice (v1) — Endpoints API deprecated in K8s 1.33+.
+# Update the address if the Cilium LB pool or Gateway service IP changes.
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
-  name: platform-gateway-tailscale
+  name: platform-gateway-tailscale-manual
   namespace: platform
-subsets:
+  labels:
+    kubernetes.io/service-name: platform-gateway-tailscale
+addressType: IPv4
+endpoints:
   - addresses:
-      - ip: 192.168.15.193
-    ports:
-      - name: https
-        port: 443
-        protocol: TCP
-      - name: http
-        port: 80
-        protocol: TCP
+      - 192.168.15.193
+    conditions:
+      ready: true
+ports:
+  - name: https
+    port: 443
+    protocol: TCP
+  - name: http
+    port: 80
+    protocol: TCP
