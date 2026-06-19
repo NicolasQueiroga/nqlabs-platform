@@ -51,7 +51,7 @@ servers:
       - name: template
         parameters: IN A platform.nqlabs.network
         configBlock: |-
-          match ^(?!proxmox\.)[a-z0-9-]+\.platform\.nqlabs\.network\.$
+          match ^[a-z0-9-]+\.platform\.nqlabs\.network\.$
           answer "{{ .Name }} 60 IN A 100.123.152.13"
       - name: template
         parameters: IN A staging.nqlabs.network
