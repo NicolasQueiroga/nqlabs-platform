@@ -63,7 +63,9 @@ spec:
         valueFiles:
           - $values/clusters/nqlabs-management/dns/coredns-values.yaml
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
-      targetRevision: HEAD
+      # Temporary while management root tracks this feature branch. Switch to HEAD
+      # after the branch is merged to main.
+      targetRevision: letta/multi-cluster-foundation-f894476f
       ref: values
   destination:
     server: https://kubernetes.default.svc
