@@ -417,6 +417,7 @@ workstation; the desktop becomes the always-on infrastructure host.
       - [x] Add `local-path-provisioner` to management root and validate default StorageClass
       - [x] Install External Secrets Operator on management and validate `nqlabs-1password` ClusterSecretStore
       - [x] Install cert-manager on management and validate Cloudflare ExternalSecret + ClusterIssuers
+      - [x] Install management DNS stack and validate CoreDNS LB `192.168.15.194`
       - [ ] Expand cluster-aware management ArgoCD app model beyond safe bootstrap apps
       - [ ] Configure management ArgoCD to manage staging/production clusters
 - [x] Re-run full ArgoCD app-of-apps bootstrap on desktop lab

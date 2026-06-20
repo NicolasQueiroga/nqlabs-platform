@@ -50,6 +50,14 @@ Completed on desktop Proxmox:
 - ArgoCD admin password rotated into 1Password; initial bootstrap secret deleted.
 - ArgoCD server responds HTTP 200 inside the cluster.
 - Cluster-aware management root app-of-apps applied and Healthy; it watches `clusters/nqlabs-management/argocd/apps`.
+- `local-path-provisioner` installed and `local-path` is the default StorageClass.
+- External Secrets Operator installed; `nqlabs-1password` ClusterSecretStore is Ready/Valid.
+- cert-manager installed; Cloudflare ExternalSecret and ClusterIssuers are Ready.
+- DNS stack installed through management-specific ArgoCD wrappers:
+  - `etcd-dns` Ready with local-path PVC
+  - `external-dns` Ready
+  - `coredns-dns` Ready at LoadBalancer IP `192.168.15.194`
+  - Wildcard external/tailnet answers resolve to Proxmox Tailscale edge `100.105.35.84`.
 - Legacy desktop-lab root remains intentionally unapplied to management; additional platform apps should be added through cluster-local wrappers or cluster-aware shared definitions.
 
 1Password items:
@@ -59,4 +67,4 @@ Completed on desktop Proxmox:
 - `argocd-nqlabs-management-admin` — ArgoCD admin credential
 - `Service Account Auth Token: NQ Labs` — source token for ESO `onepassword-service-account-token`
 
-Next: expand the cluster-aware management ArgoCD model safely, then bootstrap/register staging and production.
+Next: migrate Gateway with management-specific LoadBalancer IP `192.168.15.195`, add management in-cluster split-horizon kube-dns patch, then bootstrap/register staging and production.
