@@ -592,9 +592,20 @@ Initial Gateway allocation:
 | `*.staging.nqlabs.network` | `nqlabs-staging` | `192.168.15.196` |
 | `*.production.nqlabs.network` | `nqlabs-production` | `192.168.15.197` |
 
-Current desktop-lab HAProxy forwards all HTTP(S) traffic to the single desktop-lab
-Gateway at `192.168.15.193`. During multi-cluster migration, change HAProxy from a
-single backend to SNI-based backends only after each target cluster Gateway is live.
+Current partial HAProxy cutover state:
+
+| Hostname | Backend Gateway |
+|----------|-----------------|
+| `argocd.platform.nqlabs.network` | `nqlabs-management` Gateway `192.168.15.195` |
+| all other HTTPS hostnames | desktop-lab Gateway `192.168.15.193` |
+
+HAProxy is HTTPS-only on `100.105.35.84:443`; port 80 is intentionally closed.
+The installed config is tracked at `clusters/desktop-lab/haproxy/haproxy.cfg`.
+Backup before the argocd-only cutover: `/etc/haproxy/haproxy.cfg.bak-20260620T021639Z`.
+
+Do not wildcard `*.platform.nqlabs.network` to management until Grafana,
+Prometheus, Alertmanager, Rollouts, Uptime Kuma, and any other platform tools are
+migrated to `nqlabs-management`.
 
 ### Phase I.4 — GitOps model
 

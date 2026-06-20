@@ -259,5 +259,14 @@ Initial fanout target:
 | `*.staging.nqlabs.network` | `nqlabs-staging` | staging Gateway IP |
 | `*.production.nqlabs.network` | `nqlabs-production` | production Gateway IP |
 
-Until the three-cluster topology exists, the current desktop-lab HAProxy forwards all
-HTTP(S) traffic to the single desktop-lab Gateway.
+Current partial cutover state during migration:
+
+| Hostname | Backend Gateway |
+|----------|-----------------|
+| `argocd.platform.nqlabs.network` | `nqlabs-management` Gateway `192.168.15.195` |
+| all other HTTPS hostnames | desktop-lab Gateway `192.168.15.193` |
+
+HAProxy is HTTPS-only on `100.105.35.84:443`; port 80 is intentionally closed.
+Move additional hostnames one at a time only after the corresponding service is live
+on the target cluster. Do not wildcard an entire zone before its services are
+migrated.

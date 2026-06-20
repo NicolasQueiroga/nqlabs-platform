@@ -74,4 +74,6 @@ Completed on desktop Proxmox:
 - `argocd-nqlabs-management-admin` — ArgoCD admin credential
 - `Service Account Auth Token: NQ Labs` — source token for ESO `onepassword-service-account-token`
 
-Next: decide how/when Proxmox HAProxy should route `*.platform.nqlabs.network` to management Gateway `192.168.15.195` instead of desktop-lab Gateway `192.168.15.193`, then migrate remaining platform tools.
+Current HAProxy cutover: `argocd.platform.nqlabs.network` routes to management Gateway `192.168.15.195`; all other HTTPS hostnames still route to desktop-lab Gateway `192.168.15.193`. HAProxy is HTTPS-only; port 80 is intentionally closed.
+
+Next: migrate remaining platform tools to management one at a time, then wildcard `*.platform.nqlabs.network` to management only after those tools are live.
