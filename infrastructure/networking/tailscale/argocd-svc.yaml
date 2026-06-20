@@ -1,8 +1,0 @@
-# REMOVED — ArgoCD is not exposed directly on Tailscale.
-#
-# ArgoCD is accessible via:
-#   https://argocd.platform.nqlabs.network
-# through the platform Gateway + Let's Encrypt cert + Tailscale subnet route.
-#
-# A separate Tailscale LoadBalancer Service for ArgoCD was redundant and
-# exposed the UI over plain HTTP (port 80 → 8080) without TLS.

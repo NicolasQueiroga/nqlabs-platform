@@ -1,9 +1,0 @@
-# REMOVED from GitOps render.
-#
-# Platform HTTPS ingress is now exposed through Proxmox HAProxy bound only to
-# tailscale0 (100.105.35.84:443/80), forwarding TCP passthrough to the Cilium
-# Gateway LB IP (192.168.15.193).
-#
-# Reason: Tailscale operator Service/ProxyGroup VIP path was not consistently
-# routable from tailnet clients in this environment, while HAProxy on Proxmox is
-# deterministic, boot-persistent, and still Tailscale-only.

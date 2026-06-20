@@ -1,4 +1,0 @@
-# REMOVED from GitOps render.
-#
-# The platform-gateway ProxyGroup experiment was replaced by Proxmox HAProxy
-# TCP passthrough bound to tailscale0 only. See platform-gateway-svc.yaml stub.

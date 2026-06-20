@@ -1,7 +1,0 @@
-# Compatibility wrapper/documentation.
-# Active patches used by desktop bootstrap:
-#   - machine-network-install.yaml
-#   - hostname.yaml
-#
-# Do not place generated machine config here. Generated files live under
-# clusters/desktop-lab/generated/ and are gitignored.
