@@ -35,6 +35,13 @@ spec:
       targetRevision: HEAD
       ref: values
 
+    # ExternalSecret that creates the operator-oauth secret the operator needs
+    # to authenticate to the tailnet. Included here so it is created in the
+    # tailscale namespace at the same time as the namespace itself.
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/security/external-secrets/secrets
+
   destination:
     server: https://kubernetes.default.svc
     namespace: tailscale
