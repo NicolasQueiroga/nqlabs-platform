@@ -10,6 +10,7 @@ Exposure model:
   preview  -> private reachability only, internal Gateway
 */ -}}
 {{- $top := . -}}
+{{- if not .Values.workloads }}
 {{- range $class := (list "internal" "public" "preview") }}
 {{- $r := index $top.Values.routes $class }}
 {{- if and $r $r.enabled }}
@@ -44,5 +45,6 @@ spec:
       backendRefs:
         - name: {{ include "nqlabs-service.fullname" $top }}
           port: {{ $top.Values.service.port }}
+{{- end }}
 {{- end }}
 {{- end }}

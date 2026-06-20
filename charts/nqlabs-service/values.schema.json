@@ -4,99 +4,224 @@
   "description": "Schema for NQLabs service environment descriptors and chart values.",
   "type": "object",
   "additionalProperties": true,
-  "required": ["image"],
+  "required": [
+    "image"
+  ],
   "properties": {
     "app": {
       "type": "object",
-      "properties": { "name": { "type": "string" } }
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
     },
     "environment": {
       "type": "object",
       "properties": {
-        "name": { "type": "string" },
-        "namespace": { "type": "string" }
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        }
       }
     },
-    "argocd": { "type": "object" },
-    "replicaCount": { "type": "integer", "minimum": 0 },
+    "argocd": {
+      "type": "object"
+    },
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 0
+    },
     "image": {
       "type": "object",
-      "required": ["repository"],
+      "required": [
+        "repository"
+      ],
       "properties": {
-        "repository": { "type": "string", "minLength": 1 },
-        "tag": { "type": ["string", "number"] },
-        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": [
+            "string",
+            "number"
+          ]
+        },
+        "pullPolicy": {
+          "type": "string",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ]
+        }
       }
     },
-    "imagePullSecrets": { "type": "array" },
+    "imagePullSecrets": {
+      "type": "array"
+    },
     "container": {
       "type": "object",
       "properties": {
-        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
-        "env": { "type": "array" }
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "env": {
+          "type": "array"
+        }
       }
     },
     "podSecurityContext": {
       "type": "object",
-      "properties": { "enabled": { "type": "boolean" } }
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
     },
     "securityContext": {
       "type": "object",
-      "properties": { "enabled": { "type": "boolean" } }
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
     },
-    "probes": { "type": "object" },
-    "resources": { "type": "object" },
+    "probes": {
+      "type": "object"
+    },
+    "resources": {
+      "type": "object"
+    },
     "autoscaling": {
       "type": "object",
       "properties": {
-        "enabled": { "type": "boolean" },
-        "minReplicas": { "type": "integer", "minimum": 1 },
-        "maxReplicas": { "type": "integer", "minimum": 1 },
-        "targetCPUUtilizationPercentage": { "type": ["integer", "null"] },
-        "targetMemoryUtilizationPercentage": { "type": ["integer", "null"] }
+        "enabled": {
+          "type": "boolean"
+        },
+        "minReplicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxReplicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "targetCPUUtilizationPercentage": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "targetMemoryUtilizationPercentage": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
       }
     },
     "pdb": {
       "type": "object",
       "properties": {
-        "enabled": { "type": "boolean" },
-        "minAvailable": { "type": ["integer", "string", "null"] },
-        "maxUnavailable": { "type": ["integer", "string", "null"] }
+        "enabled": {
+          "type": "boolean"
+        },
+        "minAvailable": {
+          "type": [
+            "integer",
+            "string",
+            "null"
+          ]
+        },
+        "maxUnavailable": {
+          "type": [
+            "integer",
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "metrics": {
       "type": "object",
-      "properties": { "enabled": { "type": "boolean" } }
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
     },
     "externalSecrets": {
       "type": "object",
       "properties": {
-        "enabled": { "type": "boolean" },
-        "data": { "type": "array" }
+        "enabled": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "array"
+        }
       }
     },
     "rollout": {
       "type": "object",
-      "properties": { "enabled": { "type": "boolean" } }
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
     },
     "service": {
       "type": "object",
       "properties": {
-        "type": { "type": "string" },
-        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+        "type": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
       }
     },
     "route": {
       "type": "object",
-      "properties": { "enabled": { "type": "boolean" } }
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
     },
-    "routes": { "type": "object" },
-    "resourceQuota": { "type": "object" },
-    "limitRange": { "type": "object" },
-    "rbac": { "type": "object" },
-    "ciliumNetworkPolicy": { "type": "object" },
-    "serviceAccount": { "type": "object" },
-    "podAnnotations": { "type": "object" },
-    "podLabels": { "type": "object" }
+    "routes": {
+      "type": "object"
+    },
+    "resourceQuota": {
+      "type": "object"
+    },
+    "limitRange": {
+      "type": "object"
+    },
+    "rbac": {
+      "type": "object"
+    },
+    "ciliumNetworkPolicy": {
+      "type": "object"
+    },
+    "serviceAccount": {
+      "type": "object"
+    },
+    "podAnnotations": {
+      "type": "object"
+    },
+    "podLabels": {
+      "type": "object"
+    },
+    "workloads": {
+      "type": "object"
+    }
   }
 }

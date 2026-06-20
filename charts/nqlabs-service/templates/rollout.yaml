@@ -1,4 +1,4 @@
-{{- if .Values.rollout.enabled -}}
+{{- if and (not .Values.workloads) .Values.rollout.enabled -}}
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:

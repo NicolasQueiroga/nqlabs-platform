@@ -223,3 +223,12 @@ routes:
     paths:
       - type: PathPrefix
         value: /
+
+# Multi-workload applications. When this map is non-empty, the chart renders one
+# Deployment/Rollout (+ Service/HPA/PDB/ServiceMonitor/routes) per entry and the
+# legacy single-workload values above are ignored. Empty = legacy single workload.
+# Example:
+#   workloads:
+#     api:    { kind: rollout, container: { port: 8080 }, routes: { internal: { enabled: true, host: api.staging.nqlabs.network } } }
+#     worker: { kind: deployment, command: [run, worker] }
+workloads: {}

@@ -1,0 +1,35 @@
+{{- /*
+Multi-workload mode. When `.Values.workloads` is a non-empty map, render one
+Deployment/Rollout (+ Service / HPA / PDB / ServiceMonitor / routes) per entry.
+When it is empty, the legacy single-workload templates render instead, so an
+existing simple service is unchanged.
+*/ -}}
+{{- if .Values.workloads }}
+{{- $root := . }}
+{{- range $name, $wl := .Values.workloads }}
+{{- $ctx := dict "root" $root "name" $name "wl" $wl }}
+---
+{{ include "nqlabs-service.wl.workload" $ctx }}
+{{- if dig "container" "port" 0 $wl }}
+{{- if dig "service" "enabled" true $wl }}
+---
+{{ include "nqlabs-service.wl.service" $ctx }}
+{{- end }}
+{{- end }}
+{{- if dig "autoscaling" "enabled" false $wl }}
+---
+{{ include "nqlabs-service.wl.hpa" $ctx }}
+{{- end }}
+{{- if dig "pdb" "enabled" false $wl }}
+---
+{{ include "nqlabs-service.wl.pdb" $ctx }}
+{{- end }}
+{{- if dig "metrics" "enabled" false $wl }}
+---
+{{ include "nqlabs-service.wl.servicemonitor" $ctx }}
+{{- end }}
+{{- if $wl.routes }}
+{{ include "nqlabs-service.wl.routes" $ctx }}
+{{- end }}
+{{- end }}
+{{- end }}

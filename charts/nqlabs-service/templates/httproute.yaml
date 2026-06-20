@@ -1,4 +1,4 @@
-{{- if .Values.route.enabled -}}
+{{- if and (not .Values.workloads) .Values.route.enabled -}}
 {{- if not .Values.route.host -}}
 {{- fail "route.host is required when route.enabled=true" -}}
 {{- end -}}
