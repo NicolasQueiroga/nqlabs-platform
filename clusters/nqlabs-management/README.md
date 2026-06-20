@@ -62,6 +62,9 @@ Completed on desktop Proxmox:
   - `platform-gateway` Programmed=True at LoadBalancer IP `192.168.15.195`
   - `nqlabs-wildcard` Certificate Ready from Let's Encrypt
   - ArgoCD HTTPRoute validated from Proxmox: HTTP 200 via SNI to `192.168.15.195`
+- In-cluster kube-dns split-horizon patch applied and stored in `clusters/nqlabs-management/bootstrap/coredns-nqlabs-stub.yaml`:
+  - `*.platform.nqlabs.network`, `*.staging.nqlabs.network`, and `*.production.nqlabs.network` resolve to `192.168.15.195` for pods.
+  - This preserves automatic scale; no per-app hostAliases or DNS record lists.
 - Legacy desktop-lab root remains intentionally unapplied to management; additional platform apps should be added through cluster-local wrappers or cluster-aware shared definitions.
 
 1Password items:
@@ -71,4 +74,4 @@ Completed on desktop Proxmox:
 - `argocd-nqlabs-management-admin` — ArgoCD admin credential
 - `Service Account Auth Token: NQ Labs` — source token for ESO `onepassword-service-account-token`
 
-Next: add management in-cluster split-horizon kube-dns patch, then decide how/when Proxmox HAProxy should route platform hostnames to management instead of desktop-lab.
+Next: decide how/when Proxmox HAProxy should route `*.platform.nqlabs.network` to management Gateway `192.168.15.195` instead of desktop-lab Gateway `192.168.15.193`, then migrate remaining platform tools.

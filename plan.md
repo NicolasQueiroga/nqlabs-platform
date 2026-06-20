@@ -419,6 +419,7 @@ workstation; the desktop becomes the always-on infrastructure host.
       - [x] Install cert-manager on management and validate Cloudflare ExternalSecret + ClusterIssuers
       - [x] Install management DNS stack and validate CoreDNS LB `192.168.15.194`
       - [x] Install management Gateway and validate HTTPS ArgoCD route on LB `192.168.15.195`
+      - [x] Apply management in-cluster split-horizon DNS patch for automatic wildcard pod resolution
       - [ ] Expand cluster-aware management ArgoCD app model beyond safe bootstrap apps
       - [ ] Configure management ArgoCD to manage staging/production clusters
 - [x] Re-run full ArgoCD app-of-apps bootstrap on desktop lab
