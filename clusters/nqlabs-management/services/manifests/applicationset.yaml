@@ -1,0 +1,68 @@
+# Service factory ApplicationSet (descriptor-driven, cluster-aware).
+#
+# A single ApplicationSet generates one ArgoCD Application per
+# apps/<service>/environments/<env>.yaml descriptor. Each descriptor declares:
+#   argocd.project           -> services-staging | services-production
+#   argocd.destination.name  -> nqlabs-staging | nqlabs-production  (ArgoCD cluster name)
+#   environment.namespace    -> the service namespace in that cluster (e.g. demo)
+#
+# Destinations are by CLUSTER NAME, not server IP, so the clusters can change
+# address without editing the platform. The clusters must be registered in the
+# management ArgoCD with those exact names. See
+# docs/runbooks/remote-cluster-service-factory.md.
+#
+# Automatic scale: adding a new service is just adding descriptor files — no
+# central list to edit here.
+
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: services
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+  generators:
+    - git:
+        repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+        revision: HEAD
+        files:
+          - path: apps/*/environments/*.yaml
+  template:
+    metadata:
+      name: '{{ .app.name }}-{{ .environment.name }}'
+      labels:
+        nqlabs.network/service: '{{ .app.name }}'
+        nqlabs.network/environment: '{{ .environment.name }}'
+    spec:
+      project: '{{ .argocd.project }}'
+      sources:
+        - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+          targetRevision: HEAD
+          path: charts/nqlabs-service
+          helm:
+            releaseName: '{{ .app.name }}'
+            valueFiles:
+              - $values/{{ .argocd.valueFile }}
+        - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+          targetRevision: HEAD
+          ref: values
+      destination:
+        name: '{{ .argocd.destination.name }}'
+        namespace: '{{ .environment.namespace }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        managedNamespaceMetadata:
+          labels:
+            nqlabs.network/service: '{{ .app.name }}'
+            nqlabs.network/environment: '{{ .environment.name }}'
+            pod-security.kubernetes.io/enforce: baseline
+            pod-security.kubernetes.io/enforce-version: latest
+        syncOptions:
+          - ServerSideApply=true
+          - CreateNamespace=true

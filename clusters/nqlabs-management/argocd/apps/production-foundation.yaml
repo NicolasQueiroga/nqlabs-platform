@@ -24,7 +24,7 @@ spec:
     targetRevision: HEAD
     path: clusters/nqlabs-production/cilium
   destination:
-    server: https://192.168.15.33:6443
+    name: nqlabs-production
     namespace: kube-system
   syncPolicy:
     automated:
@@ -55,7 +55,7 @@ spec:
       targetRevision: HEAD
       ref: values
   destination:
-    server: https://192.168.15.33:6443
+    name: nqlabs-production
     namespace: local-path-storage
   syncPolicy:
     automated:
@@ -92,7 +92,7 @@ spec:
       targetRevision: HEAD
       ref: values
   destination:
-    server: https://192.168.15.33:6443
+    name: nqlabs-production
     namespace: external-secrets
   syncPolicy:
     automated:
@@ -120,7 +120,7 @@ spec:
     directory:
       include: "cluster-secret-store.yaml"
   destination:
-    server: https://192.168.15.33:6443
+    name: nqlabs-production
     namespace: external-secrets
   syncPolicy:
     automated:
@@ -158,7 +158,7 @@ spec:
       targetRevision: HEAD
       ref: values
   destination:
-    server: https://192.168.15.33:6443
+    name: nqlabs-production
     namespace: argo-rollouts
   syncPolicy:
     automated:
@@ -198,7 +198,7 @@ spec:
       targetRevision: HEAD
       ref: values
   destination:
-    server: https://192.168.15.33:6443
+    name: nqlabs-production
     namespace: cert-manager
   syncPolicy:
     automated:
@@ -230,7 +230,7 @@ spec:
     directory:
       include: "{cluster-issuers.yaml,externalsecrets.yaml}"
   destination:
-    server: https://192.168.15.33:6443
+    name: nqlabs-production
     namespace: cert-manager
   syncPolicy:
     automated:
@@ -256,7 +256,7 @@ spec:
     targetRevision: HEAD
     path: clusters/nqlabs-production/gateway
   destination:
-    server: https://192.168.15.33:6443
+    name: nqlabs-production
     namespace: platform
   ignoreDifferences:
     - kind: Namespace

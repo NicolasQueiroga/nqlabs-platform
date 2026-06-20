@@ -49,9 +49,9 @@ spec:
       namespace: platform
     - server: https://kubernetes.default.svc
       namespace: tailscale
-    - server: https://192.168.15.32:6443
+    - name: nqlabs-staging
       namespace: "*"
-    - server: https://192.168.15.33:6443
+    - name: nqlabs-production
       namespace: "*"
 
   # Platform apps intentionally manage cluster-scoped primitives: CRDs,
@@ -81,9 +81,12 @@ spec:
   sourceRepos:
     - https://github.com/NicolasQueiroga/nqlabs-platform.git
 
+  # Cluster-aware by NAME (not server IP): staging services run on the remote
+  # cluster registered in management ArgoCD as "nqlabs-staging". The cluster is
+  # the environment boundary, so namespaces use the plain service name.
   destinations:
-    - server: https://192.168.15.32:6443
-      namespace: "*-staging"
+    - name: nqlabs-staging
+      namespace: "*"
 
   # Namespace creation is cluster-scoped; required for CreateNamespace=true in
   # generated service Applications.
@@ -158,9 +161,12 @@ spec:
   sourceRepos:
     - https://github.com/NicolasQueiroga/nqlabs-platform.git
 
+  # Cluster-aware by NAME (not server IP): production services run on the remote
+  # cluster registered in management ArgoCD as "nqlabs-production". The cluster is
+  # the environment boundary, so namespaces use the plain service name.
   destinations:
-    - server: https://192.168.15.33:6443
-      namespace: "*-production"
+    - name: nqlabs-production
+      namespace: "*"
 
   # Namespace creation is cluster-scoped; required for CreateNamespace=true in
   # generated service Applications.
