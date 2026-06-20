@@ -1,0 +1,29 @@
+# Cilium LB IPAM for nqlabs-staging.
+#
+# Staging gets its own non-overlapping pair of LAN LoadBalancer IPs:
+#   192.168.15.196-197
+#
+# Planned usage:
+#   192.168.15.196  staging Gateway
+#   192.168.15.197  reserved / future LB service
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: staging-pool
+spec:
+  blocks:
+    - start: "192.168.15.196"
+      stop: "192.168.15.197"
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: staging-l2-policy
+spec:
+  serviceSelector:
+    matchLabels: {}
+  nodeSelector:
+    matchLabels: {}
+  interfaces:
+    - ens18
+  loadBalancerIPs: true

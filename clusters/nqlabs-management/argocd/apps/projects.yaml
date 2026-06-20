@@ -49,6 +49,10 @@ spec:
       namespace: platform
     - server: https://kubernetes.default.svc
       namespace: tailscale
+    - server: https://192.168.15.32:6443
+      namespace: "*"
+    - server: https://192.168.15.33:6443
+      namespace: "*"
 
   # Platform apps intentionally manage cluster-scoped primitives: CRDs,
   # ClusterRoles, ClusterIssuers, GatewayClasses, Cilium resources, etc.
