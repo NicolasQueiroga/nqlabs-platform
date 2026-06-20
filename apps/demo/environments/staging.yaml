@@ -3,11 +3,15 @@ app:
 
 environment:
   name: staging
-  namespace: demo-staging
+  # Cluster is the environment boundary, so the namespace is the plain service
+  # name. This namespace lives in the remote nqlabs-staging cluster.
+  namespace: demo
 
 argocd:
   project: services-staging
   valueFile: apps/demo/environments/staging.yaml
+  destination:
+    name: nqlabs-staging
 
 replicaCount: 1
 

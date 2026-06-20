@@ -3,11 +3,15 @@ app:
 
 environment:
   name: production
-  namespace: demo-production
+  # Cluster is the environment boundary, so the namespace is the plain service
+  # name. This namespace lives in the remote nqlabs-production cluster.
+  namespace: demo
 
 argocd:
   project: services-production
   valueFile: apps/demo/environments/production.yaml
+  destination:
+    name: nqlabs-production
 
 replicaCount: 1
 
