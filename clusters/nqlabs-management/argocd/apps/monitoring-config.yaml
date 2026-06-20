@@ -1,0 +1,39 @@
+# monitoring-config for nqlabs-management.
+#
+# Deploys: AlertmanagerConfig (Discord), HTTPRoutes for platform tools,
+#          Grafana datasources, blackbox probe rules, Discord ExternalSecret.
+#
+# Depends on: kube-prometheus-stack (AlertmanagerConfig CRD must exist).
+# Depends on: external-secrets (nqlabs-1password ClusterSecretStore for webhook).
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-config
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: letta/multi-cluster-foundation-f894476f
+    path: infrastructure/monitoring
+    directory:
+      include: "{externalsecrets.yaml,routes.yaml,datasources.yaml,blackbox-probes.yaml,blackbox-rules.yaml,alertmanager-discord.yaml}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/enforce-version: latest
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

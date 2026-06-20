@@ -1,0 +1,44 @@
+# blackbox-exporter for nqlabs-management.
+#
+# Probes platform/staging/production endpoint URLs.
+# In-cluster split-horizon DNS resolves probe targets to the management Gateway
+# (192.168.15.195) automatically — no per-probe hostAliases needed.
+#
+# Depends on: kube-prometheus-stack (ServiceMonitor CRD must exist).
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: blackbox-exporter
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: prometheus-blackbox-exporter
+      targetRevision: "11.12.0"
+      helm:
+        releaseName: blackbox-exporter
+        valueFiles:
+          - $values/infrastructure/monitoring/blackbox/values.yaml
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: letta/multi-cluster-foundation-f894476f
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/enforce-version: latest
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

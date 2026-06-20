@@ -1,0 +1,43 @@
+# Argo Rollouts for nqlabs-management.
+#
+# Progressive delivery controller + read-only dashboard.
+# Dashboard exposed at rollouts.platform.nqlabs.network via Gateway HTTPRoute.
+#
+# Depends on: kube-prometheus-stack (ServiceMonitor CRD must exist).
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-rollouts
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://argoproj.github.io/argo-helm
+      chart: argo-rollouts
+      targetRevision: "2.41.0"
+      helm:
+        releaseName: argo-rollouts
+        valueFiles:
+          - $values/infrastructure/delivery/argo-rollouts/values.yaml
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: letta/multi-cluster-foundation-f894476f
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argo-rollouts
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

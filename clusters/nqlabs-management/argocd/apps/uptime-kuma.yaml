@@ -1,0 +1,36 @@
+# Uptime Kuma for nqlabs-management.
+#
+# Status page and secondary endpoint probe vantage point.
+# HTTPRoute (uptime.platform.nqlabs.network) created by monitoring-config.
+# No hostAliases needed — in-cluster split-horizon DNS resolves platform
+# hostnames to the management Gateway automatically.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: uptime-kuma
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: letta/multi-cluster-foundation-f894476f
+    path: infrastructure/monitoring/uptime-kuma
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/enforce-version: latest
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

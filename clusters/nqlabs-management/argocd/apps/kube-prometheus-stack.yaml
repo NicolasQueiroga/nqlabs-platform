@@ -1,0 +1,50 @@
+# kube-prometheus-stack for nqlabs-management.
+#
+# Installs: Prometheus, Grafana, Alertmanager, kube-state-metrics,
+#           node-exporter, and all monitoring CRDs (ServiceMonitor, etc.)
+#
+# Alertmanager runs as root (same as Prometheus) due to Talos local-path
+# subPath kernel restriction. See values.yaml for securityContext comment.
+#
+# Monitoring namespace enforces 'privileged' pod security — this is
+# intentional and required for Prometheus and Alertmanager on this setup.
+#
+# Values from the feature branch so the alertmanager securityContext fix
+# and the no-hostAliases split-horizon DNS fix are both applied.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: "86.2.3"
+      helm:
+        releaseName: kube-prometheus-stack
+        valueFiles:
+          - $values/infrastructure/monitoring/kube-prometheus-stack/values.yaml
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: letta/multi-cluster-foundation-f894476f
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/enforce-version: latest
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
