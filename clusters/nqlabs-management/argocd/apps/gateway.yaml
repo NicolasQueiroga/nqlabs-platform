@@ -1,0 +1,51 @@
+# Gateway stack for nqlabs-management.
+#
+# Uses the shared Gateway API manifests because they do not hardcode desktop-lab
+# IPs. Cilium LB IPAM assigns the next free management LB IP; after CoreDNS uses
+# 192.168.15.194, the platform Gateway should receive 192.168.15.195.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gateway
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: infrastructure/networking/gateway
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: platform
+  ignoreDifferences:
+    - kind: Namespace
+      jsonPointers:
+        - /spec/finalizers
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      jsonPointers:
+        - /spec/listeners/0/tls/certificateRefs/0/group
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      jsonPointers:
+        - /spec/parentRefs/0/group
+        - /spec/parentRefs/0/kind
+        - /spec/rules/0/backendRefs/0/group
+        - /spec/rules/0/backendRefs/0/kind
+        - /spec/rules/0/backendRefs/0/weight
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
