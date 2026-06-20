@@ -98,10 +98,10 @@ metrics:
   interval: 30s
 
 # External Secrets Operator integration. Materializes a Kubernetes Secret from the
-# platform secret store (1Password-backed ClusterSecretStore by default).
+# platform secret store. Defaults to the NQLabs 1Password-backed ClusterSecretStore.
 externalSecrets:
   enabled: false
-  store: onepassword
+  store: nqlabs-1password
   storeKind: ClusterSecretStore
   refreshInterval: 1h
   targetName: ""
