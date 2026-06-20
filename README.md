@@ -100,26 +100,39 @@ Detailed structure documentation: [`docs/repo-structure.md`](./docs/repo-structu
 
 ```
 nqlabs-platform/
-├── .github/workflows/     # CI/release automation
-├── clusters/              # Per-cluster bootstrap (Talos configs, ArgoCD install)
-│   └── lab/               # Local development cluster (laptop/VM)
-├── infrastructure/        # Platform services managed by ArgoCD
-│   ├── networking/        # Cilium, Gateway API, external-dns
-│   ├── storage/           # local-path now, Rook/Ceph distributed storage
-│   ├── monitoring/        # Prometheus, Grafana, Alertmanager, Loki/Promtail
-│   ├── security/          # cert-manager, External Secrets, Kyverno, Falco, Harbor
-│   └── identity/          # Authentik/SSO, OpenBao, workload identity
-├── platform/
-│   └── argocd/            # ArgoCD itself — app-of-apps root
-├── apps/                  # Service environment contracts consumed by ApplicationSet
-├── services/              # Build contexts for first-party service images
-├── terraform/             # Service/product onboarding definitions and modules
+├── .github/workflows/        # platform CI (validate) + reusable preview workflows
+├── clusters/
+│   ├── nqlabs-management/     # management cluster: ArgoCD app-of-apps + service factory  (CANONICAL)
+│   ├── nqlabs-staging/        # staging cluster: Talos patches + foundation
+│   └── nqlabs-production/     # production cluster: Talos patches + foundation
+├── infrastructure/           # platform services managed by ArgoCD
+│   ├── networking/           # Cilium, Gateway API, Tailscale operator/connector/coredns
+│   ├── storage/              # local-path now, Rook/Ceph later
+│   ├── monitoring/           # Prometheus, Grafana, Alertmanager, Loki/Promtail
+│   ├── security/             # cert-manager, External Secrets + 1Password ClusterSecretStore
+│   └── identity/             # future SSO / workload identity
+├── charts/nqlabs-service/    # reusable service chart (single- or multi-workload)
+├── apps/<app>/               # deployment contracts: environments/*.yaml + previews/*.yaml
+├── terraform/                # optional service scaffolding (writes descriptors)
 ├── docs/
-│   ├── decisions/         # Architecture Decision Records (ADRs)
-│   └── runbooks/          # Operational procedures
-├── guides/                # Educational curriculum for understanding the platform
-└── scripts/               # Bootstrap and utility scripts
+│   ├── architecture/         # service-factory architecture
+│   ├── decisions/            # Architecture Decision Records (ADRs)
+│   └── runbooks/             # operational procedures
+├── guides/                   # educational curriculum
+└── scripts/                  # bootstrap and utility scripts
 ```
+
+## Service delivery (the service factory)
+
+The platform deploys applications through a descriptor-driven, multi-cluster GitOps
+service factory: management ArgoCD generates one Application per
+`apps/<app>/environments/*.yaml` and deploys it to the named environment cluster.
+Merges deploy staging; releases promote production; PR comments create previews.
+
+- Architecture: [`docs/architecture/service-factory.md`](./docs/architecture/service-factory.md)
+- Add a new app (plug-and-play): [`docs/runbooks/onboarding-a-new-application.md`](./docs/runbooks/onboarding-a-new-application.md)
+- Preview environments: [`docs/runbooks/preview-environments.md`](./docs/runbooks/preview-environments.md)
+- Cluster access / recovery / edge: [`docs/runbooks/cluster-and-edge-operations.md`](./docs/runbooks/cluster-and-edge-operations.md)
 
 ## Learning Track
 
@@ -148,7 +161,7 @@ See `.gitignore` for the full exclusion list.
 | Phase | Target | Status |
 |-------|--------|--------|
 | 0 — Foundation | Single-node Talos on Mac laptop (UTM/ARM64) | 🔧 In progress — core platform operational, readiness backlog remains |
-| 0.7 — Fixed-IP Desktop Full Architecture | Ryzen 9 7950X / 124GB RAM Proxmox/Talos VM host; active Proxmox VM storage is currently 130GB thin LVM | 🔧 Active — desktop-lab live; full three-cluster architecture next |
+| 0.7 — Fixed-IP Desktop Full Architecture | Ryzen 9 7950X / 124GB RAM Proxmox/Talos VM host | ✅ Three-cluster architecture live — `nqlabs-management` (VM131), `nqlabs-staging` (VM132), `nqlabs-production` (VM133); service factory + previews operational. (Legacy desktop-lab VM 130 removed.) |
 | 1 — Hardware Node Expansion | Dell NUC-class node pool | ⏳ Add/replace nodes in the desktop-proven architecture; no new platform capabilities are gated here |
 | 2 — Operations/Security Hardening | Same architecture, starting on desktop | ⏳ Buildable on desktop after multi-cluster baseline; not NUC-gated |
 
