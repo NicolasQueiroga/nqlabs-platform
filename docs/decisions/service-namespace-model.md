@@ -1,32 +1,37 @@
 # Service Namespace Model
 
-Status: selected for the Mac lab and documented as the stepping stone to the
-multi-cluster target.
+Status: **ACTIVE — multi-cluster model in production.** The three-cluster topology
+(`nqlabs-management` / `nqlabs-staging` / `nqlabs-production`) is live, so the
+cluster is the environment boundary and services use the plain service name as the
+namespace.
 
 ## Decision
 
-The current single-cluster lab uses one namespace per service/environment:
+Each environment cluster runs the service in a namespace named after the service:
 
 ```text
-<service>-staging
-<service>-production
+cluster/nqlabs-staging    namespace/<service>
+cluster/nqlabs-production namespace/<service>
 ```
 
 Examples:
 
 ```text
-demo-staging
-demo-production
-payment-staging
-payment-production
+nqlabs-staging/demo
+nqlabs-production/demo
+nqlabs-staging/payment
+nqlabs-production/payment
 ```
 
-This is the single-cluster approximation of the target multi-cluster model:
+The fully qualified environment boundary is **cluster + namespace**; the same
+namespace name is safe across environments because the clusters are separate
+control planes. Service descriptors set `argocd.destination.name`
+(`nqlabs-staging` / `nqlabs-production`) and `environment.namespace: <service>`.
 
-```text
-nqlabs-staging/<service>
-nqlabs-production/<service>
-```
+> Historical: the earlier single-cluster lab used `<service>-staging` /
+> `<service>-production` in one cluster. That pattern is retired now that staging
+> and production are separate clusters (only previews still use a suffix:
+> `<service>-pr-<n>` on the staging cluster).
 
 Staging and production workloads must never share a namespace or environment boundary.
 
@@ -139,10 +144,10 @@ namespace/platform
   Gateway/platform-gateway
 ```
 
-Service routes live with their service:
+Service routes live with their service (in the environment cluster):
 
 ```text
-namespace/demo-staging
+cluster/nqlabs-staging  namespace/demo
   HTTPRoute/demo
   Service/demo
   Rollout/demo
@@ -152,10 +157,11 @@ Traffic flow:
 
 ```text
 client
-  → platform/platform-gateway
-  → demo-staging/HTTPRoute demo
-  → demo-staging/Service demo
-  → demo-staging/Pod demo
+  → HAProxy SNI edge (*.staging → staging gateway)
+  → platform/platform-gateway (staging cluster)
+  → demo/HTTPRoute demo
+  → demo/Service demo
+  → demo/Pod demo
 ```
 
 The Gateway is configured with:
@@ -200,10 +206,10 @@ deny arbitrary egress
 deny unrelated namespace traffic
 ```
 
-## Future multi-cluster model
+## Multi-cluster model (active)
 
-When `nqlabs-staging` and `nqlabs-production` are separate clusters, the service
-namespace can use the same name in both clusters:
+`nqlabs-staging` and `nqlabs-production` are separate clusters, so the service
+namespace uses the same name in both clusters:
 
 ```text
 cluster/nqlabs-staging    namespace/payment

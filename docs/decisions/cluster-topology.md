@@ -1,22 +1,21 @@
 # Cluster Topology
 
-Status: target architecture selected.
+Status: **LIVE** — the three-cluster model runs as Talos VMs on the Proxmox desktop.
 
 ## Decision
 
-NQLabs targets a three-cluster model:
+NQLabs runs a three-cluster model:
 
 ```text
-nqlabs-management
-nqlabs-staging
-nqlabs-production
+nqlabs-management   # VM131 192.168.15.31 — ArgoCD app-of-apps + service factory
+nqlabs-staging      # VM132 192.168.15.32 — staging workloads (+ previews)
+nqlabs-production   # VM133 192.168.15.33 — production workloads
 ```
 
-The Mac laptop lab remains a single-cluster approximation. The fixed-IP desktop lab
-is where the full architecture is built first: it should first prove one desktop
-Talos cluster, then run the three-cluster model as VMs. NUCs later add bare-metal
-nodes/capacity to that same model or replace VM nodes after validation; they do not
-unlock a separate architecture.
+These are live Talos VM clusters on the fixed-IP desktop. The earlier single-node
+labs (Mac/UTM and the desktop-lab VM 130) were stepping stones and have been
+retired. NUCs later add bare-metal nodes/capacity to this same model or replace VM
+nodes after validation; they do not unlock a separate architecture.
 
 ## What a cluster means
 
