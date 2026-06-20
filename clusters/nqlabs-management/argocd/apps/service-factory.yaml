@@ -1,0 +1,33 @@
+# Service factory for nqlabs-management.
+#
+# Management ArgoCD owns multi-cluster service deployment. This wrapper points
+# at the management-specific ApplicationSets which fan out staging services to
+# the staging cluster and production services to the production cluster.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: service-factory
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # Run after the remote platform substrate is healthy (gateway, ESO,
+    # cert-manager, argo-rollouts, etc.) so generated service apps do not race
+    # missing CRDs/controllers on staging/production.
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: clusters/nqlabs-management/services/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

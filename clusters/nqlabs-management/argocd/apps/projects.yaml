@@ -82,7 +82,7 @@ spec:
     - https://github.com/NicolasQueiroga/nqlabs-platform.git
 
   destinations:
-    - server: https://kubernetes.default.svc
+    - server: https://192.168.15.32:6443
       namespace: "*-staging"
 
   # Namespace creation is cluster-scoped; required for CreateNamespace=true in
@@ -159,7 +159,7 @@ spec:
     - https://github.com/NicolasQueiroga/nqlabs-platform.git
 
   destinations:
-    - server: https://kubernetes.default.svc
+    - server: https://192.168.15.33:6443
       namespace: "*-production"
 
   # Namespace creation is cluster-scoped; required for CreateNamespace=true in
