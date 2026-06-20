@@ -1,0 +1,52 @@
+# Tailscale Operator — cluster access layer for nqlabs-management
+#
+# Deploys the Tailscale Kubernetes operator so the cluster can expose services
+# and connectors to the tailnet (hen-exponential.ts.net) without public IPs.
+#
+# The operator authenticates using the operator-oauth secret, which is created
+# automatically by ESO (ExternalSecret in infrastructure/security/external-secrets/secrets/).
+# Once the tailscale namespace is created by this app, the external-secrets-config
+# self-heal will apply the ExternalSecret and ESO will materialise the secret.
+#
+# sync-wave 2: runs after external-secrets (wave 0) and external-secrets-config
+# (wave 1) so the ESO webhook is ready.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tailscale-operator
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: platform
+
+  sources:
+    - repoURL: https://pkgs.tailscale.com/helmcharts
+      chart: tailscale-operator
+      targetRevision: "1.98.4"
+      helm:
+        valueFiles:
+          - $values/infrastructure/networking/tailscale/values.yaml
+
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tailscale
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/enforce-version: latest
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

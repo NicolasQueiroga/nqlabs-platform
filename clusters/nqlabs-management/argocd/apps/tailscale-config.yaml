@@ -1,0 +1,48 @@
+# Tailscale Config — Connector and Service proxies for nqlabs-management
+#
+# Manages the Tailscale-specific Kubernetes resources:
+#   - Connector (subnet router) — advertises 192.168.15.0/24 to the tailnet so
+#     all tailnet devices can reach cluster LoadBalancer IPs directly
+#   - coredns-tailscale Service — exposes CoreDNS on Tailscale for split DNS
+#     (*.nqlabs.network resolves through this device on the tailnet)
+#
+# Platform HTTPS ingress (*.platform.nqlabs.network) is handled by HAProxy on
+# the Proxmox host bound to tailscale0 (100.105.35.84), forwarding TCP
+# passthrough to the Cilium Gateway LB IP. No Tailscale Service/ProxyGroup
+# for the gateway is needed.
+#
+# sync-wave 3: runs after tailscale-operator (wave 2) so the Connector CRD
+# (tailscale.com/v1alpha1) exists before we apply a Connector resource.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tailscale-config
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: platform
+
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: infrastructure/networking/tailscale
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tailscale
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/enforce-version: latest
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
