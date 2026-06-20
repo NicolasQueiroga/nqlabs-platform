@@ -212,9 +212,7 @@ spec:
   source:
     repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
     targetRevision: HEAD
-    path: infrastructure/networking/gateway
-    directory:
-      include: "platform-gateway.yaml"
+    path: clusters/nqlabs-staging/gateway
   destination:
     server: https://192.168.15.32:6443
     namespace: platform

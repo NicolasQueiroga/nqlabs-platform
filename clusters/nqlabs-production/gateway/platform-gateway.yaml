@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: nqlabs-wildcard
+  namespace: platform
+spec:
+  secretName: nqlabs-wildcard-tls
+  duration: 2160h
+  renewBefore: 360h
+  commonName: "*.production.nqlabs.network"
+  dnsNames:
+    - "*.production.nqlabs.network"
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: platform-gateway
+  namespace: platform
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  gatewayClassName: cilium
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: nqlabs-wildcard-tls
+            kind: Secret
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
