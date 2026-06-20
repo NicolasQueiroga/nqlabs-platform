@@ -1,0 +1,48 @@
+{{- /*
+Structured route exposure: internal (.network, private), public (.io, public edge),
+and preview (.network, private). Each class is opt-in (enabled=false by default) and
+renders its own HTTPRoute named <fullname>-<class>. This is additive and coexists
+with the legacy single `route` value used by simple services.
+
+Exposure model:
+  internal -> private reachability, publicly-trusted DNS-01 TLS, internal Gateway
+  public   -> public reachability, requires a public edge, public Gateway, explicit paths
+  preview  -> private reachability only, internal Gateway
+*/ -}}
+{{- $top := . -}}
+{{- range $class := (list "internal" "public" "preview") }}
+{{- $r := index $top.Values.routes $class }}
+{{- if and $r $r.enabled }}
+{{- if not $r.host }}{{- fail (printf "routes.%s.host is required when routes.%s.enabled=true" $class $class) }}{{- end }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "nqlabs-service.fullname" $top }}-{{ $class }}
+  labels:
+    {{- include "nqlabs-service.labels" $top | nindent 4 }}
+    nqlabs.network/route-class: {{ $class }}
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: {{ $r.host | quote }}
+    {{- with $r.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  parentRefs:
+    - name: {{ $r.gateway.name }}
+      namespace: {{ $r.gateway.namespace }}
+      sectionName: {{ $r.gateway.sectionName }}
+  hostnames:
+    - {{ $r.host | quote }}
+  rules:
+    - matches:
+        {{- range $r.paths }}
+        - path:
+            type: {{ .type }}
+            value: {{ .value | quote }}
+        {{- end }}
+      backendRefs:
+        - name: {{ include "nqlabs-service.fullname" $top }}
+          port: {{ $top.Values.service.port }}
+{{- end }}
+{{- end }}

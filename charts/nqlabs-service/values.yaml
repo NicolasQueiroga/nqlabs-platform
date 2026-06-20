@@ -29,8 +29,42 @@ serviceAccount:
 podAnnotations: {}
 podLabels: {}
 
-podSecurityContext: {}
-securityContext: {}
+# Secure by default. New services inherit a hardened pod/container context.
+# A workload that genuinely needs to relax this (e.g. a legacy image that writes
+# to its root filesystem or binds a privileged port) sets `enabled: false` and,
+# if needed, provides its own relaxed values in the environment descriptor.
+podSecurityContext:
+  enabled: true
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  enabled: true
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Container HTTP probes. Disabled by default so simple services without a health
+# endpoint are unaffected. Enable per service once the app exposes a health path.
+probes:
+  readiness:
+    enabled: false
+    path: /healthz
+    port: http
+    timing: {}
+  liveness:
+    enabled: false
+    path: /healthz
+    port: http
+    timing: {}
+  startup:
+    enabled: false
+    path: /healthz
+    port: http
+    timing: {}
 
 resources:
   requests:
@@ -38,6 +72,46 @@ resources:
     memory: 32Mi
   limits:
     memory: 128Mi
+
+# Horizontal Pod Autoscaler. When enabled, the workload's replicas field is left
+# unmanaged by this chart so the HPA owns scaling. Targets the Rollout when
+# rollout.enabled, otherwise the Deployment.
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 75
+  targetMemoryUtilizationPercentage: null
+
+# Pod Disruption Budget. Set exactly one of minAvailable / maxUnavailable.
+pdb:
+  enabled: false
+  minAvailable: 1
+  maxUnavailable: null
+
+# Prometheus scraping via a ServiceMonitor (requires the Prometheus Operator CRDs
+# on the target cluster). Scrapes the named Service port.
+metrics:
+  enabled: false
+  path: /metrics
+  port: http
+  interval: 30s
+
+# External Secrets Operator integration. Materializes a Kubernetes Secret from the
+# platform secret store (1Password-backed ClusterSecretStore by default).
+externalSecrets:
+  enabled: false
+  store: onepassword
+  storeKind: ClusterSecretStore
+  refreshInterval: 1h
+  targetName: ""
+  data: []
+  # Example:
+  # data:
+  #   - secretKey: DATABASE_URL
+  #     remoteRef:
+  #       key: demo/staging/database-url
+  #       property: ""
 
 # Namespace-scoped guardrails. The Mac lab uses dedicated service-environment
 # namespaces such as <service>-staging or <service>-production so these apply to
@@ -96,6 +170,8 @@ service:
   type: ClusterIP
   port: 80
 
+# Legacy single route. Kept for simple services. Prefer the structured `routes`
+# block below for new applications that distinguish internal vs public exposure.
 route:
   enabled: false
   host: ""
@@ -107,3 +183,43 @@ route:
   path:
     type: PathPrefix
     value: /
+
+# Structured exposure (recommended for new services). Each class is opt-in.
+#   internal -> private *.nqlabs.network, internal Gateway, DNS-01 trusted TLS
+#   public   -> public *.nqlabs.io, public Gateway/edge, EXPLICIT paths only
+#   preview  -> private *.nqlabs.network only
+# Public exposure must declare explicit paths and should require review before
+# enabling in production. A routine image update must never add public exposure.
+routes:
+  internal:
+    enabled: false
+    host: ""
+    gateway:
+      name: platform-gateway
+      namespace: platform
+      sectionName: https
+    annotations: {}
+    paths:
+      - type: PathPrefix
+        value: /
+  public:
+    enabled: false
+    host: ""
+    gateway:
+      name: platform-gateway
+      namespace: platform
+      sectionName: https
+    annotations: {}
+    # No default path: public exposure must declare explicit, reviewed paths.
+    paths: []
+  preview:
+    enabled: false
+    host: ""
+    gateway:
+      name: platform-gateway
+      namespace: platform
+      sectionName: https
+    annotations: {}
+    paths:
+      - type: PathPrefix
+        value: /

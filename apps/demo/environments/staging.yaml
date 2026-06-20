@@ -19,6 +19,14 @@ image:
 container:
   port: 80
 
+# The demo image is an nginx server on :80 (writable root fs, privileged port),
+# so it opts out of the chart's hardened security defaults. Real services should
+# keep the secure defaults and listen on a non-privileged port.
+podSecurityContext:
+  enabled: false
+securityContext:
+  enabled: false
+
 rollout:
   enabled: true
   strategy:

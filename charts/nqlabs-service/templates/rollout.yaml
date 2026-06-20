@@ -6,7 +6,9 @@ metadata:
   labels:
     {{- include "nqlabs-service.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   strategy:
     canary:
       {{- toYaml .Values.rollout.strategy.canary | nindent 6 }}
@@ -30,9 +32,9 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.podSecurityContext }}
+      {{- if .Values.podSecurityContext.enabled }}
       securityContext:
-        {{- toYaml . | nindent 8 }}
+        {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
       {{- end }}
       containers:
         - name: {{ include "nqlabs-service.name" . }}
@@ -46,9 +48,13 @@ spec:
           env:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.securityContext }}
+          {{- if .Values.securityContext.enabled }}
           securityContext:
-            {{- toYaml . | nindent 12 }}
+            {{- omit .Values.securityContext "enabled" | toYaml | nindent 12 }}
+          {{- end }}
+          {{- $probes := include "nqlabs-service.probes" . }}
+          {{- if $probes }}
+          {{- $probes | nindent 10 }}
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

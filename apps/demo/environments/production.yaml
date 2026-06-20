@@ -19,6 +19,13 @@ image:
 container:
   port: 80
 
+# Placeholder demo image on :80 opts out of the chart's hardened security
+# defaults. Real services should keep the secure defaults.
+podSecurityContext:
+  enabled: false
+securityContext:
+  enabled: false
+
 rollout:
   enabled: true
   strategy:
