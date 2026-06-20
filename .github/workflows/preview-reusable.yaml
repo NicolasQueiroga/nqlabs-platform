@@ -1,0 +1,298 @@
+name: Preview environment (reusable)
+
+# Reusable, app-agnostic preview lane. Any application repo calls this with its
+# `app` name and `image`; everything else (descriptor shape, cluster, TTL,
+# routing convention) is identical across apps — plug and play.
+#
+# A preview descriptor is written to apps/<app>/previews/pr-<n>.yaml in the
+# platform repo; the `previews` ApplicationSet renders an ephemeral Application
+# to the staging cluster at <app>-pr-<n>.<domain>. Descriptors are built and
+# edited with `yq` (preinstalled on runners) and TTL uses `date` — no scripts.
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: Service name (matches apps/<app>/ in the platform repo)
+        required: true
+        type: string
+      image:
+        description: Container image repository (without tag)
+        required: true
+        type: string
+      cluster:
+        description: ArgoCD destination cluster name for previews
+        required: false
+        type: string
+        default: nqlabs-staging
+      domain:
+        description: DNS suffix for preview hosts (<app>-pr-<n>.<domain>)
+        required: false
+        type: string
+        default: staging.nqlabs.network
+      port:
+        description: Container/service port
+        required: false
+        type: number
+        default: 80
+      ttl-seconds:
+        description: Preview lifetime before auto-teardown
+        required: false
+        type: number
+        default: 3600
+      hardened:
+        description: Enable the chart's secure-by-default pod/container contexts
+        required: false
+        type: boolean
+        default: false
+
+env:
+  PLATFORM_REPO: NicolasQueiroga/nqlabs-platform
+
+jobs:
+  command:
+    name: /preview command
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request != null &&
+      startsWith(github.event.comment.body, '/preview')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: write
+    steps:
+      - name: Authorize + parse command
+        id: cmd
+        env:
+          BODY: ${{ github.event.comment.body }}
+          ASSOC: ${{ github.event.comment.author_association }}
+        run: |
+          set -euo pipefail
+          case "$ASSOC" in
+            OWNER|MEMBER|COLLABORATOR) ;;
+            *) echo "::error::commenter ($ASSOC) is not authorized to run /preview"; exit 1 ;;
+          esac
+          sub="$(printf '%s' "$BODY" | awk 'NR==1{print $2}')"
+          case "$sub" in
+            deploy|renew|destroy|status) ;;
+            *) echo "::error::unknown subcommand '$sub' (use deploy|renew|destroy|status)"; exit 1 ;;
+          esac
+          {
+            echo "sub=$sub"
+            echo "pr=${{ github.event.issue.number }}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Resolve PR head
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          sha="$(gh api "repos/${{ github.repository }}/pulls/${{ steps.cmd.outputs.pr }}" --jq '.head.sha')"
+          short="${sha:0:12}"
+          {
+            echo "sha=$sha"
+            echo "short=$short"
+            echo "tag=pr-${{ steps.cmd.outputs.pr }}-$short"
+            echo "host=${{ inputs.app }}-pr-${{ steps.cmd.outputs.pr }}.${{ inputs.domain }}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout platform repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.PLATFORM_REPO }}
+          token: ${{ secrets.NQLABS_PLATFORM_REPO_TOKEN }}
+          path: platform-repo
+
+      - name: Checkout PR head (for build)
+        if: steps.cmd.outputs.sub == 'deploy'
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ steps.cmd.outputs.pr }}/head
+          path: app
+
+      - name: Set up Docker Buildx
+        if: steps.cmd.outputs.sub == 'deploy'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        if: steps.cmd.outputs.sub == 'deploy'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build + push preview image
+        if: steps.cmd.outputs.sub == 'deploy'
+        uses: docker/build-push-action@v6
+        with:
+          context: app
+          file: app/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ inputs.image }}:${{ steps.pr.outputs.tag }}
+
+      - name: Apply command
+        id: apply
+        run: |
+          set -euo pipefail
+          cd platform-repo
+          n='${{ steps.cmd.outputs.pr }}'
+          app='${{ inputs.app }}'
+          desc="apps/$app/previews/pr-$n.yaml"
+          host='${{ steps.pr.outputs.host }}'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          case '${{ steps.cmd.outputs.sub }}' in
+            deploy)
+              expires="$(date -u -d '+${{ inputs.ttl-seconds }} seconds' +%Y-%m-%dT%H:%M:%SZ)"
+              mkdir -p "apps/$app/previews"
+              APP="$app" REPO='${{ github.repository }}' N="$n" SHA='${{ steps.pr.outputs.short }}' \
+              IMG='${{ inputs.image }}' TAG='${{ steps.pr.outputs.tag }}' HOST="$host" \
+              CLUSTER='${{ inputs.cluster }}' PORT='${{ inputs.port }}' EXP="$expires" \
+              HARD='${{ inputs.hardened }}' yq -n '
+                .app.name = strenv(APP) |
+                .app.repository = strenv(REPO) |
+                .preview.number = (strenv(N) | tonumber) |
+                .preview.sha = strenv(SHA) |
+                .preview.expiresAt = strenv(EXP) |
+                .preview.warnedAt = "" |
+                .environment.name = "preview" |
+                .environment.namespace = strenv(APP) + "-pr-" + strenv(N) |
+                .argocd.project = "services-preview" |
+                .argocd.valueFile = "apps/" + strenv(APP) + "/previews/pr-" + strenv(N) + ".yaml" |
+                .argocd.destination.name = strenv(CLUSTER) |
+                .image.repository = strenv(IMG) |
+                .image.tag = strenv(TAG) |
+                .image.pullPolicy = "IfNotPresent" |
+                .container.port = (strenv(PORT) | tonumber) |
+                .rollout.enabled = false |
+                .service.port = (strenv(PORT) | tonumber) |
+                .route.enabled = true |
+                .route.host = strenv(HOST) |
+                .podSecurityContext.enabled = (strenv(HARD) == "true") |
+                .securityContext.enabled = (strenv(HARD) == "true")
+              ' > "$desc"
+              git add "$desc"
+              git commit -q -m "preview($app): deploy pr-$n (${{ steps.pr.outputs.tag }})"
+              git push origin HEAD:main
+              echo "msg=Preview deploying → https://$host (image \`${{ steps.pr.outputs.tag }}\`). Expires \`$expires\`; comment \`/preview renew\` to extend." >> "$GITHUB_OUTPUT"
+              ;;
+            renew)
+              if [ ! -f "$desc" ]; then echo "msg=No active preview to renew — use \`/preview deploy\`." >> "$GITHUB_OUTPUT"; exit 0; fi
+              expires="$(date -u -d '+${{ inputs.ttl-seconds }} seconds' +%Y-%m-%dT%H:%M:%SZ)"
+              EXP="$expires" yq -i '.preview.expiresAt = strenv(EXP) | .preview.warnedAt = ""' "$desc"
+              git add "$desc"; git commit -q -m "preview($app): renew pr-$n"
+              git push origin HEAD:main
+              echo "msg=Preview renewed — new expiry \`$expires\`." >> "$GITHUB_OUTPUT"
+              ;;
+            destroy)
+              if [ ! -f "$desc" ]; then echo "msg=No active preview to destroy." >> "$GITHUB_OUTPUT"; exit 0; fi
+              git rm -q "$desc"; git commit -q -m "preview($app): destroy pr-$n"
+              git push origin HEAD:main
+              echo "msg=Preview destroyed and resources reclaimed." >> "$GITHUB_OUTPUT"
+              ;;
+            status)
+              if [ ! -f "$desc" ]; then echo "msg=No active preview for this PR." >> "$GITHUB_OUTPUT"; exit 0; fi
+              exp="$(yq '.preview.expiresAt' "$desc")"
+              echo "msg=Preview active → https://$host (expires \`$exp\`)." >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Comment result on PR
+        if: always() && steps.apply.outputs.msg != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr comment "${{ steps.cmd.outputs.pr }}" --repo "${{ github.repository }}" --body "${{ steps.apply.outputs.msg }}"
+
+  autoupdate:
+    name: auto-update active preview
+    if: github.event_name == 'pull_request' && github.event.action == 'synchronize'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: write
+    steps:
+      - name: Checkout platform repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.PLATFORM_REPO }}
+          token: ${{ secrets.NQLABS_PLATFORM_REPO_TOKEN }}
+          path: platform-repo
+      - name: Is a preview active?
+        id: chk
+        run: |
+          set -euo pipefail
+          f="platform-repo/apps/${{ inputs.app }}/previews/pr-${{ github.event.pull_request.number }}.yaml"
+          echo "active=$([ -f "$f" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Checkout PR head
+        if: steps.chk.outputs.active == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.pull_request.number }}/head
+          path: app
+      - name: Login to GHCR
+        if: steps.chk.outputs.active == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        if: steps.chk.outputs.active == 'true'
+        uses: docker/setup-buildx-action@v3
+      - name: Rebuild + update preview (keep TTL)
+        if: steps.chk.outputs.active == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          n='${{ github.event.pull_request.number }}'
+          app='${{ inputs.app }}'
+          short="${HEAD_SHA:0:12}"
+          tag="pr-$n-$short"
+          docker buildx build --platform linux/amd64 --push -t "${{ inputs.image }}:$tag" -f app/Dockerfile app
+          cd platform-repo
+          desc="apps/$app/previews/pr-$n.yaml"
+          TAG="$tag" SHA="$short" yq -i '.image.tag = strenv(TAG) | .preview.sha = strenv(SHA)' "$desc"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$desc"
+          git commit -q -m "preview($app): update pr-$n ($tag)" && git push origin HEAD:main || echo "no change"
+          gh pr comment "$n" --repo "${{ github.repository }}" --body "Preview updated to \`$tag\` → https://$app-pr-$n.${{ inputs.domain }}"
+
+  cleanup:
+    name: tear down preview on PR close
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout platform repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.PLATFORM_REPO }}
+          token: ${{ secrets.NQLABS_PLATFORM_REPO_TOKEN }}
+          path: platform-repo
+      - name: Remove preview descriptor if present
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd platform-repo
+          app='${{ inputs.app }}'
+          desc="apps/$app/previews/pr-${{ github.event.pull_request.number }}.yaml"
+          if [ -f "$desc" ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git rm -q "$desc"
+            git commit -q -m "preview($app): destroy pr-${{ github.event.pull_request.number }} (PR closed)"
+            git push origin HEAD:main
+            gh pr comment "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --body "PR closed — preview torn down and resources reclaimed."
+          fi

@@ -1,0 +1,70 @@
+name: Preview TTL reaper (reusable)
+
+# Reusable, app-agnostic preview reaper. An app repo calls this on a schedule
+# with its `app` name. It scans apps/<app>/previews/pr-*.yaml in the platform
+# repo and:
+#   - warns on the PR ~10 min before expiry (once), suggesting /preview renew
+#   - tears the preview down at expiry (remove descriptor -> ArgoCD prunes it)
+# Pure shell: yq + date. Runs in the caller's context so it comments on the
+# caller repo's PRs with the caller's GITHUB_TOKEN (no cross-repo token).
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: Service name (matches apps/<app>/ in the platform repo)
+        required: true
+        type: string
+      warn-seconds:
+        description: How long before expiry to warn
+        required: false
+        type: number
+        default: 600
+
+jobs:
+  reap:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout platform repo
+        uses: actions/checkout@v4
+        with:
+          repository: NicolasQueiroga/nqlabs-platform
+          token: ${{ secrets.NQLABS_PLATFORM_REPO_TOKEN }}
+
+      - name: Warn / tear down by TTL
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APP_REPO: ${{ github.repository }}
+          APP: ${{ inputs.app }}
+          WARN: ${{ inputs.warn-seconds }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          now_s="$(date -u +%s)"
+          changed=0
+          for f in "apps/$APP/previews/"pr-*.yaml; do
+            n="$(yq '.preview.number' "$f")"
+            exp="$(yq '.preview.expiresAt' "$f")"
+            warned="$(yq '.preview.warnedAt' "$f")"
+            exp_s="$(date -u -d "$exp" +%s)"
+            if [ "$now_s" -ge "$exp_s" ]; then
+              git rm -q "$f"
+              git commit -q -m "preview($APP): TTL expiry teardown pr-$n"
+              changed=1
+              gh pr comment "$n" --repo "$APP_REPO" \
+                --body "Preview expired (TTL) and was torn down to free resources. Comment \`/preview deploy\` to spin up a fresh one." || true
+            elif [ "$now_s" -ge "$((exp_s - WARN))" ] && { [ -z "$warned" ] || [ "$warned" = "null" ]; }; then
+              NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)" yq -i '.preview.warnedAt = strenv(NOW)' "$f"
+              git add "$f"
+              git commit -q -m "preview($APP): TTL warning sent pr-$n"
+              changed=1
+              gh pr comment "$n" --repo "$APP_REPO" \
+                --body "⏳ This preview expires at \`$exp\`. Comment \`/preview renew\` to keep it another cycle, otherwise it will be torn down automatically." || true
+            fi
+          done
+          if [ "$changed" = "1" ]; then git push origin HEAD:main; else echo "nothing to reap"; fi
