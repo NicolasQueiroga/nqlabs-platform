@@ -226,3 +226,60 @@ spec:
 
   orphanedResources:
     warn: true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: services-preview
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: Ephemeral per-PR preview workloads. Deployed to the nqlabs-staging cluster.
+
+  sourceRepos:
+    - https://github.com/NicolasQueiroga/nqlabs-platform.git
+
+  # Previews run on the staging cluster (reusing the *.staging wildcard cert,
+  # gateway, and edge) in throwaway namespaces named <service>-pr-<number>.
+  destinations:
+    - name: nqlabs-staging
+      namespace: "*-pr-*"
+
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: Secret
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ServiceAccount
+    - group: apps
+      kind: Deployment
+    - group: apps
+      kind: ReplicaSet
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+    - group: policy
+      kind: PodDisruptionBudget
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+    - group: cilium.io
+      kind: CiliumNetworkPolicy
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+    - group: external-secrets.io
+      kind: ExternalSecret
+    - group: monitoring.coreos.com
+      kind: ServiceMonitor
+    - group: argoproj.io
+      kind: Rollout
+
+  orphanedResources:
+    warn: false

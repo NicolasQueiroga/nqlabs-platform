@@ -1,0 +1,66 @@
+# Preview ApplicationSet (ephemeral per-PR environments).
+#
+# Generates one throwaway ArgoCD Application per apps/<service>/previews/pr-<n>.yaml
+# descriptor. The app repo's /preview command writes such a descriptor on
+# `/preview deploy` and removes it on `/preview destroy`, PR close, or TTL expiry,
+# so the Application (and its namespace, via prune + CreateNamespace) is created
+# and torn down automatically.
+#
+# Previews run on the staging cluster under <service>-pr-<n>.staging.nqlabs.network
+# so they reuse the existing *.staging wildcard cert, gateway, and edge — no new
+# preview infrastructure required.
+
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: previews
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+  generators:
+    - git:
+        repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+        revision: HEAD
+        files:
+          - path: apps/*/previews/*.yaml
+  template:
+    metadata:
+      name: '{{ .app.name }}-pr-{{ .preview.number }}'
+      labels:
+        nqlabs.network/service: '{{ .app.name }}'
+        nqlabs.network/environment: preview
+        nqlabs.network/preview-pr: '{{ .preview.number }}'
+    spec:
+      project: '{{ .argocd.project }}'
+      sources:
+        - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+          targetRevision: HEAD
+          path: charts/nqlabs-service
+          helm:
+            releaseName: '{{ .app.name }}-pr-{{ .preview.number }}'
+            valueFiles:
+              - $values/{{ .argocd.valueFile }}
+        - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+          targetRevision: HEAD
+          ref: values
+      destination:
+        name: '{{ .argocd.destination.name }}'
+        namespace: '{{ .environment.namespace }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        managedNamespaceMetadata:
+          labels:
+            nqlabs.network/service: '{{ .app.name }}'
+            nqlabs.network/environment: preview
+            nqlabs.network/preview-pr: '{{ .preview.number }}'
+            pod-security.kubernetes.io/enforce: baseline
+            pod-security.kubernetes.io/enforce-version: latest
+        syncOptions:
+          - ServerSideApply=true
+          - CreateNamespace=true

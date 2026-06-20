@@ -13,6 +13,9 @@
       "properties": {
         "name": {
           "type": "string"
+        },
+        "repository": {
+          "type": "string"
         }
       }
     },
@@ -221,6 +224,9 @@
       "type": "object"
     },
     "workloads": {
+      "type": "object"
+    },
+    "preview": {
       "type": "object"
     }
   }
