@@ -15,7 +15,7 @@ It covers:
 
 - repository responsibilities
 - PR/build path
-- staging deploy proposal path
+- automatic staging deploy path
 - production release proposal path
 - what GitHub Actions do
 - what changes in GitOps
@@ -121,7 +121,7 @@ Purpose:
 
 PRs are validation-only until a future opt-in preview lane exists.
 
-### Staging proposal workflow
+### Staging deploy workflow
 
 ```text
 .github/workflows/deploy-staging-on-main.yaml
@@ -139,10 +139,9 @@ on:
 Purpose:
 
 - build and push an immutable SHA-tagged image
-- update the staging environment descriptor in a platform repo branch
-- open a platform repo PR
+- update the staging environment descriptor directly on platform repo `main`
+- let management ArgoCD reconcile staging automatically from Git
 - do **not** mutate clusters directly
-- do **not** push directly to platform `main`
 
 ### Production proposal workflow
 
@@ -208,7 +207,7 @@ every tiny change.
 
 ---
 
-## 3. Staging path — merge to app main proposes staging deploy
+## 3. Staging path — merge to app main deploys staging automatically
 
 ### Trigger
 
@@ -243,9 +242,9 @@ Example:
 ghcr.io/nicolasqueiroga/nqlabs-demo:sha-58c0e7ab0b31
 ```
 
-### Platform PR effect
+### Platform GitOps effect
 
-The staging PR changes only:
+The staging workflow commits this change directly to platform `main`:
 
 ```text
 apps/demo/environments/staging.yaml
@@ -260,18 +259,17 @@ image:
 + tag: sha-new
 ```
 
-### Why staging does not deploy until PR merge
+### Why staging deploys automatically
 
-The app repo does not own deployment state. It proposes a state change.
+Staging is the fast integration lane. The app repo does not talk to Kubernetes or ArgoCD directly; it updates staging desired state in the platform repo.
 
 Deployment trigger:
 
 ```text
-merge platform staging PR
+platform main receives the staging environment descriptor update
 ```
 
-After merge, management ArgoCD sees the changed GitOps state and reconciles
-`demo-staging` into `nqlabs-staging`.
+Management ArgoCD sees the changed GitOps state and reconciles `demo-staging` into `nqlabs-staging`.
 
 ---
 
@@ -323,13 +321,13 @@ services should use richer production canary steps and health gates.
 
 ---
 
-## 5. Production path — GitHub Release proposes production deploy
+## 5. Production path — release PR creates release, release proposes production deploy
 
 Production is intentionally separate from staging.
 
 ### Trigger
 
-Publishing a GitHub Release in `nqlabs-demo` triggers:
+Merging the Release Please PR in `nqlabs-demo` creates a GitHub Release and tag, which triggers:
 
 ```text
 .github/workflows/promote-production-on-release.yaml
@@ -453,42 +451,40 @@ contracts should define safer canary steps than the current demo default.
 5. no cluster deployment happens
 ```
 
-### Merge to main / staging proposal
+### Merge to main / staging deploy
 
 ```text
 0. PR merged to nqlabs-demo main
-1. staging proposal workflow starts
+1. staging deploy workflow starts
 2. workflow builds multi-arch image
 3. workflow pushes sha-<shortsha> image to GHCR
 4. workflow checks out nqlabs-platform
-5. workflow updates apps/demo/environments/staging.yaml on a release branch
-6. workflow opens a platform PR
-7. operator reviews PR diff
-8. operator merges PR
-9. management ArgoCD detects platform main change
-10. ArgoCD reconciles demo-staging to nqlabs-staging
-11. Argo Rollouts updates the demo pod
-12. route should serve the new image at demo.staging.nqlabs.network
+5. workflow updates apps/demo/environments/staging.yaml on platform main
+6. management ArgoCD detects platform main change
+7. ArgoCD reconciles demo-staging to nqlabs-staging
+8. Argo Rollouts updates the demo pod
+9. route should serve the new image at demo.staging.nqlabs.network
 ```
 
-### GitHub Release / production proposal
+### Release PR / production proposal
 
 ```text
-0. staging artifact has been built and deployed through staging PR
-1. operator publishes GitHub Release in nqlabs-demo
-2. production proposal workflow starts
-3. workflow verifies release commit is on main
-4. workflow verifies sha-<shortsha> image exists
-5. workflow retags exact staged artifact as release tag
-6. workflow checks out nqlabs-platform
-7. workflow updates apps/demo/environments/production.yaml on a release branch
-8. workflow opens a platform PR
-9. operator reviews PR diff
-10. operator merges PR
-11. management ArgoCD detects platform main change
-12. ArgoCD reconciles demo-production to nqlabs-production
-13. Argo Rollouts updates production workload
-14. route should serve the release image at demo.production.nqlabs.network
+0. staging artifact has been built and deployed through the automatic staging path
+1. Release Please PR is merged in nqlabs-demo
+2. Release Please creates a GitHub Release and tag
+3. production proposal workflow starts
+4. workflow verifies release commit is on main
+5. workflow verifies sha-<shortsha> image exists
+6. workflow retags exact staged artifact as release tag
+7. workflow checks out nqlabs-platform
+8. workflow updates apps/demo/environments/production.yaml on a release branch
+9. workflow opens a platform PR
+10. operator reviews PR diff
+11. operator merges PR
+12. management ArgoCD detects platform main change
+13. ArgoCD reconciles demo-production to nqlabs-production
+14. Argo Rollouts updates production workload
+15. route should serve the release image at demo.production.nqlabs.network
 ```
 
 ---
@@ -546,7 +542,7 @@ lab does not accumulate stale namespaces, routes, and workloads.
 The app repo does not call `kubectl`, does not call ArgoCD sync, and does not
 mutate cluster runtime state.
 
-It only builds artifacts and proposes platform repo PRs.
+For staging, it updates GitOps desired state on platform `main`. For production, it proposes a platform repo PR.
 
 ### Git is the deployment source of truth
 
@@ -646,11 +642,11 @@ PR to app repo
 
 Merge to app main
   → build/push immutable image
-  → open staging deploy PR in platform repo
-  → merge platform PR
+  → update staging desired state on platform main
   → management ArgoCD deploys staging
 
-GitHub Release in app repo
+Release PR merged in app repo
+  → GitHub Release/tag created
   → promote exact staged artifact
   → open production deploy PR in platform repo
   → merge platform PR
