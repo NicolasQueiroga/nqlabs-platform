@@ -1,0 +1,95 @@
+name: validate
+
+# Platform repo CI: reject invalid service descriptors, chart changes, and GitOps
+# manifests before ArgoCD ever renders them.
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chart:
+    name: chart + service descriptors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+
+      - name: helm lint
+        run: helm lint charts/nqlabs-service
+
+      - name: helm template every service descriptor (schema + render)
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          fail=0
+          for f in apps/*/environments/*.yaml; do
+            svc="$(basename "$(dirname "$(dirname "$f")")")"
+            echo "::group::helm template $f"
+            if ! helm template "$svc" charts/nqlabs-service -f "$f" > "/tmp/${svc}.yaml"; then
+              echo "::error file=$f::helm template failed (schema or template error)"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $fail
+
+      - name: install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin kubeconform
+
+      - name: kubeconform rendered manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for f in apps/*/environments/*.yaml; do
+            svc="$(basename "$(dirname "$(dirname "$f")")")"
+            helm template "$svc" charts/nqlabs-service -f "$f" \
+              | kubeconform -strict -ignore-missing-schemas -summary
+          done
+
+  manifests:
+    name: GitOps YAML parse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: yaml parse clusters/platform/apps/infrastructure
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import glob, yaml, sys
+          bad = 0; n = 0
+          for pat in ("clusters/**/*.yaml", "platform/**/*.yaml", "apps/**/*.yaml", "infrastructure/**/*.yaml"):
+              for f in glob.glob(pat, recursive=True):
+                  n += 1
+                  try:
+                      list(yaml.safe_load_all(open(f)))
+                  except Exception as e:
+                      print(f"::error file={f}::invalid YAML: {e}")
+                      bad = 1
+          print(f"parsed {n} files")
+          sys.exit(bad)
+          PY
+
+  actions:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: actionlint
+        uses: raven-actions/actionlint@v2
