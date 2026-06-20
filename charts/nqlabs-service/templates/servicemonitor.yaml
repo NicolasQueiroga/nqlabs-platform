@@ -1,0 +1,16 @@
+{{- if .Values.metrics.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "nqlabs-service.fullname" . }}
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "nqlabs-service.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: {{ .Values.metrics.port | default "http" }}
+      path: {{ .Values.metrics.path | default "/metrics" }}
+      interval: {{ .Values.metrics.interval | default "30s" }}
+{{- end }}

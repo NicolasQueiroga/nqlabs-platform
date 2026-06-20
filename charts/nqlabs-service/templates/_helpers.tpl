@@ -34,3 +34,41 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- default "default" .Values.serviceAccount.name -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Container HTTP probes. Renders readiness/liveness/startup probes for each entry
+whose `enabled` is true. Default values disable all probes so existing simple
+services (no health endpoint) are unaffected. `timing` is an optional free-form
+map (initialDelaySeconds, periodSeconds, timeoutSeconds, failureThreshold, ...).
+*/}}
+{{- define "nqlabs-service.probes" -}}
+{{- with .Values.probes }}
+{{- if .readiness.enabled }}
+readinessProbe:
+  httpGet:
+    path: {{ .readiness.path | default "/" }}
+    port: {{ .readiness.port | default "http" }}
+  {{- with .readiness.timing }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+{{- end }}
+{{- if .liveness.enabled }}
+livenessProbe:
+  httpGet:
+    path: {{ .liveness.path | default "/" }}
+    port: {{ .liveness.port | default "http" }}
+  {{- with .liveness.timing }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+{{- end }}
+{{- if .startup.enabled }}
+startupProbe:
+  httpGet:
+    path: {{ .startup.path | default "/" }}
+    port: {{ .startup.port | default "http" }}
+  {{- with .startup.timing }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end -}}
