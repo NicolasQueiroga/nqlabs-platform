@@ -111,14 +111,16 @@ alertmanager:
             requests:
               storage: 2Gi
 
-    # Alertmanager runs as uid=1000 gid=2000. Without fsGroup=2000 the local-path
-    # PVC is owned by root:root and nflog/silences WAL writes fail with EACCES,
-    # breaking deduplication state persistence. (Bug found 2026-06-19.)
+    # Same Talos subPath kernel restriction that affects Prometheus applies here:
+    # non-root UIDs can't write to local-path PVC directories even with correct
+    # fsGroup/ownership. Run as root same as Prometheus. monitoring namespace
+    # enforces 'privileged' pod security — running as root is intentional here.
+    # (Bug found 2026-06-19: nflog/silences permission denied for 12+ hours)
     securityContext:
-      fsGroup: 2000
-      runAsNonRoot: true
-      runAsUser: 1000
-      runAsGroup: 2000
+      runAsUser: 0
+      runAsGroup: 0
+      runAsNonRoot: false
+      fsGroup: 0
 
     resources:
       requests:

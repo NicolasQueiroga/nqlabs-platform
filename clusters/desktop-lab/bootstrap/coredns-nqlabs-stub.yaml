@@ -1,8 +1,8 @@
-# Patch for in-cluster CoreDNS to add nqlabs.network stub zone.
+# Patch for in-cluster CoreDNS to add split-horizon nqlabs.network answers.
 #
 # Talos manages the base coredns ConfigMap in kube-system; this patch adds a
-# nqlabs.network:53 block so ALL pods can resolve platform/staging/production
-# hostnames without hostAliases hacks.
+# nqlabs.network:53 block so ALL pods resolve platform/staging/production hostnames
+# directly to the LAN-side Gateway LoadBalancer IP without per-app hostAliases.
 #
 # Apply AFTER cluster bootstrap, BEFORE running platform apps with endpoint probes:
 #   kubectl -n kube-system patch configmap coredns --type=merge --patch-file=clusters/desktop-lab/bootstrap/coredns-nqlabs-stub.yaml
@@ -11,9 +11,9 @@
 # This will revert if the node is rebuilt and Talos re-applies its manifests.
 # Re-apply this patch during desktop-lab bootstrap (see cluster-lifecycle.md).
 #
-# Platform CoreDNS LB IP: 192.168.15.192  (desktop-lab)
-# Authoritative for: nqlabs.network, *.platform.nqlabs.network,
-#                    *.staging.nqlabs.network, *.production.nqlabs.network
+# In-cluster target: 192.168.15.193 (desktop-lab Cilium Gateway LB)
+# External/tailnet clients still resolve these names to the Proxmox Tailscale edge
+# via platform CoreDNS. This file is the inside-cluster split-horizon view.
 
 apiVersion: v1
 kind: ConfigMap
@@ -50,9 +50,25 @@ data:
         loadbalance
     }
     nqlabs.network:53 {
-        forward . 192.168.15.192
-        cache 30
+        errors
         log . {
             class error
         }
+        template IN A platform.nqlabs.network {
+            match ^[a-z0-9-]+\.platform\.nqlabs\.network\.$
+            answer "{{ .Name }} 60 IN A 192.168.15.193"
+            fallthrough
+        }
+        template IN A staging.nqlabs.network {
+            match ^[a-z0-9-]+\.staging\.nqlabs\.network\.$
+            answer "{{ .Name }} 60 IN A 192.168.15.193"
+            fallthrough
+        }
+        template IN A production.nqlabs.network {
+            match ^[a-z0-9-]+\.production\.nqlabs\.network\.$
+            answer "{{ .Name }} 60 IN A 192.168.15.193"
+            fallthrough
+        }
+        forward . 192.168.15.192
+        cache 30
     }
