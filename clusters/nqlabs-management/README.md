@@ -58,6 +58,10 @@ Completed on desktop Proxmox:
   - `external-dns` Ready
   - `coredns-dns` Ready at LoadBalancer IP `192.168.15.194`
   - Wildcard external/tailnet answers resolve to Proxmox Tailscale edge `100.105.35.84`.
+- Gateway stack installed through management-specific ArgoCD wrapper:
+  - `platform-gateway` Programmed=True at LoadBalancer IP `192.168.15.195`
+  - `nqlabs-wildcard` Certificate Ready from Let's Encrypt
+  - ArgoCD HTTPRoute validated from Proxmox: HTTP 200 via SNI to `192.168.15.195`
 - Legacy desktop-lab root remains intentionally unapplied to management; additional platform apps should be added through cluster-local wrappers or cluster-aware shared definitions.
 
 1Password items:
@@ -67,4 +71,4 @@ Completed on desktop Proxmox:
 - `argocd-nqlabs-management-admin` — ArgoCD admin credential
 - `Service Account Auth Token: NQ Labs` — source token for ESO `onepassword-service-account-token`
 
-Next: migrate Gateway with management-specific LoadBalancer IP `192.168.15.195`, add management in-cluster split-horizon kube-dns patch, then bootstrap/register staging and production.
+Next: add management in-cluster split-horizon kube-dns patch, then decide how/when Proxmox HAProxy should route platform hostnames to management instead of desktop-lab.
