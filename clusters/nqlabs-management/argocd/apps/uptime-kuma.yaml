@@ -18,7 +18,7 @@ spec:
   project: platform
   source:
     repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
-    targetRevision: letta/multi-cluster-foundation-f894476f
+    targetRevision: HEAD
     path: infrastructure/monitoring/uptime-kuma
   destination:
     server: https://kubernetes.default.svc

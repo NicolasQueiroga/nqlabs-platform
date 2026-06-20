@@ -23,7 +23,7 @@ spec:
         valueFiles:
           - $values/infrastructure/monitoring/promtail/values.yaml
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
-      targetRevision: letta/multi-cluster-foundation-f894476f
+      targetRevision: HEAD
       ref: values
   destination:
     server: https://kubernetes.default.svc
