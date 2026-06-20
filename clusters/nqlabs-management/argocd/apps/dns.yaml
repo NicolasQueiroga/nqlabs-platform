@@ -1,0 +1,111 @@
+# DNS stack for nqlabs-management.
+#
+# Cluster-local wrapper around the shared etcd/external-dns manifests plus
+# management-specific CoreDNS values. Do not use desktop-lab CoreDNS values here:
+# they hardcode desktop service IPs.
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: etcd-dns
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: infrastructure/dns/etcd/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dns
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      jsonPointers:
+        - /spec/template/spec/containers/0/terminationMessagePath
+        - /spec/template/spec/containers/0/terminationMessagePolicy
+        - /spec/volumeClaimTemplates/0/spec/volumeMode
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: coredns-dns
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://coredns.github.io/helm
+      chart: coredns
+      targetRevision: "1.46.0"
+      helm:
+        releaseName: coredns-dns
+        valueFiles:
+          - $values/clusters/nqlabs-management/dns/coredns-values.yaml
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dns
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://kubernetes-sigs.github.io/external-dns/
+      chart: external-dns
+      targetRevision: "1.21.1"
+      helm:
+        releaseName: external-dns
+        valueFiles:
+          - $values/infrastructure/dns/external-dns/values.yaml
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dns
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
