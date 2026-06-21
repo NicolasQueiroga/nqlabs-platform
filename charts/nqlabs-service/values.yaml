@@ -232,3 +232,14 @@ routes:
 #     api:    { kind: rollout, container: { port: 8080 }, routes: { internal: { enabled: true, host: api.staging.nqlabs.network } } }
 #     worker: { kind: deployment, command: [run, worker] }
 workloads: {}
+
+# Declarative runtime dependencies (review 5.9). `secrets` materialize via External
+# Secrets into a <fullname>-deps Secret that every container consumes with envFrom;
+# `externalServices` document required egress (FQDN allowlist intent for policy).
+dependencies:
+  secrets: []
+  # - envVar: DATABASE_URL
+  #   remoteRef: { key: <app>/<env>/database-url }
+  externalServices: []
+  # - name: payment-provider
+  #   host: api.payment-provider.example

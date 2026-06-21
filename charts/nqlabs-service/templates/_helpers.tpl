@@ -72,3 +72,12 @@ startupProbe:
 {{- end }}
 {{- end }}
 {{- end -}}
+
+{{/* envFrom the dependency Secret, when dependencies.secrets is declared. */}}
+{{- define "nqlabs-service.depsEnvFrom" -}}
+{{- if .Values.dependencies.secrets }}
+envFrom:
+  - secretRef:
+      name: {{ include "nqlabs-service.fullname" . }}-deps
+{{- end }}
+{{- end -}}

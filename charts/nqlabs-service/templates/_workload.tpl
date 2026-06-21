@@ -131,6 +131,10 @@ spec:
           env:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- $df := include "nqlabs-service.depsEnvFrom" $root }}
+          {{- if $df }}
+          {{- $df | nindent 10 }}
+          {{- end }}
           {{- if $sc.enabled }}
           securityContext:
             {{- omit $sc "enabled" | toYaml | nindent 12 }}
