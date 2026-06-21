@@ -162,7 +162,7 @@ Likely causes:
 ### ArgoCD shows false OutOfSync on ExternalSecret
 
 ESO defaults fields such as `conversionStrategy`, `decodingStrategy`, and
-`deletionPolicy`. ArgoCD has global diff customizations in `platform/argocd/values.yaml`
+`deletionPolicy`. ArgoCD has global diff customizations in `clusters/nqlabs-management/argocd/values.yaml`
 so these should not create false OutOfSync anymore. If it reappears, verify `argocd-cm`
 contains the global `resource.customizations.ignoreDifferences.external-secrets.io_ExternalSecret` entry.
 

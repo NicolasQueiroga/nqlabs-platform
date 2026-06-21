@@ -8,14 +8,14 @@
 This runbook covers the one-time manual bootstrap of ArgoCD on the lab cluster.
 After bootstrap, the root Application discovers all platform Applications from git,
 including the `argocd` self-management Application. From that point forward,
-`platform/argocd/values.yaml` is authoritative for ArgoCD itself.
+`clusters/nqlabs-management/argocd/values.yaml` is authoritative for ArgoCD itself.
 
 ## Prerequisites
 
 - Talos cluster running and `kubectl` configured
 - Cilium installed and node `Ready`
 - `helm` CLI installed
-- `platform/argocd/` committed and pushed to GitHub
+- `clusters/nqlabs-management/argocd/` committed and pushed to GitHub
 
 ## Step 1 — Add Helm repo
 
@@ -30,7 +30,7 @@ helm repo update argo
 helm install argocd argo/argo-cd \
   --namespace argocd \
   --create-namespace \
-  -f platform/argocd/values.yaml
+  -f clusters/nqlabs-management/argocd/values.yaml
 ```
 
 Watch pods come up (all should reach `Running` within ~60s):
@@ -50,10 +50,10 @@ Expected pods:
 
 This is the seed of the app-of-apps pattern. Applied once, manually.
 After this, all platform additions are git commits. The root app will also discover
-`platform/argocd/apps/argocd.yaml`, which makes ArgoCD manage its own Helm release.
+`clusters/nqlabs-management/argocd/apps/argocd.yaml`, which makes ArgoCD manage its own Helm release.
 
 ```bash
-kubectl apply -f platform/argocd/apps/root.yaml
+kubectl apply -f clusters/nqlabs-management/argocd/apps/root.yaml
 ```
 
 Verify it synced:
@@ -148,7 +148,7 @@ Applications should not use it.
 
 ## Adding new platform services
 
-Once ArgoCD is running, add new Application manifests to `platform/argocd/apps/`.
+Once ArgoCD is running, add new Application manifests to `clusters/nqlabs-management/argocd/apps/`.
 The root Application syncs that directory — any new file is picked up automatically.
 
 Platform services must use:
@@ -164,7 +164,7 @@ Applications should use `services-staging` or `services-production` instead of
 `platform`.
 
 ```
-platform/argocd/apps/
+clusters/nqlabs-management/argocd/apps/
 ├── root.yaml                       # Root app — applied once manually
 ├── projects.yaml                   # AppProjects: platform, staging, production
 ├── argocd.yaml                     # ArgoCD self-management
