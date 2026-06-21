@@ -76,6 +76,16 @@ grafana:
     runAsUser: 1000
     fsGroup: 1000
 
+  # init-chown-data init container — sets ownership on the PV
+  # Resource requests (Kyverno require-resource-requests)
+  initChownData:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 128Mi
+
 # ── Prometheus ──────────────────────────────────────────────────────────────
 prometheus:
   prometheusSpec:
@@ -161,15 +171,7 @@ alertmanager:
       limits:
         memory: 256Mi
 
-    # config-reloader sidecar — watches configmaps and triggers Alertmanager reloads
-    # Resource requests (Kyverno require-resource-requests)
-    alertmanagerConfigReloader:
-      resources:
-        requests:
-          cpu: 10m
-          memory: 32Mi
-        limits:
-          memory: 128Mi────
+# ── Prometheus Operator ─────────────────────────────────────────────────────
 prometheusOperator:
   resources:
     requests:

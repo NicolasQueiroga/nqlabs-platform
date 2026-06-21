@@ -34,13 +34,21 @@ operator:
       memory: 512Mi
 
 # Cilium agent — runs on every node, handles eBPF datapath
-cilium:
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      memory: 1Gi
+# Top-level 'resources' key in the Cilium chart
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+# Agent init containers (config, mount-bpf-fs, apply-sysctl-overwrites, clean-cilium-state)
+initResources:
+  requests:
+    cpu: 25m
+    memory: 32Mi
+  limits:
+    memory: 128Mi
 
 # Envoy proxy — L7 proxy for Gateway API
 envoy:
@@ -95,12 +103,20 @@ hubble:
   ui:
     enabled: true
     # Resource requests (Kyverno require-resource-requests)
-    resources:
-      requests:
-        cpu: 25m
-        memory: 64Mi
-      limits:
-        memory: 256Mi
+    backend:
+      resources:
+        requests:
+          cpu: 25m
+          memory: 64Mi
+        limits:
+          memory: 256Mi
+    frontend:
+      resources:
+        requests:
+          cpu: 25m
+          memory: 64Mi
+        limits:
+          memory: 256Mi
 
 # Gateway API — replaces Nginx Ingress Controller
 # Requires Gateway API CRDs to be installed first (upstream Kubernetes project)

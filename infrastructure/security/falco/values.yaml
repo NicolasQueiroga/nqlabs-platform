@@ -20,6 +20,13 @@ resources:
 # Resource requests (Kyverno require-resource-requests)
 falcoctl:
   artifact:
+    install:
+      resources:
+        requests:
+          cpu: 25m
+          memory: 32Mi
+        limits:
+          memory: 128Mi
     follow:
       resources:
         requests:
