@@ -8,6 +8,7 @@ metadata:
   annotations:
     policies.kyverno.io/title: Disallow Latest Tag
     policies.kyverno.io/category: Supply Chain
+    pol.kyverno.io/autogen-controllers: none
 spec:
   failurePolicy: Ignore
   background: true
@@ -31,6 +32,7 @@ metadata:
   name: require-resource-requests
   annotations:
     policies.kyverno.io/category: Best Practices
+    pol.kyverno.io/autogen-controllers: none
 spec:
   failurePolicy: Ignore
   background: true
@@ -57,6 +59,7 @@ metadata:
   name: restrict-image-registries
   annotations:
     policies.kyverno.io/category: Supply Chain
+    pol.kyverno.io/autogen-controllers: none
 spec:
   failurePolicy: Ignore
   background: true
@@ -80,6 +83,7 @@ metadata:
   name: require-run-as-nonroot
   annotations:
     policies.kyverno.io/category: Pod Security
+    pol.kyverno.io/autogen-controllers: none
 spec:
   failurePolicy: Ignore
   background: true
