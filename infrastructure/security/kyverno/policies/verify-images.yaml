@@ -9,7 +9,6 @@ metadata:
     policies.kyverno.io/category: Supply Chain
     pol.kyverno.io/autogen-controllers: none
 spec:
-  failurePolicy: Ignore
   background: false
   webhookConfiguration:
     failurePolicy: Ignore

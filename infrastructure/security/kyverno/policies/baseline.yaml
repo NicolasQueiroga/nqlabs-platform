@@ -1,6 +1,7 @@
-# Baseline guardrails in AUDIT mode (failureAction: Audit) and failurePolicy:
-# Ignore, so they never block admission — they surface violations in PolicyReports.
-# Flip individual rules to Enforce once the fleet is clean.
+# Baseline guardrails in AUDIT mode (failureAction: Audit) and webhook
+# failurePolicy: Ignore, so they never block admission — they surface
+# violations in PolicyReports. Flip individual rules to Enforce once the
+# fleet is clean.
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
@@ -10,7 +11,8 @@ metadata:
     policies.kyverno.io/category: Supply Chain
     pol.kyverno.io/autogen-controllers: none
 spec:
-  failurePolicy: Ignore
+  webhookConfiguration:
+    failurePolicy: Ignore
   background: true
   rules:
     - name: require-image-tag
@@ -34,7 +36,8 @@ metadata:
     policies.kyverno.io/category: Best Practices
     pol.kyverno.io/autogen-controllers: none
 spec:
-  failurePolicy: Ignore
+  webhookConfiguration:
+    failurePolicy: Ignore
   background: true
   rules:
     - name: require-requests
@@ -61,7 +64,8 @@ metadata:
     policies.kyverno.io/category: Supply Chain
     pol.kyverno.io/autogen-controllers: none
 spec:
-  failurePolicy: Ignore
+  webhookConfiguration:
+    failurePolicy: Ignore
   background: true
   rules:
     - name: allowed-registries
@@ -85,7 +89,8 @@ metadata:
     policies.kyverno.io/category: Pod Security
     pol.kyverno.io/autogen-controllers: none
 spec:
-  failurePolicy: Ignore
+  webhookConfiguration:
+    failurePolicy: Ignore
   background: true
   rules:
     - name: run-as-non-root
