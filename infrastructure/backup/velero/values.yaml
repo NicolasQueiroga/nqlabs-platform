@@ -1,6 +1,7 @@
-# Velero — on-demand cluster backup/DR to Azure + AWS (no schedule, no node-agent).
-# Backup manually before risky ops: velero backup create pre-change-$(date +%F)
-# Default BSL = Azure (cheaper, Cool tier); secondary = AWS S3 (Cheap standard).
+# Velero — on-demand backup/DR (no schedule, no node-agent). Three targets:
+#   minio (default) — local, free, fast; for routine pre-change snapshots
+#   aws            — offsite S3 (us-east-1)        | real DR, on demand:
+#   azure          — offsite Blob (Cool, cheapest) |   velero backup create X --storage-location aws
 initContainers:
   - name: velero-plugin-for-aws
     image: velero/velero-plugin-for-aws:v1.14.1
@@ -19,19 +20,32 @@ credentials:
   existingSecret: velero-credentials
 configuration:
   backupStorageLocation:
-    - name: azure
-      provider: azure
+    - name: minio
+      provider: aws
       default: true
-      config:
-        resourceGroup: nqlabs-backup
-        storageAccount: nqlabsvelero24612
-        storageAccountKeyEnvVar: AZURE_STORAGE_ACCOUNT_ACCESS_KEY
       bucket: velero
+      config:
+        region: minio
+        s3Url: http://minio.minio:9000
+        s3ForcePathStyle: "true"
     - name: aws
       provider: aws
       bucket: nqlabs-velero-backup
+      credential:
+        name: velero-credentials
+        key: aws
       config:
         region: us-east-1
+    - name: azure
+      provider: azure
+      bucket: velero
+      credential:
+        name: velero-credentials
+        key: azure
+      config:
+        resourceGroup: nqlabs-backup
+        storageAccount: nqlabsvelero24612
+        useAAD: "false"
   volumeSnapshotLocation: []
 snapshotsEnabled: false
 deployNodeAgent: false

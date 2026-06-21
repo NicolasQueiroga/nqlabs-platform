@@ -1,4 +1,23 @@
-# Velero on-demand backup/DR to Azure Blob (default) + AWS S3 (secondary).
+# Backup/DR: MinIO (local default target) + Velero (engine -> minio/aws/azure).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: management-minio
+  namespace: argocd
+  finalizers: [resources-finalizer.argocd.argoproj.io]
+  annotations: { argocd.argoproj.io/sync-wave: "3" }
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: infrastructure/storage/minio
+  destination: { server: https://kubernetes.default.svc, namespace: minio }
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+---
+# Velero on-demand backup to MinIO (default) + AWS S3 + Azure Blob.
 # No schedule, no node-agent — trigger manually before risky ops.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
