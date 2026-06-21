@@ -94,10 +94,10 @@ jobs:
             ' > "apps/$NAME/environments/$env.yaml"
           done
 
-          # Production gets a progressive canary by default (review 5.6); staging stays fast.
+          # Production gets a progressive canary by default (review 5.6); staging stays
+          # fast. Basic (replica-ratio) canary — valid without a traffic router.
           yq -i '.rollout.strategy.canary.steps = [
-            {"setCanaryScale": {"replicas": 1, "weight": 0, "matchTrafficWeight": true}},
-            {"pause": {}}, {"setWeight": 10}, {"pause": {}}, {"setWeight": 25},
+            {"setWeight": 10}, {"pause": {}}, {"setWeight": 25},
             {"pause": {}}, {"setWeight": 50}, {"pause": {}}, {"setWeight": 100}
           ]' "apps/$NAME/environments/production.yaml"
 
