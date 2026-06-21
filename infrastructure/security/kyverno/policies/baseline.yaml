@@ -75,7 +75,7 @@ spec:
         pattern:
           spec:
             containers:
-              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/* | cr.l5d.io/* | argoproj.github.io/* | cloudflare/*"
+              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/* | cr.l5d.io/* | argoproj.github.io/* | cloudflare/* | velero/*"
 ---
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
