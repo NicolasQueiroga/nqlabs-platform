@@ -19,13 +19,7 @@ operatorImage: docker.io/tailscale/k8s-operator:v1.98.4
 proxyImage: docker.io/tailscale/tailscale:v1.98.4
 
 # Resource requests (Kyverno require-resource-requests)
-operatorResources:
-  requests:
-    cpu: 50m
-    memory: 64Mi
-  limits:
-    memory: 256Mi
-proxyResources:
+resources:
   requests:
     cpu: 50m
     memory: 64Mi

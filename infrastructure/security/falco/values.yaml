@@ -17,10 +17,13 @@ resources:
     memory: 1Gi
 
 # falcoctl-artifact-follow sidecar — downloads/maintains Falco rules
+# Resource requests (Kyverno require-resource-requests)
 falcoctl:
-  resources:
-    requests:
-      cpu: 25m
-      memory: 32Mi
-    limits:
-      memory: 128Mi
+  artifact:
+    follow:
+      resources:
+        requests:
+          cpu: 25m
+          memory: 32Mi
+        limits:
+          memory: 128Mi

@@ -49,22 +49,16 @@ grafana:
     dashboards:
       enabled: true
       searchNamespace: ALL
-      # Resource requests (Kyverno require-resource-requests)
-      resources:
-        requests:
-          cpu: 10m
-          memory: 32Mi
-        limits:
-          memory: 128Mi
     datasources:
       enabled: true
-      # Resource requests (Kyverno require-resource-requests)
-      resources:
-        requests:
-          cpu: 10m
-          memory: 32Mi
-        limits:
-          memory: 128Mi
+    # Resource requests for ALL sidecars (Kyverno require-resource-requests)
+    # The Grafana chart uses a single resources block for all sidecar containers
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 128Mi
 
   defaultDashboardsTimezone: browser
 

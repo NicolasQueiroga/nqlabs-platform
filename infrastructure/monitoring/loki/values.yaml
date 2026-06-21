@@ -56,16 +56,15 @@ singleBinary:
     limits:
       memory: 1Gi
 
-  # Rules sidecar — watches ConfigMaps for Loki rules
-  # Resource requests (Kyverno require-resource-requests)
-  sidecar:
-    rules:
-      resources:
-        requests:
-          cpu: 10m
-          memory: 32Mi
-        limits:
-          memory: 128Mi
+# Rules sidecar — watches ConfigMaps for Loki rules
+# Resource requests (Kyverno require-resource-requests)
+sidecar:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
 
 # Disable SimpleScalable / distributed components.
 read:
