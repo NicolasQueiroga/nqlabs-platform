@@ -6,7 +6,7 @@ bank-grade, fully-featured private cloud. Tracked here.
 
 ## Delivery polish
 
-- [ ] **Exact-weight canary** — Argo Rollouts Gateway API trafficRouting plugin +
+- [x] **Exact-weight canary** — Argo Rollouts Gateway API trafficRouting plugin +
   canary/stable Services + weighted HTTPRoute (current canary is replica-ratio basic).
 - [ ] **Metric-driven rollouts** — AnalysisTemplates for automated promote/rollback
   (not only manual pauses).
