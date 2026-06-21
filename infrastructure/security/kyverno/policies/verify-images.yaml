@@ -22,6 +22,7 @@ spec:
         - imageReferences:
             - "ghcr.io/nicolasqueiroga/*"
           failureAction: Audit
+          mutateDigest: false
           attestors:
             - entries:
                 - keyless:

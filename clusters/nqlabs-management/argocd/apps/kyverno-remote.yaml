@@ -33,8 +33,6 @@ spec:
       - CreateNamespace=true
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
-  orphanedResources:
-    warn: false
   ignoreDifferences:
     - group: apiextensions.k8s.io
       kind: CustomResourceDefinition
@@ -81,8 +79,6 @@ spec:
       limit: 5
     syncOptions:
       - ServerSideApply=true
-  orphanedResources:
-    warn: false
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -117,8 +113,6 @@ spec:
       - CreateNamespace=true
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
-  orphanedResources:
-    warn: false
   ignoreDifferences:
     - group: apiextensions.k8s.io
       kind: CustomResourceDefinition
@@ -165,5 +159,3 @@ spec:
       limit: 5
     syncOptions:
       - ServerSideApply=true
-  orphanedResources:
-    warn: false
