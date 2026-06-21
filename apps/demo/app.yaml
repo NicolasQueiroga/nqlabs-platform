@@ -31,6 +31,23 @@ dependencies:
   secrets: []
   externalServices: []
 
+# Baseline default-deny ingress (Cilium): drop arbitrary external ingress, allow
+# in-cluster traffic (gateway, analysis, monitoring), node probes, and ingress proxy.
+# Egress stays open for now.
+ciliumNetworkPolicy:
+  enabled: true
+  enableDefaultDeny:
+    ingress: true
+    egress: false
+  ingress:
+    - fromEntities:
+        - cluster
+        - host
+        - remote-node
+        - health
+        - ingress
+        - kube-apiserver
+
 # --- default workload shape (demo is a single nginx workload on :80) ---
 container:
   port: 80
