@@ -36,8 +36,7 @@ bank-grade, fully-featured private cloud. Tracked here.
 
 ## Resilience / scale
 
-- [~] **Velero** backup/DR — Velero+MinIO GitOps built; activate by adding 1Password
-  `velero-backup` (then wire the held apps). Offsite = Cloudflare R2. Runbook: backup-velero.md.
+- [x] **Velero** backup/DR — LIVE on management, on-demand, 3 targets (MinIO default + AWS S3 + Azure Blob offsite). All BSLs Available; restore-tested. Runbook: backup-velero.md.
 - [ ] **Rook/Ceph** distributed storage — hardware-gated (needs spare OSD disks).
   Requirements: [planning/storage-and-ha-requirements.md](planning/storage-and-ha-requirements.md).
 - [ ] **HA multi-node** clusters — hardware-gated (needs 3 CP nodes/cluster; NUCs).

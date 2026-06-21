@@ -1,36 +1,42 @@
 # Runbook — Backup & DR (Velero)
 
-Velero backs up cluster resources (and PV data via the node-agent/Kopia) to an
-S3 target. Default target = in-cluster **MinIO** on the management cluster
-(`infrastructure/storage/minio`). Daily schedule at 03:00, 7-day retention.
+Velero runs on the **management** cluster, **on-demand only** (no schedule, no
+node-agent) with three backup storage locations:
 
-> MinIO is a *backup target*, not durable storage. For real offsite DR, point the
-> backup storage location at **Cloudflare R2** (below).
+| BSL | Where | Use |
+|-----|-------|-----|
+| `minio` (default) | in-cluster MinIO (local-path) | free, fast — routine pre-change snapshots |
+| `aws` | AWS S3 `nqlabs-velero-backup` (us-east-1) | offsite DR |
+| `azure` | Azure Blob `nqlabsvelero24612/velero` (Cool, LRS) | offsite DR |
 
-## Activate
-1. Add a 1Password (NQLabs vault) item **`velero-backup`** with fields:
-   - `access-key` — any value (becomes the MinIO root user + S3 access key)
-   - `secret-key` — any value (MinIO root password + S3 secret key)
-2. Ping the agent to wire the `management-minio` + `management-velero` apps (held
-   until creds exist so health stays clean).
-3. Verify:
-   ```bash
-   velero backup-location get        # default = Available
-   velero backup create test-1 --wait
-   velero backup get
-   ```
+Credentials live in 1Password (`velero-minio`, `velero-aws`, `velero-azure`) and are
+assembled into the `velero-credentials` secret by External Secrets.
 
-## Restore test
+## Take a backup (before risky changes)
 ```bash
-velero restore create --from-backup test-1 --include-namespaces demo
-velero restore get
+kubectl -n velero exec deploy/velero -- \
+  velero backup create pre-change-$(date +%F-%H%M) --wait            # -> minio (default)
+
+# offsite copy:
+... velero backup create dr-$(date +%F) --storage-location aws  --wait
+... velero backup create dr-$(date +%F) --storage-location azure --wait
+```
+Velero `ttl` (default 30 days) auto-prunes old backups from the store.
+
+## List / inspect / restore
+```bash
+kubectl -n velero exec deploy/velero -- velero backup get
+kubectl -n velero exec deploy/velero -- velero backup describe <name> --details
+kubectl -n velero exec deploy/velero -- velero restore create --from-backup <name>
 ```
 
-## Offsite upgrade — Cloudflare R2
-1. Cloudflare → R2 → create bucket `nqlabs-velero` + an R2 API token (S3 access key/secret).
-2. Store the keys in 1Password `velero-backup` (reuse `access-key`/`secret-key`).
-3. In `infrastructure/backup/velero/values.yaml` set the backupStorageLocation:
-   - `bucket: nqlabs-velero`
-   - `config.s3Url: https://<account-id>.r2.cloudflarestorage.com`
-   - `config.region: auto`, add `config.checksumAlgorithm: ""` (R2 quirk)
-4. Drop the MinIO app. Now backups are offsite (survive a full Proxmox loss).
+## Scope & follow-ups
+- Velero backs up the cluster it runs on = **management** (ArgoCD apps, configs,
+  secrets metadata, CRs — git re-creates the rest on restore).
+- For **staging/production** workload DR, deploy Velero on those clusters too (same
+  pattern as Kyverno/Falco replication). PV *data* needs `deployNodeAgent: true`.
+- Cost control: no schedule (manual only), Azure Cool + LRS, S3 Standard, `ttl` prune.
+
+## Cloud resources (provisioned via az/aws CLI)
+- Azure: RG `nqlabs-backup` / SA `nqlabsvelero24612` / container `velero` (Standard_LRS, Cool)
+- AWS: bucket `nqlabs-velero-backup` (us-east-1), IAM user `velero-nqlabs` (scoped S3 policy)
