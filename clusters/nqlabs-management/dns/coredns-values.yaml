@@ -10,6 +10,11 @@
 
 replicaCount: 1
 
+# Fully-qualified image reference (Kyverno restrict-image-registries)
+image:
+  repository: docker.io/coredns/coredns
+  tag: "1.13.1"
+
 service:
   name: coredns-dns
   type: LoadBalancer

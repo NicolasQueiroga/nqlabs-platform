@@ -20,10 +20,14 @@ operatorConfig:
       memory: 64Mi
     limits:
       memory: 256Mi
+  # Fully-qualified image reference (Kyverno restrict-image-registries)
+  image:
+    repository: docker.io/tailscale/k8s-operator
 
-# Fully-qualified image references (Kyverno restrict-image-registries)
-operatorImage: docker.io/tailscale/k8s-operator:v1.98.4
-proxyImage: docker.io/tailscale/tailscale:v1.98.4
+# Fully-qualified proxy image reference (Kyverno restrict-image-registries)
+proxyConfig:
+  image:
+    repository: docker.io/tailscale/tailscale
 
 # oauth block intentionally empty — operator reads from ESO-managed operator-oauth secret
 oauth:
