@@ -157,6 +157,9 @@ spec:
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
       ref: values
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/delivery/argo-rollouts/rbac
   destination:
     name: nqlabs-staging
     namespace: argo-rollouts

@@ -10,6 +10,13 @@ controller:
   # Single-node Phase 0 cluster; increase in Phase 1.
   replicas: 1
 
+  # Gateway API traffic router plugin — enables exact-weight canary by adjusting
+  # weighted HTTPRoute backendRefs. Only invoked by Rollouts that set
+  # trafficRouting; clusters are amd64 (Talos metal amd64).
+  trafficRouterPlugins:
+    - name: argoproj-labs/gatewayAPI
+      location: https://github.com/argoproj-labs/rollouts-plugin-trafficrouter-gatewayapi/releases/download/v0.14.1/gatewayapi-plugin-linux-amd64
+
   resources:
     requests:
       cpu: 50m

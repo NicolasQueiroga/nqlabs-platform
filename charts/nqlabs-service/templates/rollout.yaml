@@ -11,6 +11,15 @@ spec:
   {{- end }}
   strategy:
     canary:
+      {{- if .Values.rollout.trafficRouting.enabled }}
+      canaryService: {{ include "nqlabs-service.fullname" . }}-canary
+      stableService: {{ include "nqlabs-service.fullname" . }}-stable
+      trafficRouting:
+        plugins:
+          argoproj-labs/gatewayAPI:
+            httpRoute: {{ include "nqlabs-service.fullname" . }}
+            namespace: {{ .Release.Namespace }}
+      {{- end }}
       {{- toYaml .Values.rollout.strategy.canary | nindent 6 }}
   selector:
     matchLabels:

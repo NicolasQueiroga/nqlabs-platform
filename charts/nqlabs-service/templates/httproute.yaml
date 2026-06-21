@@ -24,6 +24,15 @@ spec:
             type: {{ .Values.route.path.type }}
             value: {{ .Values.route.path.value | quote }}
       backendRefs:
+        {{- if .Values.rollout.trafficRouting.enabled }}
+        - name: {{ include "nqlabs-service.fullname" . }}-stable
+          port: {{ .Values.service.port }}
+          weight: 100
+        - name: {{ include "nqlabs-service.fullname" . }}-canary
+          port: {{ .Values.service.port }}
+          weight: 0
+        {{- else }}
         - name: {{ include "nqlabs-service.fullname" . }}
           port: {{ .Values.service.port }}
+        {{- end }}
 {{- end }}

@@ -161,6 +161,12 @@ ciliumNetworkPolicy:
 
 rollout:
   enabled: false
+  # Exact-weight canary via the Argo Rollouts Gateway API plugin. When enabled,
+  # the chart renders canary/stable Services and a weighted HTTPRoute that the
+  # plugin adjusts through the canary steps. Requires the gatewayAPI plugin in the
+  # cluster's argo-rollouts controller. Default off = replica-ratio basic canary.
+  trafficRouting:
+    enabled: false
   strategy:
     canary:
       maxSurge: 25%
