@@ -78,3 +78,17 @@ spec:
       limit: 5
     syncOptions:
       - ServerSideApply=true
+  # Kyverno defaults these fields on ClusterPolicy at admission time; ignore
+  # the drift so ArgoCD doesn't show perpetual OutOfSync.
+  ignoreDifferences:
+    - group: kyverno.io
+      kind: ClusterPolicy
+      jqPathExpressions:
+        - .spec.admission
+        - .spec.emitWarning
+        - .spec.validationFailureAction
+        - .spec.rules[].skipBackgroundRequests
+        - .spec.rules[].validate.allowExistingViolations
+        - .spec.rules[].verifyImages[].required
+        - .spec.rules[].verifyImages[].useCache
+        - .spec.rules[].verifyImages[].verifyDigest
