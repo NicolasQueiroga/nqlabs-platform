@@ -17,6 +17,26 @@ image:
   repository: ghcr.io/nicolasqueiroga/nqlabs-demo
   tag: sha-aec3a454e4aa
 
+# Production progressive canary (review 5.6): start at 0% traffic with 1 canary
+# replica, then promote through 10/25/50/100 with manual pauses. Staging stays
+# fast (simple canary from app.yaml).
+rollout:
+  strategy:
+    canary:
+      steps:
+        - setCanaryScale:
+            replicas: 1
+            weight: 0
+            matchTrafficWeight: true
+        - pause: {}
+        - setWeight: 10
+        - pause: {}
+        - setWeight: 25
+        - pause: {}
+        - setWeight: 50
+        - pause: {}
+        - setWeight: 100
+
 route:
   enabled: true
   host: demo.production.nqlabs.network

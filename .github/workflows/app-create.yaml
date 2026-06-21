@@ -94,6 +94,13 @@ jobs:
             ' > "apps/$NAME/environments/$env.yaml"
           done
 
+          # Production gets a progressive canary by default (review 5.6); staging stays fast.
+          yq -i '.rollout.strategy.canary.steps = [
+            {"setCanaryScale": {"replicas": 1, "weight": 0, "matchTrafficWeight": true}},
+            {"pause": {}}, {"setWeight": 10}, {"pause": {}}, {"setWeight": 25},
+            {"pause": {}}, {"setWeight": 50}, {"pause": {}}, {"setWeight": 100}
+          ]' "apps/$NAME/environments/production.yaml"
+
           printf '# Preview descriptors (ephemeral, auto-managed by /preview)\n' > "apps/$NAME/previews/README.md"
           echo "generated apps/$NAME/{app.yaml,environments/{staging,production}.yaml}"
 
