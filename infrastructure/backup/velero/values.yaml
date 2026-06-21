@@ -45,7 +45,7 @@ configuration:
       config:
         resourceGroup: nqlabs-backup
         storageAccount: nqlabsvelero24612
-        useAAD: "false"
+        storageAccountKeyEnvVar: AZURE_STORAGE_ACCOUNT_ACCESS_KEY
   volumeSnapshotLocation: []
 snapshotsEnabled: false
 deployNodeAgent: false
