@@ -61,14 +61,36 @@ Also grant the app repo **Actions write access** to its GHCR package the first t
 
 ## 2. Platform repository — descriptors only
 
-Add per-environment descriptors (this is the entire platform-side change):
+### Fastest: the `Create application` workflow
+
+Run the platform repo's **Create application** workflow (`workflow_dispatch`) with
+`name`, `repository`, `image`, `port`, and `public`. It scaffolds the descriptors
+and opens a PR — production gets a progressive canary by default.
+
+### Or by hand: identity + environments
+
+The platform side is split into stable identity and per-environment runtime:
 
 ```
-apps/<app>/environments/staging.yaml
+apps/<app>/app.yaml                    # identity, exposure intent, default shape, dependencies
+apps/<app>/environments/staging.yaml   # runtime: image tag, namespace, cluster, route host
 apps/<app>/environments/production.yaml
 ```
 
-Minimum descriptor:
+`app.yaml` is merged UNDER each environment file before rendering the chart, so the
+env files carry only what changes per environment. Declare dependencies in `app.yaml`:
+
+```yaml
+# app.yaml (excerpt)
+dependencies:
+  secrets:
+    - envVar: DATABASE_URL
+      remoteRef: { key: <app>/staging/database-url }   # materialized via External Secrets
+config:
+  LOG_LEVEL: info                                       # non-secret env via ConfigMap
+```
+
+Minimum environment descriptor:
 
 ```yaml
 app:

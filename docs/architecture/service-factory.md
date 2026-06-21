@@ -24,7 +24,13 @@ preview environments with repeatable, plug-and-play automation. This documents t
 | App-repo flow: PR build, staging-on-main, release-please, production proposal | ✅ (in app repos) |
 | Preview lane: `/preview deploy|renew|destroy|status` + 1h TTL reaper | ✅ |
 | Reusable, app-agnostic preview workflows (plug-and-play) | ✅ |
-| ConfigMap/envFrom in the chart | ⬜ follow-up |
+| `apps/<app>/app.yaml` identity manifest (split from env state) | ✅ |
+| One-step `Create application` workflow | ✅ |
+| Declarative dependency model (secrets → ExternalSecret + envFrom) | ✅ |
+| ConfigMap/envFrom for non-secret config | ✅ |
+| Production progressive canary defaults | ✅ |
+| Main history-protection ruleset + repo-rules doc | ✅ |
+| Preview workload selectivity (api/web only, `--workers/--scheduler`) | ⬜ follow-up |
 | Public `*.io` edge (Cloudflare Tunnel / VPS) | ⬜ future |
 
 ## Repository responsibilities
