@@ -1,0 +1,27 @@
+# ProxyClass — default configuration for all Tailscale proxies
+#
+# Sets resource requests for the tailscale container and sysctler init container
+# to satisfy Kyverno require-resource-requests policy.
+# Applied to proxies via tailscale.com/proxy-class label or connector.spec.proxyClass.
+
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyClass
+metadata:
+  name: default
+spec:
+  statefulSet:
+    pod:
+      tailscaleContainer:
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 256Mi
+      tailscaleInitContainer:
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            memory: 128Mi

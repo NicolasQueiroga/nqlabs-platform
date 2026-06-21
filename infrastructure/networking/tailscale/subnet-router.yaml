@@ -17,6 +17,7 @@ metadata:
   namespace: tailscale
 spec:
   hostname: nqlabs-lab-router
+  proxyClass: default
   subnetRouter:
     advertiseRoutes:
       - 192.168.15.0/24   # desktop LAN — nqlabs-desktop (192.168.15.20), Talos VMs (.30-49), LB pool (.192-207)

@@ -12,6 +12,7 @@ metadata:
     tailscale.com/expose: "true"
     tailscale.com/hostname: "coredns"
     tailscale.com/tags: "tag:k8s"
+    tailscale.com/proxy-class: "default"
 spec:
   type: LoadBalancer
   loadBalancerClass: tailscale
