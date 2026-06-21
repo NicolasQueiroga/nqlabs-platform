@@ -6,7 +6,13 @@ existing simple service is unchanged.
 */ -}}
 {{- if .Values.workloads }}
 {{- $root := . }}
+{{- $pv := .Values.preview }}
 {{- range $name, $wl := .Values.workloads }}
+{{- $type := dig "type" "web" $wl }}
+{{- /* Skip a workload if explicitly disabled, or suppressed in preview mode:
+       workers off unless preview.workers, schedulers off unless preview.scheduler. */ -}}
+{{- $previewSkip := and $pv.active (or (and (eq $type "worker") (not $pv.workers)) (and (eq $type "scheduler") (not $pv.scheduler))) }}
+{{- if and (dig "enabled" true $wl) (not $previewSkip) }}
 {{- $ctx := dict "root" $root "name" $name "wl" $wl }}
 ---
 {{ include "nqlabs-service.wl.workload" $ctx }}
@@ -30,6 +36,7 @@ existing simple service is unchanged.
 {{- end }}
 {{- if $wl.routes }}
 {{ include "nqlabs-service.wl.routes" $ctx }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

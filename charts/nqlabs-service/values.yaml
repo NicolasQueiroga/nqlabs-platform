@@ -268,3 +268,11 @@ dependencies:
 #     LOG_LEVEL: info
 #     FEATURE_X: "true"
 config: {}
+
+# Preview workload selectivity (review 5.3). In preview mode, workloads typed
+# `worker` are skipped unless preview.workers, and `scheduler` unless
+# preview.scheduler. The preview workflow sets these from /preview deploy flags.
+preview:
+  active: false
+  workers: false
+  scheduler: false

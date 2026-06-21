@@ -7,7 +7,7 @@ with a **1 hour TTL** so previews never leak resources.
 
 | Comment | Effect |
 |---|---|
-| `/preview deploy` | Build the PR's image and deploy a preview (1h TTL). |
+| `/preview deploy [--workers] [--scheduler]` | Build + deploy a preview (1h TTL). For multi-workload apps, workers/scheduler are off unless flagged (api/web only by default). |
 | `/preview renew` | Extend the TTL by another hour. |
 | `/preview destroy` | Tear the preview down now. |
 | `/preview status` | Report the preview URL and expiry. |

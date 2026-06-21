@@ -74,6 +74,9 @@ jobs:
             *) echo "::error::commenter ($ASSOC) is not authorized to run /preview"; exit 1 ;;
           esac
           sub="$(printf '%s' "$BODY" | awk 'NR==1{print $2}')"
+          workers=false; scheduler=false
+          printf '%s' "$BODY" | grep -qw -- '--workers' && workers=true
+          printf '%s' "$BODY" | grep -qw -- '--scheduler' && scheduler=true
           case "$sub" in
             deploy|renew|destroy|status) ;;
             *) echo "::error::unknown subcommand '$sub' (use deploy|renew|destroy|status)"; exit 1 ;;
@@ -81,6 +84,8 @@ jobs:
           {
             echo "sub=$sub"
             echo "pr=${{ github.event.issue.number }}"
+            echo "workers=$workers"
+            echo "scheduler=$scheduler"
           } >> "$GITHUB_OUTPUT"
 
       - name: Resolve PR head
@@ -153,7 +158,7 @@ jobs:
               APP="$app" REPO='${{ github.repository }}' N="$n" SHA='${{ steps.pr.outputs.short }}' \
               IMG='${{ inputs.image }}' TAG='${{ steps.pr.outputs.tag }}' HOST="$host" \
               CLUSTER='${{ inputs.cluster }}' PORT='${{ inputs.port }}' EXP="$expires" \
-              HARD='${{ inputs.hardened }}' yq -n '
+              HARD='${{ inputs.hardened }}' WK='${{ steps.cmd.outputs.workers }}' SC='${{ steps.cmd.outputs.scheduler }}' yq -n '
                 .app.name = strenv(APP) |
                 .app.repository = strenv(REPO) |
                 .preview.number = (strenv(N) | tonumber) |
@@ -174,7 +179,10 @@ jobs:
                 .route.enabled = true |
                 .route.host = strenv(HOST) |
                 .podSecurityContext.enabled = (strenv(HARD) == "true") |
-                .securityContext.enabled = (strenv(HARD) == "true")
+                .securityContext.enabled = (strenv(HARD) == "true") |
+                .preview.active = true |
+                .preview.workers = (strenv(WK) == "true") |
+                .preview.scheduler = (strenv(SC) == "true")
               ' > "$desc"
               git add "$desc"
               git commit -q -m "preview($app): deploy pr-$n (${{ steps.pr.outputs.tag }})"
