@@ -1,0 +1,10 @@
+# Kyverno — policy engine for NQLabs. Single-node clusters: 1 replica per
+# controller. Policies start in Audit (see policies/) so nothing is blocked.
+admissionController:
+  replicas: 1
+backgroundController:
+  replicas: 1
+reportsController:
+  replicas: 1
+cleanupController:
+  replicas: 1

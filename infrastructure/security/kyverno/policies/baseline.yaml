@@ -1,0 +1,98 @@
+# Baseline guardrails in AUDIT mode (failureAction: Audit) and failurePolicy:
+# Ignore, so they never block admission — they surface violations in PolicyReports.
+# Flip individual rules to Enforce once the fleet is clean.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/title: Disallow Latest Tag
+    policies.kyverno.io/category: Supply Chain
+spec:
+  failurePolicy: Ignore
+  background: true
+  rules:
+    - name: require-image-tag
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      validate:
+        failureAction: Audit
+        message: "An explicit image tag is required (no :latest, no untagged)."
+        pattern:
+          spec:
+            containers:
+              - image: "!*:latest & *:*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resource-requests
+  annotations:
+    policies.kyverno.io/category: Best Practices
+spec:
+  failurePolicy: Ignore
+  background: true
+  rules:
+    - name: require-requests
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      validate:
+        failureAction: Audit
+        message: "CPU and memory requests are required."
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  requests:
+                    memory: "?*"
+                    cpu: "?*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-image-registries
+  annotations:
+    policies.kyverno.io/category: Supply Chain
+spec:
+  failurePolicy: Ignore
+  background: true
+  rules:
+    - name: allowed-registries
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      validate:
+        failureAction: Audit
+        message: "Images must come from an approved registry."
+        pattern:
+          spec:
+            containers:
+              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/* | cr.l5d.io/* | argoproj.github.io/* | cloudflare/*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-run-as-nonroot
+  annotations:
+    policies.kyverno.io/category: Pod Security
+spec:
+  failurePolicy: Ignore
+  background: true
+  rules:
+    - name: run-as-non-root
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      validate:
+        failureAction: Audit
+        message: "Containers should run as non-root."
+        pattern:
+          spec:
+            =(securityContext):
+              =(runAsNonRoot): "true"
