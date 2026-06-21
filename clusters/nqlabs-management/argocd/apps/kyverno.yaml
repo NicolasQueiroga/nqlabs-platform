@@ -92,3 +92,4 @@ spec:
         - .spec.rules[].verifyImages[].required
         - .spec.rules[].verifyImages[].useCache
         - .spec.rules[].verifyImages[].verifyDigest
+        - .spec.rules[].verifyImages[].attestors[].entries[].signatureAlgorithm
