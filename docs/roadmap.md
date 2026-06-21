@@ -8,11 +8,11 @@ bank-grade, fully-featured private cloud. Tracked here.
 
 - [x] **Exact-weight canary** — Argo Rollouts Gateway API trafficRouting plugin +
   canary/stable Services + weighted HTTPRoute (current canary is replica-ratio basic).
-- [ ] **Metric-driven rollouts** — AnalysisTemplates for automated promote/rollback
+- [x] **Metric-driven rollouts** — AnalysisTemplates for automated promote/rollback
   (not only manual pauses).
-- [ ] **Public `*.io` edge** — Cloudflare Tunnel / VPS reverse proxy (exposure model is
+- [~] **Public `*.io` edge** (scaffold + runbook done; needs Cloudflare tunnel token) — Cloudflare Tunnel / VPS reverse proxy (exposure model is
   defined; the public edge is not built).
-- [ ] **Preview workload selectivity** — `--workers/--scheduler` flags; default api/web
+- [x] **Preview workload selectivity** — `--workers/--scheduler` flags; default api/web
   only for multi-workload apps.
 
 ## Security / supply chain
