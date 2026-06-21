@@ -1,0 +1,51 @@
+# Application identity + default shape for the `demo` service.
+#
+# This is the stable, environment-independent layer. The service factory merges it
+# UNDER each environments/<env>.yaml (env wins) before rendering charts/nqlabs-service.
+# Per-environment runtime state (image tag, namespace, cluster, route host,
+# public on/off) lives in environments/<env>.yaml — never here.
+
+metadata:
+  name: demo
+  description: Demo service validating the NQLabs service factory.
+  owner: platform
+  repository: github.com/NicolasQueiroga/nqlabs-demo
+  tier: internal
+  lifecycle: active
+
+# Exposure intent. Environment files decide what is actually enabled per env.
+#   internal -> private *.nqlabs.network (DNS-01 TLS, Tailscale split DNS)
+#   public   -> public *.nqlabs.io (requires a real public edge + approval)
+exposure:
+  internal:
+    allowed: true
+    domain: network
+  public:
+    allowed: false
+    domain: io
+    requiresApproval: true
+
+# Declarative runtime dependencies. `secrets` materialize via External Secrets;
+# `externalServices` document required egress (FQDN allowlist intent).
+dependencies:
+  secrets: []
+  externalServices: []
+
+# --- default workload shape (demo is a single nginx workload on :80) ---
+container:
+  port: 80
+service:
+  port: 80
+rollout:
+  enabled: true
+  strategy:
+    canary:
+      maxSurge: 25%
+      maxUnavailable: 0
+
+# nginx on :80 needs a writable root fs and a privileged port, so it opts out of
+# the chart's hardened defaults. Real services keep the secure defaults.
+podSecurityContext:
+  enabled: false
+securityContext:
+  enabled: false

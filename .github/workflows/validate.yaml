@@ -38,8 +38,11 @@ jobs:
           fail=0
           for f in apps/*/environments/*.yaml; do
             svc="$(basename "$(dirname "$(dirname "$f")")")"
+            vf=()
+            [ -f "apps/$svc/app.yaml" ] && vf+=(-f "apps/$svc/app.yaml")
+            vf+=(-f "$f")
             echo "::group::helm template $f"
-            if ! helm template "$svc" charts/nqlabs-service -f "$f" > "/tmp/${svc}.yaml"; then
+            if ! helm template "$svc" charts/nqlabs-service "${vf[@]}" > "/tmp/${svc}.yaml"; then
               echo "::error file=$f::helm template failed (schema or template error)"
               fail=1
             fi
@@ -59,7 +62,10 @@ jobs:
           shopt -s nullglob
           for f in apps/*/environments/*.yaml; do
             svc="$(basename "$(dirname "$(dirname "$f")")")"
-            helm template "$svc" charts/nqlabs-service -f "$f" \
+            vf=()
+            [ -f "apps/$svc/app.yaml" ] && vf+=(-f "apps/$svc/app.yaml")
+            vf+=(-f "$f")
+            helm template "$svc" charts/nqlabs-service "${vf[@]}" \
               | kubeconform -strict -ignore-missing-schemas -summary
           done
 

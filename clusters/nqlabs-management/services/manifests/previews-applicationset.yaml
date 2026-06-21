@@ -43,6 +43,8 @@ spec:
           helm:
             releaseName: '{{ .app.name }}-pr-{{ .preview.number }}'
             valueFiles:
+              # Identity + default shape, then the generated preview runtime.
+              - $values/apps/{{ .app.name }}/app.yaml
               - $values/{{ .argocd.valueFile }}
         - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
           targetRevision: HEAD

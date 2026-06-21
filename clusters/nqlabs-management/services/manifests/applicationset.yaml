@@ -46,6 +46,8 @@ spec:
           helm:
             releaseName: '{{ .app.name }}'
             valueFiles:
+              # Identity + default shape, then per-environment runtime overrides.
+              - $values/apps/{{ .app.name }}/app.yaml
               - $values/{{ .argocd.valueFile }}
         - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
           targetRevision: HEAD

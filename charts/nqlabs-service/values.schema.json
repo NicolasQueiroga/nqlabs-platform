@@ -228,6 +228,15 @@
     },
     "preview": {
       "type": "object"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "exposure": {
+      "type": "object"
+    },
+    "dependencies": {
+      "type": "object"
     }
   }
 }

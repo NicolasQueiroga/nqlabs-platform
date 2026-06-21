@@ -1,10 +1,10 @@
+# Per-environment runtime state for demo/production. Identity + shape come from
+# ../app.yaml (merged under this file). Only runtime lives here.
 app:
   name: demo
 
 environment:
   name: production
-  # Cluster is the environment boundary, so the namespace is the plain service
-  # name. This namespace lives in the remote nqlabs-production cluster.
   namespace: demo
 
 argocd:
@@ -13,32 +13,9 @@ argocd:
   destination:
     name: nqlabs-production
 
-replicaCount: 1
-
 image:
   repository: ghcr.io/nicolasqueiroga/nqlabs-demo
   tag: sha-aec3a454e4aa
-  pullPolicy: IfNotPresent
-
-container:
-  port: 80
-
-# Placeholder demo image on :80 opts out of the chart's hardened security
-# defaults. Real services should keep the secure defaults.
-podSecurityContext:
-  enabled: false
-securityContext:
-  enabled: false
-
-rollout:
-  enabled: true
-  strategy:
-    canary:
-      maxSurge: 25%
-      maxUnavailable: 0
-
-service:
-  port: 80
 
 route:
   enabled: true
