@@ -1,0 +1,32 @@
+# Verify NQLabs images are Cosign-signed (keyless) by our GitHub Actions.
+# AUDIT + failurePolicy Ignore — surfaces unsigned images in PolicyReports without
+# blocking. Applies fleet-wide once Kyverno is on staging/production too.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-image-signatures
+  annotations:
+    policies.kyverno.io/category: Supply Chain
+    pol.kyverno.io/autogen-controllers: none
+spec:
+  failurePolicy: Ignore
+  background: false
+  webhookConfiguration:
+    failurePolicy: Ignore
+  rules:
+    - name: verify-ghcr-nqlabs
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      verifyImages:
+        - imageReferences:
+            - "ghcr.io/nicolasqueiroga/*"
+          failureAction: Audit
+          attestors:
+            - entries:
+                - keyless:
+                    issuer: "https://token.actions.githubusercontent.com"
+                    subject: "https://github.com/NicolasQueiroga/*"
+                    rekor:
+                      url: "https://rekor.sigstore.dev"
