@@ -1,0 +1,72 @@
+# Public edge — Cloudflare Tunnel (cloudflared).
+#
+# Gives *.nqlabs.io services a real public ingress without exposing a public IP.
+# cloudflared dials OUT to Cloudflare; Cloudflare terminates public TLS and
+# forwards matched hostnames over the tunnel to the cluster. Ingress rules
+# (hostname -> origin) are managed in the Cloudflare dashboard for a remotely-
+# managed tunnel; the pod only needs the tunnel token.
+#
+# NOT wired into the app-of-apps yet: it requires a Cloudflare tunnel + the token
+# in 1Password. See docs/runbooks/public-edge-cloudflare.md to activate.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+  namespace: cloudflared
+  labels:
+    app.kubernetes.io/name: cloudflared
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cloudflared
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cloudflared
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:2025.6.1
+          args: ["tunnel", "--no-autoupdate", "--metrics", "0.0.0.0:2000", "run"]
+          env:
+            - name: TUNNEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cloudflared-tunnel
+                  key: token
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          livenessProbe:
+            httpGet: { path: /ready, port: 2000 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits: { memory: 128Mi }
+---
+# Tunnel token from 1Password via External Secrets.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: cloudflared-tunnel
+  namespace: cloudflared
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: nqlabs-1password
+  target:
+    name: cloudflared-tunnel
+    creationPolicy: Owner
+  data:
+    - secretKey: token
+      remoteRef:
+        key: cloudflared-tunnel/token
