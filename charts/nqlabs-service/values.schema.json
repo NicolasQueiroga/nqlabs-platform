@@ -237,6 +237,9 @@
     },
     "dependencies": {
       "type": "object"
+    },
+    "config": {
+      "type": "object"
     }
   }
 }

@@ -73,11 +73,17 @@ startupProbe:
 {{- end }}
 {{- end -}}
 
-{{/* envFrom the dependency Secret, when dependencies.secrets is declared. */}}
+{{/* envFrom the service ConfigMap (non-secret config) and the dependency Secret. */}}
 {{- define "nqlabs-service.depsEnvFrom" -}}
-{{- if .Values.dependencies.secrets }}
+{{- if or .Values.config .Values.dependencies.secrets }}
 envFrom:
+{{- if .Values.config }}
+  - configMapRef:
+      name: {{ include "nqlabs-service.fullname" . }}-config
+{{- end }}
+{{- if .Values.dependencies.secrets }}
   - secretRef:
       name: {{ include "nqlabs-service.fullname" . }}-deps
+{{- end }}
 {{- end }}
 {{- end -}}

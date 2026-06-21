@@ -243,3 +243,10 @@ dependencies:
   externalServices: []
   # - name: payment-provider
   #   host: api.payment-provider.example
+
+# Non-secret configuration. Each key/value becomes a ConfigMap entry that every
+# container consumes via envFrom. Empty = no ConfigMap. Example:
+#   config:
+#     LOG_LEVEL: info
+#     FEATURE_X: "true"
+config: {}
