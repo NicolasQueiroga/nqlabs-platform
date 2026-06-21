@@ -4,17 +4,23 @@
 #   azure          — offsite Blob (Cool, cheapest) |   velero backup create X --storage-location aws
 initContainers:
   - name: velero-plugin-for-aws
-    image: velero/velero-plugin-for-aws:v1.14.1
+    image: docker.io/velero/velero-plugin-for-aws:v1.14.1
     imagePullPolicy: IfNotPresent
     volumeMounts:
       - mountPath: /target
         name: plugins
+    resources:
+      requests: { cpu: 25m, memory: 32Mi }
+      limits: { memory: 128Mi }
   - name: velero-plugin-for-azure
-    image: velero/velero-plugin-for-microsoft-azure:v1.14.1
+    image: docker.io/velero/velero-plugin-for-microsoft-azure:v1.14.1
     imagePullPolicy: IfNotPresent
     volumeMounts:
       - mountPath: /target
         name: plugins
+    resources:
+      requests: { cpu: 25m, memory: 32Mi }
+      limits: { memory: 128Mi }
 credentials:
   useSecret: true
   existingSecret: velero-credentials
