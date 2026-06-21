@@ -1,5 +1,8 @@
 # Terraform
 
+> **Deprecated/stale:** prefer the platform `Create application` workflow for scaffolding (it generates app.yaml + environments). This Terraform predates the app.yaml split, named cluster destinations, and the plain-`<service>` namespace model, so it needs updating before reuse.
+
+
 Terraform is used for platform onboarding contracts, not for directly mutating the
 Kubernetes cluster.
 

@@ -1,5 +1,8 @@
 # IP Address Plan
 
+> **Status:** Live three-cluster service factory (management/staging/production). Current architecture: [../docs/architecture/service-factory.md](../docs/architecture/service-factory.md). Single-cluster/desktop-lab references below are historical.
+
+
 Status: active for the desktop fixed-IP lab. The desktop is the current
 host for the full three-cluster architecture; NUCs later add/replace bare-metal
 nodes in the same topology.

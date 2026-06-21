@@ -1,5 +1,8 @@
 # Runbook: Secrets Management
 
+> **Status:** Live three-cluster service factory (management/staging/production). Current architecture: [../docs/architecture/service-factory.md](../docs/architecture/service-factory.md). Single-cluster/desktop-lab references below are historical.
+
+
 ## Overview
 
 Secrets are never committed to git. Git stores only references to secret material.

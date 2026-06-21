@@ -1,5 +1,8 @@
 # Guide 02 — Git, Source of Truth, and Secrets
 
+> **Status:** NQLabs is now a live three-cluster service factory (management/staging/production). Current architecture: [../docs/architecture/service-factory.md](../docs/architecture/service-factory.md). Sections below describing single-cluster/laptop/desktop-lab stages are historical.
+
+
 ## Learning objectives
 
 By the end of this guide, a student should be able to explain:

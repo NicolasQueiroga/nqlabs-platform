@@ -1,5 +1,8 @@
 # Decision: DNS Architecture
 
+> **Status:** Live three-cluster service factory (management/staging/production). Current architecture: [../docs/architecture/service-factory.md](../docs/architecture/service-factory.md). Single-cluster/desktop-lab references below are historical.
+
+
 ## Status
 
 Accepted — active on desktop-lab; multi-cluster desktop fanout planned.

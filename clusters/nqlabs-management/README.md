@@ -1,5 +1,8 @@
 # Cluster: nqlabs-management
 
+> **Status:** Live three-cluster service factory (management/staging/production). Current architecture: [../../docs/architecture/service-factory.md](../../docs/architecture/service-factory.md). Single-cluster/desktop-lab references below are historical.
+
+
 Status: active — first management cluster bootstrap complete on desktop Proxmox.
 
 Purpose: management/control services for the NQLabs Platform.

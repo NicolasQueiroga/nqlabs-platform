@@ -1,5 +1,8 @@
 # Demo service Terraform definition
 
+> **Deprecated/stale:** prefer the platform `Create application` workflow for scaffolding (it generates app.yaml + environments). This Terraform predates the app.yaml split, named cluster destinations, and the plain-`<service>` namespace model, so it needs updating before reuse.
+
+
 This is the Terraform definition for the demo service environment files.
 
 It mirrors the currently validated service factory state:

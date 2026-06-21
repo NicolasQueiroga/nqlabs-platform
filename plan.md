@@ -1,5 +1,8 @@
 # NQLabs Platform — Build Plan
 
+> **Status:** NQLabs is now a live three-cluster service factory (management/staging/production). Current architecture: [./docs/architecture/service-factory.md](./docs/architecture/service-factory.md). Sections below describing single-cluster/laptop/desktop-lab stages are historical.
+
+
 This document breaks down every problem that needs to be solved to build the NQLabs Platform,
 organized by phase and layer. It evolves as work progresses.
 

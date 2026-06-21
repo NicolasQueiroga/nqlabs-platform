@@ -1,5 +1,8 @@
 # Runbook: ArgoCD Bootstrap
 
+> **Status:** Live three-cluster service factory (management/staging/production). Current architecture: [../docs/architecture/service-factory.md](../docs/architecture/service-factory.md). Single-cluster/desktop-lab references below are historical.
+
+
 ## Overview
 
 This runbook covers the one-time manual bootstrap of ArgoCD on the lab cluster.

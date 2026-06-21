@@ -6,18 +6,17 @@ Generated Talos secrets, machine configs, kubeconfigs, and talosconfigs are igno
 and must not be committed. Store generated secrets in 1Password and generated access
 files under `clusters/<cluster>/generated/` on the operator workstation.
 
-## Current and target clusters
+## Clusters (live)
 
-| Cluster | Status | Purpose |
-|---------|--------|---------|
-| `desktop-lab` | active | single-cluster desktop substrate validation |
-| `nqlabs-management` | planned on desktop Proxmox | management/platform control services |
-| `nqlabs-staging` | planned on desktop Proxmox | staging workloads |
-| `nqlabs-production` | planned on desktop Proxmox | production workloads |
-| `lab` | legacy Mac/UTM | original Phase 0 laptop lab reference |
+| Cluster | VM / IP | Purpose |
+|---------|---------|---------|
+| `nqlabs-management` | VM131 `192.168.15.31` | ArgoCD app-of-apps + service factory |
+| `nqlabs-staging` | VM132 `192.168.15.32` | staging workloads (+ previews) |
+| `nqlabs-production` | VM133 `192.168.15.33` | production workloads |
 
-The desktop is expected to run the full three-cluster topology as VMs before that
-same model is moved to NUC bare metal later.
+The three-cluster topology runs as Talos VMs on the Proxmox desktop. The earlier
+single-node labs (Mac/UTM `lab` and the desktop-lab VM 130) are retired. NUCs later
+add bare-metal nodes/capacity to this same model.
 
 ## Folder contract
 

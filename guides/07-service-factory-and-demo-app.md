@@ -1,5 +1,8 @@
 # Guide 07 — Service Factory and Demo App
 
+> **Status:** NQLabs is now a live three-cluster service factory (management/staging/production). Current architecture: [../docs/architecture/service-factory.md](../docs/architecture/service-factory.md). Sections below describing single-cluster/laptop/desktop-lab stages are historical.
+
+
 ## Goal
 
 A platform is not finished when platform tools are online. It becomes useful when a
