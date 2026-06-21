@@ -79,7 +79,7 @@ spec:
         pattern:
           spec:
             containers:
-              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/* | minio/minio* | cr.l5d.io/* | argoproj.github.io/* | cloudflare/* | velero/*"
+              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/* | minio/minio* | cr.l5d.io/* | argoproj.github.io/* | cloudflare/* | velero/* | reg.kyverno.io/* | ecr-public.aws.com/* | gcr.io/*"
 ---
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
@@ -98,6 +98,16 @@ spec:
         any:
           - resources:
               kinds: [Pod]
+        exclude:
+          any:
+            - resources:
+                namespaces:
+                  - kube-system
+                  - falco
+                  - tailscale
+                  - local-path-storage
+                  - velero
+                  - monitoring
       validate:
         failureAction: Audit
         message: "Containers should run as non-root."

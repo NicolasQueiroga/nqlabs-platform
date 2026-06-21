@@ -36,3 +36,21 @@ resources:
     memory: 64Mi
   limits:
     memory: 256Mi
+
+# cainjector — injects CA certificates into webhooks
+cainjector:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# webhook — validates cert-manager resources at admission time
+webhook:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 256Mi

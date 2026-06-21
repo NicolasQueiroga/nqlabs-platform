@@ -25,6 +25,31 @@ kubeProxyReplacement: true
 # Set to 2 for NUC cluster (multi-node, HA).
 operator:
   replicas: 1
+  # Resource requests (Kyverno require-resource-requests)
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+# Cilium agent — runs on every node, handles eBPF datapath
+cilium:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+# Envoy proxy — L7 proxy for Gateway API
+envoy:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
 
 securityContext:
   capabilities:
@@ -60,8 +85,22 @@ hubble:
   enabled: true
   relay:
     enabled: true
+    # Resource requests (Kyverno require-resource-requests)
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
   ui:
     enabled: true
+    # Resource requests (Kyverno require-resource-requests)
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
 
 # Gateway API — replaces Nginx Ingress Controller
 # Requires Gateway API CRDs to be installed first (upstream Kubernetes project)

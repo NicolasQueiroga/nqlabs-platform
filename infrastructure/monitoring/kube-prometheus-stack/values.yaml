@@ -49,10 +49,38 @@ grafana:
     dashboards:
       enabled: true
       searchNamespace: ALL
+      # Resource requests (Kyverno require-resource-requests)
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          memory: 128Mi
     datasources:
       enabled: true
+      # Resource requests (Kyverno require-resource-requests)
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          memory: 128Mi
 
   defaultDashboardsTimezone: browser
+
+  # Resource requests (Kyverno require-resource-requests)
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+  # Run as non-root (Kyverno require-run-as-nonroot)
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
 
 # ── Prometheus ──────────────────────────────────────────────────────────────
 prometheus:
@@ -99,6 +127,16 @@ prometheus:
       limits:
         memory: 2Gi
 
+    # config-reloader sidecar — watches configmaps and triggers Prometheus reloads
+    # Resource requests (Kyverno require-resource-requests)
+    prometheusConfigReloader:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          memory: 128Mi
+
 # ── Alertmanager ────────────────────────────────────────────────────────────
 alertmanager:
   alertmanagerSpec:
@@ -129,7 +167,15 @@ alertmanager:
       limits:
         memory: 256Mi
 
-# ── Prometheus Operator ─────────────────────────────────────────────────────
+    # config-reloader sidecar — watches configmaps and triggers Alertmanager reloads
+    # Resource requests (Kyverno require-resource-requests)
+    alertmanagerConfigReloader:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          memory: 128Mi────
 prometheusOperator:
   resources:
     requests:

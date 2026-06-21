@@ -14,6 +14,24 @@ operatorConfig:
   hostname: nqlabs-operator
   logging: info
 
+# Fully-qualified image references (Kyverno restrict-image-registries)
+operatorImage: docker.io/tailscale/k8s-operator:v1.98.4
+proxyImage: docker.io/tailscale/tailscale:v1.98.4
+
+# Resource requests (Kyverno require-resource-requests)
+operatorResources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+proxyResources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
 # oauth block intentionally empty — operator reads from ESO-managed operator-oauth secret
 oauth:
   clientId: ""

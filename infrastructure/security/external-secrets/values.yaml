@@ -37,3 +37,21 @@ resources:
     memory: 64Mi
   limits:
     memory: 256Mi
+
+# cert-controller — manages TLS certs for ESO webhooks
+certController:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# webhook — validates ExternalSecret/SecretStore resources at admission
+webhook:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 256Mi

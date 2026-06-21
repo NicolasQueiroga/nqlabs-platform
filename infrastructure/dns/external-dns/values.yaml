@@ -38,3 +38,11 @@ annotationFilter: "external-dns.alpha.kubernetes.io/hostname"
 policy: sync
 
 txtOwnerId: nqlabs-lab
+
+# Resource requests (Kyverno require-resource-requests)
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    memory: 256Mi

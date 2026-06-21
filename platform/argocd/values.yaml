@@ -1,0 +1,141 @@
+# ArgoCD Helm values — NQLabs Platform
+# Chart: argo/argo-cd
+#
+# This file was removed in commit 7c1d747 (legacy platform/ cleanup) but is
+# still referenced by the argocd Application manifest. Restored with updated
+# resource requests and security hardening for Kyverno enforcement.
+#
+# Installation (bootstrap only — manual, one-time):
+#   helm install argocd argo/argo-cd \
+#     --namespace argocd --create-namespace \
+#     -f platform/argocd/values.yaml
+#
+# After bootstrap ArgoCD manages itself via the root Application.
+
+global:
+  # Disable network policies — Cilium handles network policy
+  networkPolicy:
+    create: false
+
+configs:
+  params:
+    # Serve HTTP — TLS terminated at Gateway API layer (cert-manager)
+    server.insecure: "true"
+
+  cm:
+    # Allow ArgoCD to manage resources across all namespaces
+    application.resourceTrackingMethod: annotation
+
+    # Global diff customizations — stop controller-defaulted fields from
+    # causing false OutOfSync across all Applications.
+    #
+    # Why global: HTTPRoute and ExternalSecret resources are reused by almost
+    # every platform/service app. Defining this once prevents repeated per-app
+    # ignoreDifferences blocks.
+
+    # Gateway API defaults group/kind/weight on HTTPRoute refs.
+    resource.customizations.ignoreDifferences.gateway.networking.k8s.io_HTTPRoute: |
+      jqPathExpressions:
+        - '.spec.parentRefs[]?.group'
+        - '.spec.parentRefs[]?.kind'
+        - '.spec.rules[]?.backendRefs[]?.group'
+        - '.spec.rules[]?.backendRefs[]?.kind'
+        - '.spec.rules[]?.backendRefs[]?.weight'
+
+    # Gateway API defaults empty group on Gateway certificateRefs.
+    resource.customizations.ignoreDifferences.gateway.networking.k8s.io_Gateway: |
+      jqPathExpressions:
+        - '.spec.listeners[]?.tls.certificateRefs[]?.group'
+
+    # External Secrets Operator defaults strategy/policy fields.
+    resource.customizations.ignoreDifferences.external-secrets.io_ExternalSecret: |
+      jqPathExpressions:
+        - '.spec.data[]?.remoteRef.conversionStrategy'
+        - '.spec.data[]?.remoteRef.decodingStrategy'
+        - '.spec.data[]?.remoteRef.metadataPolicy'
+        - '.spec.data[]?.remoteRef.nullBytePolicy'
+        - '.spec.target.deletionPolicy'
+
+# ArgoCD server — UI and API
+server:
+  replicas: 1
+  service:
+    type: ClusterIP  # Exposed via Gateway API HTTPRoute, not LoadBalancer
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  readinessProbe:
+    timeoutSeconds: 5
+    failureThreshold: 6
+  livenessProbe:
+    initialDelaySeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 6
+
+# Application controller — reconciles desired vs actual state
+controller:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+  readinessProbe:
+    timeoutSeconds: 5
+    failureThreshold: 6
+
+# Repo server — clones git repos, renders manifests
+repoServer:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  readinessProbe:
+    timeoutSeconds: 5
+    failureThreshold: 6
+  livenessProbe:
+    initialDelaySeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 6
+
+# ApplicationSet controller — generates Applications from templates
+applicationSet:
+  replicas: 1
+  # Resource requests (Kyverno require-resource-requests)
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+# Redis — cache only, no persistence needed
+redis:
+  enabled: true
+  # Override image to use Docker Hub instead of ecr-public.aws.com
+  # (Kyverno restrict-image-registries — fully-qualified reference)
+  image:
+    repository: docker.io/library/redis
+    tag: 8.2.3-alpine
+  # Resource requests (Kyverno require-resource-requests)
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+# Dex — SSO/OIDC provider (disabled until Phase 2)
+dex:
+  enabled: false
+
+# Notifications — disabled until Phase 2
+notifications:
+  enabled: false

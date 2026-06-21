@@ -19,3 +19,11 @@ nodePathMap:
   - node: DEFAULT_PATH_FOR_NON_LISTED_NODES
     paths:
       - /opt/local-path-provisioner
+
+# Resource requests (Kyverno require-resource-requests)
+resources:
+  requests:
+    cpu: 25m
+    memory: 32Mi
+  limits:
+    memory: 128Mi

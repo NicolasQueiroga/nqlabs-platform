@@ -15,3 +15,12 @@ resources:
     memory: 256Mi
   limits:
     memory: 1Gi
+
+# falcoctl-artifact-follow sidecar — downloads/maintains Falco rules
+falcoctl:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
