@@ -1,0 +1,38 @@
+# Velero — cluster backup/DR to the in-cluster MinIO S3 target (management).
+# Offsite upgrade = point backupStorageLocation at Cloudflare R2 (see runbook).
+initContainers:
+  - name: velero-plugin-for-aws
+    image: velero/velero-plugin-for-aws:v1.14.1
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+      - mountPath: /target
+        name: plugins
+credentials:
+  useSecret: true
+  existingSecret: velero-credentials
+configuration:
+  backupStorageLocation:
+    - name: default
+      provider: aws
+      bucket: velero
+      default: true
+      config:
+        region: minio
+        s3Url: http://minio.minio:9000
+        s3ForcePathStyle: "true"
+  volumeSnapshotLocation: []
+snapshotsEnabled: false
+deployNodeAgent: true
+schedules:
+  daily:
+    disabled: false
+    schedule: "0 3 * * *"
+    template:
+      ttl: "168h"
+      storageLocation: default
+      excludedNamespaces:
+        - kube-system
+        - kube-node-lease
+resources:
+  requests: { cpu: 50m, memory: 128Mi }
+  limits: { memory: 512Mi }
