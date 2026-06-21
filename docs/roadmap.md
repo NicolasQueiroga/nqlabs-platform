@@ -10,7 +10,7 @@ bank-grade, fully-featured private cloud. Tracked here.
   canary/stable Services + weighted HTTPRoute (current canary is replica-ratio basic).
 - [x] **Metric-driven rollouts** — AnalysisTemplates for automated promote/rollback
   (not only manual pauses).
-- [~] **Public `*.io` edge** (scaffold + runbook done; needs Cloudflare tunnel token) — Cloudflare Tunnel / VPS reverse proxy (exposure model is
+- [x] **Public `*.io` edge** — Cloudflare Tunnel LIVE on production (cloudflared registered); add public hostnames in the CF dashboard per app — Cloudflare Tunnel / VPS reverse proxy (exposure model is
   defined; the public edge is not built).
 - [x] **Preview workload selectivity** — `--workers/--scheduler` flags; default api/web
   only for multi-workload apps.
