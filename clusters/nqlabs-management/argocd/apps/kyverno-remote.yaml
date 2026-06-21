@@ -38,6 +38,9 @@ spec:
       kind: CustomResourceDefinition
       jqPathExpressions:
         - .spec.conversion.webhook.clientConfig.caBundle
+        - .status
+        - .metadata.annotations
+        - .metadata.labels
     - group: admissionregistration.k8s.io
       kind: ValidatingWebhookConfiguration
       jqPathExpressions:
@@ -133,6 +136,9 @@ spec:
       kind: CustomResourceDefinition
       jqPathExpressions:
         - .spec.conversion.webhook.clientConfig.caBundle
+        - .status
+        - .metadata.annotations
+        - .metadata.labels
     - group: admissionregistration.k8s.io
       kind: ValidatingWebhookConfiguration
       jqPathExpressions:

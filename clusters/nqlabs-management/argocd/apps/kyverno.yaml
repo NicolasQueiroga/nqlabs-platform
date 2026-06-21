@@ -32,11 +32,16 @@ spec:
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
   # Kyverno mutates its own CRD caBundle + webhook configs at runtime; ignore that drift.
+  # CRDs: ignore status, managedFields, and conversion webhook fields that
+  # Kubernetes/Kyverno modifies after installation.
   ignoreDifferences:
     - group: apiextensions.k8s.io
       kind: CustomResourceDefinition
       jqPathExpressions:
         - .spec.conversion.webhook.clientConfig.caBundle
+        - .status
+        - .metadata.annotations
+        - .metadata.labels
     - group: admissionregistration.k8s.io
       kind: ValidatingWebhookConfiguration
       jqPathExpressions:
