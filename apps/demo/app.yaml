@@ -38,6 +38,10 @@ service:
   port: 80
 rollout:
   enabled: true
+  # Exact-weight canary via the Gateway API plugin (canary/stable Services +
+  # weighted HTTPRoute). Production drives it through the setWeight steps.
+  trafficRouting:
+    enabled: true
   strategy:
     canary:
       maxSurge: 25%
