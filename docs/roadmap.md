@@ -20,18 +20,19 @@ bank-grade, fully-featured private cloud. Tracked here.
 - [x] **Kyverno** policy engine on **management** — 4 baseline ClusterPolicies in Audit
   (disallow-latest-tag, require-resource-requests, restrict-image-registries,
   require-run-as-nonroot) + verify-image-signatures. PolicyReports generating.
-  - [ ] replicate Kyverno to staging/production (so service pods are audited there)
+  - [x] replicate Kyverno to staging/production (auditing service pods there)
   - [ ] flip clean rules Audit → Enforce once the fleet passes
 - [x] **Supply-chain CI** — reusable Trivy scan + Cosign keyless sign + SBOM attestation
   workflow; Kyverno verify-image-signatures audits ghcr signatures. App repos call it
   from their build (wire into `nqlabs-demo` build to activate).
   - [ ] **Harbor** self-hosted registry — DEFERRED: needs distributed storage (Rook/Ceph)
     for a non-single-node install; GHCR + scan/sign/verify covers the core meanwhile.
-- [ ] **Falco** runtime security (eBPF `modern_ebpf` driver, alert mode) — DaemonSet per cluster.
-- [ ] CiliumNetworkPolicy **default-deny** baseline — chart already supports it; needs a
-  namespace baseline (allow DNS + gateway ingress + same-ns) rolled out carefully.
-- [ ] **OpenBao** — DEFERRED (large migration): stand up OpenBao, migrate ESO from
-  1Password, move PKI from the internal CA to OpenBao. Plan as its own milestone.
+    Requirements: [planning/harbor-openbao-requirements.md](planning/harbor-openbao-requirements.md).
+- [x] **Falco** runtime security — modern_ebpf DaemonSet live on all 3 clusters (alert mode).
+- [x] CiliumNetworkPolicy **default-deny** baseline — chart supports it; live on demo
+  (default-deny ingress, allow in-cluster/host/ingress; verified still reachable).
+- [ ] **OpenBao** — DEFERRED (large migration). Requirements + migration plan:
+  [planning/harbor-openbao-requirements.md](planning/harbor-openbao-requirements.md).
 
 ## Resilience / scale
 
