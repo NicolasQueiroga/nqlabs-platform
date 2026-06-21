@@ -131,16 +131,6 @@ prometheus:
       limits:
         memory: 2Gi
 
-    # config-reloader sidecar — watches configmaps and triggers Prometheus reloads
-    # Resource requests (Kyverno require-resource-requests)
-    prometheusConfigReloader:
-      resources:
-        requests:
-          cpu: 10m
-          memory: 32Mi
-        limits:
-          memory: 128Mi
-
 # ── Alertmanager ────────────────────────────────────────────────────────────
 alertmanager:
   alertmanagerSpec:
@@ -179,6 +169,15 @@ prometheusOperator:
       memory: 128Mi
     limits:
       memory: 512Mi
+  # config-reloader sidecar — used by both Prometheus and Alertmanager
+  # Resource requests (Kyverno require-resource-requests)
+  prometheusConfigReloader:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 128Mi
 
 # ── kube-state-metrics ──────────────────────────────────────────────────────
 kube-state-metrics:
