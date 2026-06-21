@@ -1,0 +1,17 @@
+# Falco — runtime security (detection/alert only; never blocks). modern_ebpf CO-RE
+# driver (no kernel module) works on Talos via BTF. JSON events to stdout are
+# collected by promtail -> Loki.
+driver:
+  kind: modern_ebpf
+collectors:
+  enabled: true
+falco:
+  json_output: true
+  json_include_output_property: true
+  json_include_tags_property: true
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
