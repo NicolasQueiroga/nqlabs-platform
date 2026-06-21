@@ -1,7 +1,6 @@
-# Baseline guardrails in AUDIT mode (failureAction: Audit) and webhook
-# failurePolicy: Ignore, so they never block admission — they surface
-# violations in PolicyReports. Flip individual rules to Enforce once the
-# fleet is clean.
+# Baseline guardrails in ENFORCE mode (failureAction: Enforce) with webhook
+# failurePolicy: Ignore (so Kyverno being down never blocks admission) — they
+# block non-compliant resources and surface violations in PolicyReports.
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
@@ -21,7 +20,7 @@ spec:
           - resources:
               kinds: [Pod]
       validate:
-        failureAction: Audit
+        failureAction: Enforce
         message: "An explicit image tag is required (no :latest, no untagged)."
         pattern:
           spec:
@@ -46,7 +45,7 @@ spec:
           - resources:
               kinds: [Pod]
       validate:
-        failureAction: Audit
+        failureAction: Enforce
         message: "CPU and memory requests are required."
         pattern:
           spec:
@@ -74,7 +73,7 @@ spec:
           - resources:
               kinds: [Pod]
       validate:
-        failureAction: Audit
+        failureAction: Enforce
         message: "Images must come from an approved registry."
         pattern:
           spec:
@@ -109,7 +108,7 @@ spec:
                 - velero
                 - monitoring
       validate:
-        failureAction: Audit
+        failureAction: Enforce
         message: "Containers should run as non-root."
         pattern:
           spec:
