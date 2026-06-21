@@ -103,6 +103,9 @@ spec:
           image: minio/mc:RELEASE.2025-04-16T18-13-26Z
           envFrom:
             - secretRef: { name: minio-auth }
+          env:
+            - { name: HOME, value: /tmp }
+            - { name: MC_CONFIG_DIR, value: /tmp/.mc }
           command: [sh, -c]
           args:
             - |
