@@ -17,11 +17,21 @@ bank-grade, fully-featured private cloud. Tracked here.
 
 ## Security / supply chain
 
-- [ ] **Kyverno** policy (audit → enforce: secure defaults, approved registries, required labels).
-- [ ] **Harbor** registry + **Trivy** scanning + **Cosign** signing + SBOMs.
-- [ ] **Falco** runtime security (eBPF).
-- [ ] CiliumNetworkPolicy **default-deny** baseline (mostly opt-in today).
-- [ ] **OpenBao** — migrate the secrets backend from 1Password; OpenBao PKI replaces the internal CA.
+- [x] **Kyverno** policy engine on **management** — 4 baseline ClusterPolicies in Audit
+  (disallow-latest-tag, require-resource-requests, restrict-image-registries,
+  require-run-as-nonroot) + verify-image-signatures. PolicyReports generating.
+  - [ ] replicate Kyverno to staging/production (so service pods are audited there)
+  - [ ] flip clean rules Audit → Enforce once the fleet passes
+- [x] **Supply-chain CI** — reusable Trivy scan + Cosign keyless sign + SBOM attestation
+  workflow; Kyverno verify-image-signatures audits ghcr signatures. App repos call it
+  from their build (wire into `nqlabs-demo` build to activate).
+  - [ ] **Harbor** self-hosted registry — DEFERRED: needs distributed storage (Rook/Ceph)
+    for a non-single-node install; GHCR + scan/sign/verify covers the core meanwhile.
+- [ ] **Falco** runtime security (eBPF `modern_ebpf` driver, alert mode) — DaemonSet per cluster.
+- [ ] CiliumNetworkPolicy **default-deny** baseline — chart already supports it; needs a
+  namespace baseline (allow DNS + gateway ingress + same-ns) rolled out carefully.
+- [ ] **OpenBao** — DEFERRED (large migration): stand up OpenBao, migrate ESO from
+  1Password, move PKI from the internal CA to OpenBao. Plan as its own milestone.
 
 ## Resilience / scale
 
