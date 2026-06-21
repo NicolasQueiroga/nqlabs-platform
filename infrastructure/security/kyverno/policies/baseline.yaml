@@ -98,16 +98,16 @@ spec:
         any:
           - resources:
               kinds: [Pod]
-        exclude:
-          any:
-            - resources:
-                namespaces:
-                  - kube-system
-                  - falco
-                  - tailscale
-                  - local-path-storage
-                  - velero
-                  - monitoring
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - falco
+                - tailscale
+                - local-path-storage
+                - velero
+                - monitoring
       validate:
         failureAction: Audit
         message: "Containers should run as non-root."
