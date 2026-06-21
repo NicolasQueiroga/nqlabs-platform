@@ -1,0 +1,39 @@
+{{- if and .Values.rollout.enabled .Values.rollout.analysis.enabled -}}
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ include "nqlabs-service.fullname" . }}-canary-health
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  args:
+    - name: service-url
+  metrics:
+    {{- if .Values.rollout.analysis.prometheus.address }}
+    - name: success-rate
+      interval: {{ .Values.rollout.analysis.interval }}
+      failureLimit: {{ .Values.rollout.analysis.failureLimit }}
+      successCondition: {{ .Values.rollout.analysis.prometheus.successCondition | quote }}
+      provider:
+        prometheus:
+          address: {{ .Values.rollout.analysis.prometheus.address }}
+          query: {{ .Values.rollout.analysis.prometheus.query | quote }}
+    {{- else }}
+    - name: http-2xx
+      interval: {{ .Values.rollout.analysis.interval }}
+      failureLimit: {{ .Values.rollout.analysis.failureLimit }}
+      provider:
+        job:
+          spec:
+            backoffLimit: 0
+            template:
+              spec:
+                restartPolicy: Never
+                containers:
+                  - name: check
+                    image: curlimages/curl:8.10.1
+                    command: [sh, -c]
+                    args:
+                      - 'code=$(curl -s -o /dev/null -m 5 -w "%{http_code}" "{{`{{args.service-url}}`}}"); echo "got $code"; test "$code" -ge 200 -a "$code" -lt 400'
+    {{- end }}
+{{- end }}

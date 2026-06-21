@@ -167,6 +167,18 @@ rollout:
   # cluster's argo-rollouts controller. Default off = replica-ratio basic canary.
   trafficRouting:
     enabled: false
+  # Metric-driven rollout: a background AnalysisRun probes the canary during the
+  # rollout and auto-aborts (rolls back) on repeated failure. Default provider is
+  # an HTTP 2xx Job check (no Prometheus needed). Set analysis.prometheus.address +
+  # query to use a Prometheus success-rate metric instead.
+  analysis:
+    enabled: false
+    interval: 30s
+    failureLimit: 3
+    prometheus:
+      address: ""
+      query: ""
+      successCondition: "result[0] >= 0.95"
   strategy:
     canary:
       maxSurge: 25%

@@ -20,6 +20,15 @@ spec:
             httpRoute: {{ include "nqlabs-service.fullname" . }}
             namespace: {{ .Release.Namespace }}
       {{- end }}
+      {{- if .Values.rollout.analysis.enabled }}
+      analysis:
+        startingStep: 1
+        templates:
+          - templateName: {{ include "nqlabs-service.fullname" . }}-canary-health
+        args:
+          - name: service-url
+            value: {{ printf "http://%s.%s.svc.cluster.local:%v/" (ternary (printf "%s-canary" (include "nqlabs-service.fullname" .)) (include "nqlabs-service.fullname" .) .Values.rollout.trafficRouting.enabled) .Release.Namespace .Values.service.port }}
+      {{- end }}
       {{- toYaml .Values.rollout.strategy.canary | nindent 6 }}
   selector:
     matchLabels:

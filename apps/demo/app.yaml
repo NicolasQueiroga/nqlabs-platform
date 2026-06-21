@@ -42,6 +42,9 @@ rollout:
   # weighted HTTPRoute). Production drives it through the setWeight steps.
   trafficRouting:
     enabled: true
+  # Auto-rollback gate: background HTTP-2xx analysis on the canary during rollouts.
+  analysis:
+    enabled: true
   strategy:
     canary:
       maxSurge: 25%
