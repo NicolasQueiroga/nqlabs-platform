@@ -84,9 +84,9 @@ cgroup:
   hostRoot: /sys/fs/cgroup
 
 # Override per cluster — must match the control plane IP/port
-# Desktop bootstrap target: first Talos control-plane VM at 192.168.15.30.
-# For future multi-node clusters, override with the cluster VIP or load balancer endpoint.
-k8sServiceHost: 192.168.15.30
+# Management cluster: 192.168.15.31 (talos-8m9-8ow)
+# Staging/production clusters: override with --set k8sServiceHost=<IP>
+k8sServiceHost: 192.168.15.31
 k8sServicePort: 6443
 
 hubble:
