@@ -62,14 +62,30 @@ spec:
   orphanedResources:
     warn: true
     ignore:
-      # Prometheus Operator creates these headless Services dynamically; they are
-      # expected in the monitoring namespace but are not tracked by any ArgoCD app.
+      # Operator/hook-managed resources that legitimately live in platform
+      # namespaces but are NOT part of GitOps-tracked state (the owning
+      # controller creates and rotates them at runtime). Ignored so they don't
+      # trip the orphaned-resource warning. warn:true is kept so genuinely
+      # leaked resources are still surfaced.
+
+      # Prometheus Operator: headless Services for the Prometheus/Alertmanager
+      # StatefulSets, created dynamically by the operator.
       - group: ""
         kind: Service
         name: prometheus-operated
       - group: ""
         kind: Service
         name: alertmanager-operated
+      # kube-prometheus-stack: admission-webhook cert Secret patched by the
+      # chart's Helm hook Job (not a rendered manifest).
+      - group: ""
+        kind: Secret
+        name: kube-prometheus-stack-admission
+      # Kyverno: webhook TLS CA/pair Secrets generated and rotated by Kyverno
+      # itself (e.g. kyverno-svc.*, kyverno-cleanup-controller.*).
+      - group: ""
+        kind: Secret
+        name: "*.kyverno.svc.kyverno-tls-*"
 
 ---
 apiVersion: argoproj.io/v1alpha1
