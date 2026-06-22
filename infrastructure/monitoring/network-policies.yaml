@@ -53,12 +53,41 @@ spec:
       ports:
         - port: 80
           protocol: TCP
+        - port: 3000
+          protocol: TCP
         - port: 9090
           protocol: TCP
         - port: 9093
           protocol: TCP
         - port: 3001
           protocol: TCP
+---
+# Allow Cilium Gateway API proxy (reserved "ingress" identity) to reach monitoring UIs.
+# The Cilium envoy connects directly to pod IPs on container ports (not service ports),
+# using the Cilium-internal "ingress" entity rather than a namespace label. A standard
+# K8s NetworkPolicy cannot match this identity; a CiliumNetworkPolicy is required.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: monitoring-allow-cilium-gateway
+  namespace: monitoring
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - ingress
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "3000"
+              protocol: TCP
+            - port: "9090"
+              protocol: TCP
+            - port: "9093"
+              protocol: TCP
+            - port: "3001"
+              protocol: TCP
 ---
 # Allow Prometheus to scrape all pods in all namespaces (egress)
 apiVersion: networking.k8s.io/v1
