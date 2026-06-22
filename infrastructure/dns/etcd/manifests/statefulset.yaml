@@ -42,10 +42,13 @@ spec:
                   matchLabels:
                     app: etcd-dns
                 topologyKey: kubernetes.io/hostname
+      # Talos + subPath bind mounts block writes for non-root UIDs at the kernel level
+      # even with correct fsGroup/ownership. Same issue as Prometheus on this setup.
+      # dns namespace is enforced as 'privileged' — running as root is intentional.
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        fsGroup: 1000
+        runAsUser: 0
+        runAsGroup: 0
+        runAsNonRoot: false
         seccompProfile:
           type: RuntimeDefault
       terminationGracePeriodSeconds: 30
