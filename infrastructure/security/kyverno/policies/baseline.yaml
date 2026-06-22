@@ -3,7 +3,7 @@
 # block non-compliant resources and surface violations in PolicyReports.
 #
 # Namespace exclusions: kube-system, falco, tailscale, local-path-storage,
-# velero, monitoring — system/infra namespaces that may need exceptions.
+# velero, monitoring, dns — system/infra namespaces that may need exceptions.
 # Add/remove namespaces from the exclude lists as needed.
 #
 # NOTE: pod-policies.kyverno.io/autogen-controllers: none disables Kyverno's
@@ -40,6 +40,7 @@ spec:
                 - local-path-storage
                 - velero
                 - monitoring
+                - dns
       validate:
         failureAction: Enforce
         message: "An explicit image tag is required (no :latest, no untagged)."
@@ -76,6 +77,7 @@ spec:
                 - local-path-storage
                 - velero
                 - monitoring
+                - dns
       validate:
         failureAction: Enforce
         message: "CPU and memory requests are required."
@@ -118,6 +120,7 @@ spec:
                 - local-path-storage
                 - velero
                 - monitoring
+                - dns
       validate:
         failureAction: Enforce
         message: "Images must come from an approved registry."
@@ -156,6 +159,7 @@ spec:
                 - local-path-storage
                 - velero
                 - monitoring
+                - dns
       validate:
         failureAction: Enforce
         message: "Containers must run as non-root. Set runAsNonRoot: true in pod or container securityContext."
@@ -196,6 +200,7 @@ spec:
                 - local-path-storage
                 - velero
                 - monitoring
+                - dns
       validate:
         failureAction: Enforce
         message: "Privileged containers are not allowed."
@@ -234,6 +239,7 @@ spec:
                 - local-path-storage
                 - velero
                 - monitoring
+                - dns
       validate:
         failureAction: Enforce
         message: "Seccomp profile must be set (RuntimeDefault or Localhost) at pod or container level."
@@ -285,6 +291,7 @@ spec:
                 - local-path-storage
                 - velero
                 - monitoring
+                - dns
       validate:
         failureAction: Enforce
         message: "Host PID and IPC namespaces are not allowed."
@@ -322,6 +329,7 @@ spec:
                 - local-path-storage
                 - velero
                 - monitoring
+                - dns
       validate:
         failureAction: Enforce
         message: "Containers must drop ALL capabilities."
@@ -361,6 +369,7 @@ spec:
                 - local-path-storage
                 - velero
                 - monitoring
+                - dns
       validate:
         failureAction: Enforce
         message: "HostPath volumes are not allowed."
