@@ -89,6 +89,31 @@ spec:
             - port: "9093"
               protocol: TCP
 ---
+# Cluster-wide policy: allow monitoring namespace pods to reach all pods
+# for health checks (Gatus) and metrics scraping (Prometheus).
+#
+# This CCNP eliminates the need to update each target namespace's CNP
+# when adding new Gatus monitors. Without it, every namespace that has
+# a CiliumNetworkPolicy with ingress rules must explicitly allow the
+# monitoring namespace — which is easy to forget and causes silent
+# 10s timeouts in Gatus health checks.
+#
+# Security rationale: the monitoring namespace is already trusted (Prometheus
+# has unrestricted egress for cluster-wide scraping). Gatus only does HTTP GET
+# health checks. This CCNP does not change the egress posture — it only
+# ensures the ingress side of target namespaces doesn't block health checks.
+apiVersion: cilium.io/v2
+kind: CiliumClusterNetworkPolicy
+metadata:
+  name: monitoring-allow-health-checks
+spec:
+  description: "Allow monitoring namespace (Gatus, Prometheus) to reach all pods for health checks and metrics scraping"
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: monitoring
+---
 # Allow Prometheus to scrape all pods in all namespaces (egress)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

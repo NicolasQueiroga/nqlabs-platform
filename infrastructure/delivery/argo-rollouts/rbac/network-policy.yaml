@@ -5,7 +5,10 @@
 # The reserved "ingress" entity is also allowed as a fallback / for direct
 # gateway access on the staging/production clusters (where authentik is absent,
 # the authentik rule simply matches nothing).
-# The monitoring namespace is allowed so Gatus can perform internal health checks.
+#
+# Gatus health checks from the monitoring namespace are handled by the
+# cluster-wide CiliumClusterNetworkPolicy "monitoring-allow-health-checks"
+# in infrastructure/monitoring/network-policies.yaml.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -23,13 +26,6 @@ spec:
     - fromEndpoints:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: authentik
-      toPorts:
-        - ports:
-            - port: "3100"
-              protocol: TCP
-    - fromEndpoints:
-        - matchLabels:
-            k8s:io.kubernetes.pod.namespace: monitoring
       toPorts:
         - ports:
             - port: "3100"
