@@ -28,6 +28,7 @@ spec:
       targetRevision: HEAD
       ref: values
     # RBAC for Gateway API HTTPRoute management (canary traffic shifting).
+    # Also contains the CiliumNetworkPolicy allowing gateway ingress to the dashboard.
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
       path: infrastructure/delivery/argo-rollouts/rbac

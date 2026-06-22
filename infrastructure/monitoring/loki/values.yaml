@@ -92,6 +92,9 @@ backend:
 gateway:
   enabled: true
   replicas: 1
+  # Single-node: disable required anti-affinity (default) to avoid rolling-update
+  # deadlock where the new pod can't schedule while the old one is still running.
+  affinity: {}
   resources:
     requests:
       cpu: 10m
