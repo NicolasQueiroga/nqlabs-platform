@@ -37,8 +37,8 @@ spec:
         - http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/-/healthy
         # Alertmanager — service endpoint on port 9093
         - http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093/-/healthy
-        # Argo Rollouts dashboard — service endpoint on port 3100
-        - http://argo-rollouts-dashboard.argo-rollouts.svc.cluster.local:3100/healthz
+        # Argo Rollouts dashboard — serves UI on /, no dedicated healthz
+        - http://argo-rollouts-dashboard.argo-rollouts.svc.cluster.local:3100/
         # Uptime Kuma — service endpoint on port 3001
         - http://uptime-kuma.monitoring.svc.cluster.local:3001/
 
@@ -99,6 +99,3 @@ spec:
       static:
         - https://argocd.platform.nqlabs.network
         - https://grafana.platform.nqlabs.network
-        # Demo apps (no auth, just verify they're up)
-        - https://demo.staging.nqlabs.network
-        - https://demo.production.nqlabs.network
