@@ -1,5 +1,9 @@
 # production remote-cluster foundation apps managed by nqlabs-management ArgoCD.
 #
+# NOTE: targetRevision: HEAD is used for lab convenience. For production,
+# pin to a specific Git tag or commit SHA to prevent unreviewed changes
+# from auto-deploying to the production cluster.
+#
 # Installs the minimum shared platform substrate on the remote cluster:
 # - Cilium LB IPAM/L2 policy (post-bootstrap config only)
 # - local-path-provisioner

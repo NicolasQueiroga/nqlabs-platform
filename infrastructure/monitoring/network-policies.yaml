@@ -1,10 +1,9 @@
 # NetworkPolicies for the monitoring namespace.
 #
 # Deny all ingress by default, then allow:
-#   - Platform Gateway (namespace: platform) → Grafana, Prometheus, Alertmanager, Uptime-Kuma
-#   - Prometheus → all namespaces (scraping)
-#   - Promtail → Loki gateway
-#   - Blackbox exporter → external endpoints (egress)
+#   - Intra-namespace traffic (Promtail→Loki, Grafana→Prometheus/Loki, etc.)
+#   - Platform Gateway (namespaces with gateway-access label) → UIs
+#   - Prometheus egress to all namespaces (scraping)
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -16,7 +15,22 @@ spec:
   policyTypes:
     - Ingress
 ---
-# Allow Gateway (platform namespace) to reach monitoring UIs
+# Allow intra-namespace traffic within monitoring.
+# Promtail → Loki gateway, Grafana → Prometheus/Loki, Prometheus → Alertmanager.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: monitoring-allow-intra-namespace
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+---
+# Allow Gateway (namespaces with gateway-access label) to reach monitoring UIs
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

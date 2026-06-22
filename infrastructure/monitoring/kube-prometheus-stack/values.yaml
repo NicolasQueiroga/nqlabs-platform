@@ -125,11 +125,14 @@ prometheus:
     externalLabels:
       cluster: nqlabs-management
 
-    # TODO: Add basic auth for exposed Prometheus UI.
-    # Currently accessible via prometheus.platform.nqlabs.network without auth.
-    # Options: 1) Enable web.yml basic_auth_users (requires secret with hashed
-    # passwords), 2) Add Gateway API AuthFilter (requires Cilium support),
-    # 3) Restrict via NetworkPolicy to Tailscale subnet only.
+    # Basic auth for exposed Prometheus UI.
+    # Secret: prometheus-web-config (created by ExternalSecret from 1Password)
+    # Contains web.yml with basic_auth_users (bcrypt-hashed password).
+    # 1Password item: prometheus-basic-auth | Field: password (bcrypt hash)
+    secrets:
+      - prometheus-web-config
+    additionalArgs:
+      - --web.config.file=/etc/prometheus/secrets/prometheus-web-config/web.yml
 
 
     # Talos + subPath bind mounts block writes for non-root UIDs at the kernel level
@@ -172,6 +175,13 @@ alertmanager:
           resources:
             requests:
               storage: 2Gi
+
+    # Basic auth for exposed Alertmanager UI.
+    # Reuses the same prometheus-web-config secret (same admin password).
+    secrets:
+      - prometheus-web-config
+    additionalArgs:
+      - --web.config.file=/etc/alertmanager/secrets/prometheus-web-config/web.yml
 
     # Same Talos subPath kernel restriction that affects Prometheus applies here:
     # non-root UIDs can't write to local-path PVC directories even with correct

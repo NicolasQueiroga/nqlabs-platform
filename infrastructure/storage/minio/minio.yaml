@@ -62,9 +62,12 @@ spec:
             - { name: console, containerPort: 9001 }
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities: { drop: ["ALL"] }
           volumeMounts:
             - { name: data, mountPath: /data }
+            # Writable tmp for MinIO internal operations (readOnlyRootFilesystem)
+            - { name: tmp, mountPath: /tmp }
           livenessProbe:
             httpGet:
               path: /minio/health/live
@@ -87,6 +90,8 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim: { claimName: minio-data }
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
