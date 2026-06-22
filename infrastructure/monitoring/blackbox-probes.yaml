@@ -1,18 +1,89 @@
 # Blackbox endpoint probes — NQLabs Platform
 #
-# Probes the full user-facing HTTPS path for platform and demo service URLs:
-# DNS -> platform Gateway -> TLS -> HTTPRoute -> Service -> Pod.
+# Split into two probe types after Authentik forward-auth rollout:
+# 1. Internal service health probes — hit service endpoints directly, expect 2xx
+# 2. Edge auth probes — hit public URLs through gateway, expect 302 to Authentik
+#
+# OIDC services (ArgoCD, Grafana) serve login pages at public URLs, so they
+# remain as edge probes expecting 2xx. Forward-auth services (Prometheus,
+# Alertmanager, Rollouts, Uptime) are split into internal + edge-auth probes.
 
+---
+# Internal service health probes — verify backends are up (bypass gateway/auth)
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
 metadata:
-  name: nqlabs-endpoints
+  name: nqlabs-internal-health
   namespace: monitoring
   labels:
     app.kubernetes.io/name: blackbox-exporter
-    nqlabs.network/component: endpoint-probes
+    nqlabs.network/component: internal-health-probes
 spec:
-  jobName: nqlabs-endpoints
+  jobName: nqlabs-internal-health
+  interval: 30s
+  scrapeTimeout: 10s
+  module: http_2xx_internal
+  prober:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+    scheme: http
+    path: /probe
+  targets:
+    staticConfig:
+      labels:
+        cluster: lab
+        probe_scope: internal-health
+      static:
+        # Prometheus — service endpoint on port 9090
+        - http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/-/healthy
+        # Alertmanager — service endpoint on port 9093
+        - http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093/-/healthy
+        # Argo Rollouts dashboard — service endpoint on port 3100
+        - http://argo-rollouts-dashboard.argo-rollouts.svc.cluster.local:3100/healthz
+        # Uptime Kuma — service endpoint on port 3001
+        - http://uptime-kuma.monitoring.svc.cluster.local:3001/
+
+---
+# Edge auth probes — verify public URLs redirect to Authentik (forward-auth)
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: nqlabs-edge-auth
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: blackbox-exporter
+    nqlabs.network/component: edge-auth-probes
+spec:
+  jobName: nqlabs-edge-auth
+  interval: 30s
+  scrapeTimeout: 10s
+  module: http_302_auth
+  prober:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+    scheme: http
+    path: /probe
+  targets:
+    staticConfig:
+      labels:
+        cluster: lab
+        probe_scope: edge-auth
+      static:
+        - https://prometheus.platform.nqlabs.network
+        - https://alertmanager.platform.nqlabs.network
+        - https://rollouts.platform.nqlabs.network
+        - https://uptime.platform.nqlabs.network
+
+---
+# Edge probes for OIDC services — verify login pages are served (2xx)
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: nqlabs-edge-oidc
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: blackbox-exporter
+    nqlabs.network/component: edge-oidc-probes
+spec:
+  jobName: nqlabs-edge-oidc
   interval: 30s
   scrapeTimeout: 15s
   module: http_2xx_internal
@@ -24,13 +95,10 @@ spec:
     staticConfig:
       labels:
         cluster: lab
-        probe_scope: internal
+        probe_scope: edge-oidc
       static:
         - https://argocd.platform.nqlabs.network
         - https://grafana.platform.nqlabs.network
-        - https://prometheus.platform.nqlabs.network
-        - https://alertmanager.platform.nqlabs.network
-        - https://rollouts.platform.nqlabs.network
+        # Demo apps (no auth, just verify they're up)
         - https://demo.staging.nqlabs.network
         - https://demo.production.nqlabs.network
-        - https://uptime.platform.nqlabs.network

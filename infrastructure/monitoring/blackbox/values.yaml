@@ -21,6 +21,19 @@ config:
         tls_config:
           insecure_skip_verify: false
 
+    # Edge auth probe for forward-auth protected endpoints.
+    # Expects 302 redirect to Authentik login page. Does NOT follow redirects.
+    http_302_auth:
+      prober: http
+      timeout: 10s
+      http:
+        valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+        follow_redirects: false
+        preferred_ip_protocol: ip4
+        valid_status_codes: [302]
+        tls_config:
+          insecure_skip_verify: false
+
 resources:
   requests:
     cpu: 10m
