@@ -55,11 +55,11 @@ spec:
           protocol: TCP
         - port: 3000
           protocol: TCP
+        - port: 8080
+          protocol: TCP
         - port: 9090
           protocol: TCP
         - port: 9093
-          protocol: TCP
-        - port: 3001
           protocol: TCP
 ---
 # Allow Cilium Gateway API proxy (reserved "ingress" identity) to reach monitoring UIs.
@@ -82,11 +82,11 @@ spec:
               protocol: TCP
             - port: "3000"
               protocol: TCP
+            - port: "8080"
+              protocol: TCP
             - port: "9090"
               protocol: TCP
             - port: "9093"
-              protocol: TCP
-            - port: "3001"
               protocol: TCP
 ---
 # Allow Prometheus to scrape all pods in all namespaces (egress)
