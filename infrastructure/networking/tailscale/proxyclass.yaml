@@ -3,6 +3,10 @@
 # Sets resource requests for the tailscale container and sysctler init container
 # to satisfy Kyverno require-resource-requests policy.
 # Applied to proxies via tailscale.com/proxy-class label or connector.spec.proxyClass.
+#
+# Uses userspace networking (TS_USERSPACE=true) because Talos doesn't have
+# iptables/nftables modules loaded, so kernel-level forwarding doesn't work.
+# Userspace networking handles forwarding in userspace instead.
 
 apiVersion: tailscale.com/v1alpha1
 kind: ProxyClass
@@ -12,6 +16,9 @@ spec:
   statefulSet:
     pod:
       tailscaleContainer:
+        env:
+          - name: TS_USERSPACE
+            value: "true"
         resources:
           requests:
             cpu: 50m
