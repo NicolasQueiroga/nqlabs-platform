@@ -93,6 +93,7 @@ spec:
 # Narrowed from docker.io/* to specific Docker Hub repos:
 #   cloudflare (cloudflared), minio, louislam (uptime-kuma),
 #   grafana (grafana/loki/promtail), coredns, velero, falcosecurity
+# Note: Gatus uses ghcr.io/twin/gatus (covered by ghcr.io/* wildcard).
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:

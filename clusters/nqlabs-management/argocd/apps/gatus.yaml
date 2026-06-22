@@ -1,14 +1,14 @@
-# Uptime Kuma for nqlabs-management.
+# Gatus for nqlabs-management.
 #
-# Status page and secondary endpoint probe vantage point.
+# Uptime monitoring with native OIDC authentication (Authentik).
+# Replaces Uptime Kuma — no proxy workaround needed.
 # HTTPRoute (uptime.platform.nqlabs.network) created by monitoring-config.
-# No hostAliases needed — in-cluster split-horizon DNS resolves platform
-# hostnames to the management Gateway automatically.
+# OIDC client secret sourced from 1Password via ExternalSecret.
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: uptime-kuma
+  name: gatus
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -19,7 +19,7 @@ spec:
   source:
     repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
     targetRevision: HEAD
-    path: infrastructure/monitoring/uptime-kuma
+    path: infrastructure/monitoring/gatus
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring

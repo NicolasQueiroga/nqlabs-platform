@@ -1,0 +1,96 @@
+# Gatus configuration — monitors + OIDC security + storage.
+#
+# Config is mounted as a ConfigMap at /config/config.yaml.
+# OIDC client secret is injected via env var (OIDC_CLIENT_SECRET) and
+# resolved by Gatus at runtime (see Authentik integration guide).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gatus-config
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: gatus
+    app.kubernetes.io/part-of: nqlabs-platform
+data:
+  config.yaml: |
+    # ── Storage ──────────────────────────────────────────────────────────────
+    storage:
+      type: sqlite
+      path: /data/data.db
+
+    # ── UI ────────────────────────────────────────────────────────────────────
+    ui:
+      header: "NQLabs Platform Status"
+      login-subtitle: "Sign in with your Authentik account"
+
+    # ── OIDC Security ──────────────────────────────────────────────────────────
+    # Native OIDC integration with Authentik — no proxy needed.
+    security:
+      oidc:
+        issuer-url: "https://auth.platform.nqlabs.network/application/o/gatus/"
+        client-id: "OIDC_CLIENT_ID"
+        client-secret: "OIDC_CLIENT_SECRET"
+        redirect-url: "https://uptime.platform.nqlabs.network/authorization-code/callback"
+        scopes: ["openid", "profile", "email"]
+
+    # ── Metrics ────────────────────────────────────────────────────────────────
+    metrics: true
+
+    # ── Endpoints ──────────────────────────────────────────────────────────────
+    # Internal health checks — verify backends are up (bypass gateway/auth).
+    # Edge auth probes are handled by Blackbox Exporter (see blackbox-probes.yaml).
+    endpoints:
+      # ── Identity ─────────────────────────────────────────────────────────────
+      - name: Authentik
+        group: Identity
+        url: http://authentik-server.authentik.svc.cluster.local:80
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      # ── GitOps ───────────────────────────────────────────────────────────────
+      - name: ArgoCD
+        group: GitOps
+        url: http://argocd-server.argocd.svc.cluster.local:80
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Argo Rollouts
+        group: GitOps
+        url: http://argo-rollouts-dashboard.argo-rollouts.svc.cluster.local:3100
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      # ── Monitoring ────────────────────────────────────────────────────────────
+      - name: Grafana
+        group: Monitoring
+        url: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Prometheus
+        group: Monitoring
+        url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/-/healthy
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Alertmanager
+        group: Monitoring
+        url: http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093/-/healthy
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      # ── Edge / Gateway ───────────────────────────────────────────────────────
+      - name: Gateway (HTTPS)
+        group: Edge
+        url: https://auth.platform.nqlabs.network
+        interval: 2m
+        client:
+          follow-redirects: false
+        conditions:
+          - "[STATUS] == 200"
