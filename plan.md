@@ -561,9 +561,12 @@ storage architecture can exist. Start with Ceph and avoid a Longhorn→Ceph migr
 
 ### Problem: Identity and SSO
 
-- [ ] Deploy **Authentik** or **Keycloak** as identity provider
-- [ ] Configure OIDC for ArgoCD, Grafana, and other platform UIs
-- [ ] Define RBAC across the platform
+Decision: **Authentik** (see `docs/decisions/identity-provider.md`).
+
+- [x] Deploy **Authentik** as identity provider (CloudNativePG + Valkey backend)
+- [x] Configure OIDC for ArgoCD and Grafana (group → role RBAC)
+- [x] Forward-auth the non-OIDC UIs (Prometheus, Alertmanager, Rollouts, Uptime, Hubble) via the Authentik proxy outpost
+- [x] Define group-based RBAC across the platform (`platform-admins`, `platform-viewers`)
 
 ### Problem: Workload Identity
 

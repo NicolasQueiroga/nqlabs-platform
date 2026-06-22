@@ -67,7 +67,7 @@ These guides follow a few educational principles:
 20. OpenBao: self-hosted secrets engine and PKI *(coming)*
 21. Distributed tracing with Tempo and OpenTelemetry *(coming)*
 22. Supply chain security: Cosign, Trivy, and SBOMs *(coming)*
-23. SSO and identity with Authentik or Keycloak *(coming)*
+23. SSO and identity with Authentik *(see docs/decisions/identity-provider.md + docs/runbooks/sso-authentik.md)*
 24. Multi-cluster design and Cilium Cluster Mesh *(coming)*
 25. Cluster lifecycle management with Cluster API *(coming)*
 

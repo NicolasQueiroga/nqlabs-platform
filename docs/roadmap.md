@@ -45,7 +45,7 @@ bank-grade, fully-featured private cloud. Tracked here.
 ## Operability
 
 - [ ] **Tracing** — Tempo + OpenTelemetry Collector.
-- [ ] **SSO** — Authentik/Keycloak OIDC for ArgoCD/Grafana; workload identity.
+- [x] **SSO** — Authentik IdP: OIDC for ArgoCD/Grafana + forward-auth outpost for non-OIDC UIs (see `docs/decisions/identity-provider.md`). Workload identity (SPIFFE/SPIRE) still pending.
 
 ## Optional
 
