@@ -1,5 +1,7 @@
-# Kyverno — policy engine for NQLabs. Single-node clusters: 1 replica per
-# controller. Policies start in Audit (see policies/) so nothing is blocked.
+# Kyverno — policy engine for NQLabs.
+# Single-node clusters: 1 replica per controller.
+# For multi-node production: set admissionController.replicas and
+# backgroundController.replicas to 2+ for HA.
 admissionController:
   replicas: 1
   resources:
@@ -8,6 +10,15 @@ admissionController:
       memory: 256Mi
     limits:
       memory: 1Gi
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
 backgroundController:
   replicas: 1
   resources:
@@ -16,6 +27,15 @@ backgroundController:
       memory: 128Mi
     limits:
       memory: 512Mi
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
 reportsController:
   replicas: 1
   resources:
@@ -24,6 +44,15 @@ reportsController:
       memory: 128Mi
     limits:
       memory: 512Mi
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
 cleanupController:
   replicas: 1
   resources:
@@ -32,3 +61,12 @@ cleanupController:
       memory: 64Mi
     limits:
       memory: 256Mi
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL

@@ -30,6 +30,8 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    retry:
+      limit: 5
     syncOptions:
       - ServerSideApply=true
 ---
@@ -65,6 +67,8 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/enforce-version: latest
+    retry:
+      limit: 5
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
@@ -98,6 +102,12 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest
+    retry:
+      limit: 5
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
@@ -126,6 +136,8 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    retry:
+      limit: 5
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
@@ -171,6 +183,8 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: baseline
         pod-security.kubernetes.io/enforce-version: latest
+    retry:
+      limit: 5
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
@@ -211,6 +225,8 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: baseline
         pod-security.kubernetes.io/enforce-version: latest
+    retry:
+      limit: 5
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
@@ -239,6 +255,8 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    retry:
+      limit: 5
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
@@ -269,6 +287,12 @@ spec:
       kind: Gateway
       jsonPointers:
         - /spec/listeners/0/tls/certificateRefs/0/group
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      jsonPointers:
+        - /spec/parentRefs/0/sectionName
+        - /spec/parentRefs/0/group
+        - /spec/parentRefs/0/kind
   syncPolicy:
     automated:
       prune: true
@@ -277,6 +301,9 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: baseline
         pod-security.kubernetes.io/enforce-version: latest
+        gateway-access: "true"
+    retry:
+      limit: 5
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

@@ -1,4 +1,6 @@
 # Kyverno + baseline policies on the staging and production clusters (Audit).
+# Production HA: when nqlabs-production goes multi-node, uncomment the
+# parameters below to set 2 replicas for admissionController and backgroundController.
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -28,6 +30,8 @@ spec:
   syncPolicy:
     automated:
       prune: true
+      # selfHeal: false — Kyverno mutates its own webhook configs and CRD
+      # caBundle at runtime. selfHeal=true would revert these mutations.
       selfHeal: false
     syncOptions:
       - CreateNamespace=true
@@ -77,11 +81,14 @@ spec:
   syncPolicy:
     automated:
       prune: true
+      # selfHeal: false — Kyverno defaults fields on ClusterPolicy at admission
+      # time. selfHeal=true would revert these defaults, causing sync conflicts.
       selfHeal: false
     retry:
       limit: 5
     syncOptions:
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
   # Kyverno defaults these fields on ClusterPolicy at admission time; ignore
   # the drift so ArgoCD doesn't show perpetual OutOfSync.
   ignoreDifferences:
@@ -126,6 +133,8 @@ spec:
   syncPolicy:
     automated:
       prune: true
+      # selfHeal: false — Kyverno mutates its own webhook configs and CRD
+      # caBundle at runtime. selfHeal=true would revert these mutations.
       selfHeal: false
     syncOptions:
       - CreateNamespace=true
@@ -175,11 +184,14 @@ spec:
   syncPolicy:
     automated:
       prune: true
+      # selfHeal: false — Kyverno defaults fields on ClusterPolicy at admission
+      # time. selfHeal=true would revert these defaults, causing sync conflicts.
       selfHeal: false
     retry:
       limit: 5
     syncOptions:
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
   # Kyverno defaults these fields on ClusterPolicy at admission time; ignore
   # the drift so ArgoCD doesn't show perpetual OutOfSync.
   ignoreDifferences:

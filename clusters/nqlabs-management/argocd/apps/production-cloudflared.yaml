@@ -29,6 +29,8 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: baseline
         pod-security.kubernetes.io/enforce-version: latest
+    retry:
+      limit: 5
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

@@ -1,13 +1,16 @@
 # Verify NQLabs images are Cosign-signed (keyless) by our GitHub Actions.
 # AUDIT + failurePolicy Ignore — surfaces unsigned images in PolicyReports without
 # blocking. Applies fleet-wide once Kyverno is on staging/production too.
+#
+# NOTE: pod-policies.kyverno.io/autogen-controllers: none disables auto-generation
+# of controller rules. Remove this annotation to enable autogen.
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
   name: verify-image-signatures
   annotations:
     policies.kyverno.io/category: Supply Chain
-    pol.kyverno.io/autogen-controllers: none
+    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   background: false
   webhookConfiguration:
@@ -22,11 +25,11 @@ spec:
         - imageReferences:
             - "ghcr.io/nicolasqueiroga/*"
           failureAction: Audit
-          mutateDigest: false
+          mutateDigest: true
           attestors:
             - entries:
                 - keyless:
                     issuer: "https://token.actions.githubusercontent.com"
-                    subject: "https://github.com/NicolasQueiroga/*"
+                    subject: "https://github.com/NicolasQueiroga/nqlabs-*"
                     rekor:
                       url: "https://rekor.sigstore.dev"

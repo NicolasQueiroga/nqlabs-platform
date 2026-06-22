@@ -65,6 +65,22 @@ spec:
             capabilities: { drop: ["ALL"] }
           volumeMounts:
             - { name: data, mountPath: /data }
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           resources:
             requests: { cpu: 50m, memory: 256Mi }
             limits: { memory: 1Gi }
@@ -91,8 +107,9 @@ metadata:
   namespace: minio
   annotations:
     argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
 spec:
+  ttlSecondsAfterFinished: 300
   backoffLimit: 6
   template:
     spec:

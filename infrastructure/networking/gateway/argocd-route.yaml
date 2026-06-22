@@ -26,3 +26,6 @@ spec:
         - name: argocd-server
           namespace: argocd
           port: 80
+      timeouts:
+        request: 300s
+        backendRequest: 300s

@@ -34,8 +34,10 @@ logLevel: info
 # Annotation drives record creation — no wildcard sync
 annotationFilter: "external-dns.alpha.kubernetes.io/hostname"
 
-# Policy: sync (create + delete). Use upsert-only to protect manual records.
-policy: sync
+# Policy: upsert-only (create + update, never delete). Protects manual records
+# and prevents external-dns from removing records for resources that are
+# temporarily down or being rolled.
+policy: upsert-only
 
 txtOwnerId: nqlabs-lab
 

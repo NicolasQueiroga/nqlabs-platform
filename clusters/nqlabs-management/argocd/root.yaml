@@ -10,6 +10,10 @@
 #
 # Shared platform app definitions may still be reused, but management should expose
 # them through cluster-local wrappers when cluster-specific overrides are required.
+#
+# NOTE: targetRevision: HEAD is used for lab convenience. For production,
+# pin to a specific Git tag or commit SHA to prevent unreviewed changes
+# from auto-deploying.
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application

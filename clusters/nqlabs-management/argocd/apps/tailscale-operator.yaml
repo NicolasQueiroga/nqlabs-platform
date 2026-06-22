@@ -41,6 +41,8 @@ spec:
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
       path: infrastructure/security/external-secrets/secrets
+      directory:
+        include: "tailscale-oauth.yaml"
 
   destination:
     server: https://kubernetes.default.svc
@@ -54,6 +56,8 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/enforce-version: latest
+    retry:
+      limit: 5
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

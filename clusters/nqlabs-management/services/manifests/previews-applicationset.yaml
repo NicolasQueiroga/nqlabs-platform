@@ -34,6 +34,8 @@ spec:
         nqlabs.network/service: '{{ .app.name }}'
         nqlabs.network/environment: preview
         nqlabs.network/preview-pr: '{{ .preview.number }}'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
     spec:
       project: '{{ .argocd.project }}'
       sources:
@@ -63,6 +65,7 @@ spec:
             nqlabs.network/preview-pr: '{{ .preview.number }}'
             pod-security.kubernetes.io/enforce: baseline
             pod-security.kubernetes.io/enforce-version: latest
+            gateway-access: "true"
         syncOptions:
           - ServerSideApply=true
           - CreateNamespace=true

@@ -6,7 +6,7 @@
 # Records written by external-dns via etcd (SkyDNS protocol).
 # Exposed via Tailscale → used as Tailscale split DNS target.
 
-replicaCount: 1
+replicaCount: 2
 
 service:
   name: coredns-dns
@@ -29,6 +29,22 @@ resources:
     memory: 64Mi
   limits:
     memory: 128Mi
+
+# Liveness probe — CoreDNS health endpoint
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Readiness probe — CoreDNS ready endpoint
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 3
 
 # CoreDNS Corefile — authoritative for nqlabs.network via etcd
 servers:

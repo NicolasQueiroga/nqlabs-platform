@@ -26,7 +26,14 @@ spec:
   syncPolicy:
     automated:
       prune: true
+      # selfHeal: false — Kyverno mutates its own webhook configs and CRD
+      # caBundle at runtime. selfHeal=true would revert these mutations,
+      # causing perpetual sync conflicts.
       selfHeal: false
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
@@ -78,11 +85,14 @@ spec:
   syncPolicy:
     automated:
       prune: true
+      # selfHeal: false — Kyverno defaults fields on ClusterPolicy at admission
+      # time. selfHeal=true would revert these defaults, causing sync conflicts.
       selfHeal: false
     retry:
       limit: 5
     syncOptions:
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
   # Kyverno defaults these fields on ClusterPolicy at admission time; ignore
   # the drift so ArgoCD doesn't show perpetual OutOfSync.
   ignoreDifferences:

@@ -16,10 +16,15 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
 spec:
   project: platform
-  source:
-    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
-    targetRevision: HEAD
-    path: infrastructure/dns/etcd/manifests
+  sources:
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/dns/etcd/manifests
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/dns
+      directory:
+        include: "network-policies.yaml"
   destination:
     server: https://kubernetes.default.svc
     namespace: dns
@@ -41,6 +46,8 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+    retry:
+      limit: 5
 
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -63,10 +70,14 @@ spec:
         valueFiles:
           - $values/clusters/nqlabs-management/dns/coredns-values.yaml
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
-
-
       targetRevision: HEAD
       ref: values
+    # PDB for CoreDNS HA (2 replicas)
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/dns/coredns
+      directory:
+        include: "pdb.yaml"
   destination:
     server: https://kubernetes.default.svc
     namespace: dns
@@ -74,6 +85,12 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest
+    retry:
+      limit: 5
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
@@ -108,6 +125,12 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest
+    retry:
+      limit: 5
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

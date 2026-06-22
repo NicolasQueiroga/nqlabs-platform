@@ -68,6 +68,14 @@ argocd-cluster-*.yaml
 # Never commit rendered Helm output
 charts/*/charts/
 *.tgz
+# Helm chart pulls at repo root (helm pull --untar artifacts)
+# Leading slash ensures these only match at the repo root, not subdirectories.
+/cilium/
+/coredns/
+/falco/
+/kube-prometheus-stack/
+/loki/
+/tailscale-operator/
 
 # -----------------------------------------------------------------------------
 # Environment files

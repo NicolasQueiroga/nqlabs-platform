@@ -3,6 +3,12 @@
 # Chart: prometheus-community/kube-prometheus-stack 86.2.3
 # Namespace: monitoring
 #
+# PVC backup strategy: Prometheus (20Gi) and Alertmanager (2Gi) PVCs are on
+# local-path storage. Velero does not snapshot local-path PVCs by default.
+# For backup: 1) Use Velero with restic for file-level backup, or 2) Use
+# Prometheus remote_write to a long-term storage backend, or 3) Accept data
+# loss on node failure (lab environment — metrics are ephemeral).
+#
 # Talos/Cilium notes:
 #   - kubeProxy disabled   — replaced by Cilium
 #   - kubeEtcd disabled    — Talos etcd listens on localhost only
@@ -75,6 +81,14 @@ grafana:
     runAsNonRoot: true
     runAsUser: 1000
     fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
 
   # init-chown-data init container — sets ownership on the PV
   # Resource requests (Kyverno require-resource-requests)
@@ -107,6 +121,16 @@ prometheus:
     ruleSelectorNilUsesHelmValues: false
     probeSelectorNilUsesHelmValues: false
 
+    # External labels for multi-cluster identification
+    externalLabels:
+      cluster: nqlabs-management
+
+    # TODO: Add basic auth for exposed Prometheus UI.
+    # Currently accessible via prometheus.platform.nqlabs.network without auth.
+    # Options: 1) Enable web.yml basic_auth_users (requires secret with hashed
+    # passwords), 2) Add Gateway API AuthFilter (requires Cilium support),
+    # 3) Restrict via NetworkPolicy to Tailscale subnet only.
+
 
     # Talos + subPath bind mounts block writes for non-root UIDs at the kernel level
     # even with correct fsGroup/ownership. Prometheus must run as root on this setup.
@@ -116,13 +140,19 @@ prometheus:
       runAsGroup: 0
       runAsNonRoot: false
       fsGroup: 0
+      seccompProfile:
+        type: RuntimeDefault
 
     containerSecurityContext:
       runAsUser: 0
       runAsNonRoot: false
       readOnlyRootFilesystem: false
-      allowPrivilegeEscalation: true
-      capabilities: {}
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      seccompProfile:
+        type: RuntimeDefault
 
     resources:
       requests:
@@ -153,6 +183,19 @@ alertmanager:
       runAsGroup: 0
       runAsNonRoot: false
       fsGroup: 0
+      seccompProfile:
+        type: RuntimeDefault
+
+    containerSecurityContext:
+      runAsUser: 0
+      runAsNonRoot: false
+      readOnlyRootFilesystem: false
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      seccompProfile:
+        type: RuntimeDefault
 
     resources:
       requests:
@@ -196,3 +239,7 @@ prometheus-node-exporter:
       memory: 32Mi
     limits:
       memory: 128Mi
+  # node-exporter needs host access for metrics but should still drop caps
+  podSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault

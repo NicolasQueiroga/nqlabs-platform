@@ -45,6 +45,20 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/enforce-version: latest
+        gateway-access: "true"
+    retry:
+      limit: 5
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - ApplyOutOfSyncOnly=true
+  # Prometheus Operator injects caBundle into its webhook configs at runtime.
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      jqPathExpressions:
+        - .webhooks[].clientConfig.caBundle
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      jqPathExpressions:
+        - .webhooks[].clientConfig.caBundle

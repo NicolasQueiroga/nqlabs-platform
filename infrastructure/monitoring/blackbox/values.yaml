@@ -28,6 +28,20 @@ resources:
   limits:
     memory: 128Mi
 
+# Security contexts (Kyverno compliance)
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
 serviceMonitor:
   selfMonitor:
     enabled: true

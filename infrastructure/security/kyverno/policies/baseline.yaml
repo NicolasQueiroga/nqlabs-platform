@@ -1,6 +1,17 @@
 # Baseline guardrails in ENFORCE mode (failureAction: Enforce) with webhook
 # failurePolicy: Ignore (so Kyverno being down never blocks admission) — they
 # block non-compliant resources and surface violations in PolicyReports.
+#
+# Namespace exclusions: kube-system, falco, tailscale, local-path-storage,
+# velero, monitoring — system/infra namespaces that may need exceptions.
+# Add/remove namespaces from the exclude lists as needed.
+#
+# NOTE: pod-policies.kyverno.io/autogen-controllers: none disables Kyverno's
+# auto-generation of controller rules (Deployments, StatefulSets, etc.).
+# Policies only match raw Pods. Remove this annotation to enable autogen
+# (recommended for tighter security — applies to controllers too).
+
+# --- disallow-latest-tag ---
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
@@ -8,7 +19,7 @@ metadata:
   annotations:
     policies.kyverno.io/title: Disallow Latest Tag
     policies.kyverno.io/category: Supply Chain
-    pol.kyverno.io/autogen-controllers: none
+    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   webhookConfiguration:
     failurePolicy: Ignore
@@ -19,6 +30,16 @@ spec:
         any:
           - resources:
               kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - falco
+                - tailscale
+                - local-path-storage
+                - velero
+                - monitoring
       validate:
         failureAction: Enforce
         message: "An explicit image tag is required (no :latest, no untagged)."
@@ -27,13 +48,14 @@ spec:
             containers:
               - image: "!*:latest & *:*"
 ---
+# --- require-resource-requests ---
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
   name: require-resource-requests
   annotations:
     policies.kyverno.io/category: Best Practices
-    pol.kyverno.io/autogen-controllers: none
+    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   webhookConfiguration:
     failurePolicy: Ignore
@@ -44,6 +66,16 @@ spec:
         any:
           - resources:
               kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - falco
+                - tailscale
+                - local-path-storage
+                - velero
+                - monitoring
       validate:
         failureAction: Enforce
         message: "CPU and memory requests are required."
@@ -55,13 +87,17 @@ spec:
                     memory: "?*"
                     cpu: "?*"
 ---
+# --- restrict-image-registries ---
+# Narrowed from docker.io/* to specific Docker Hub repos:
+#   cloudflare (cloudflared), minio, louislam (uptime-kuma),
+#   grafana (grafana/loki/promtail), coredns, velero, falcosecurity
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
   name: restrict-image-registries
   annotations:
     policies.kyverno.io/category: Supply Chain
-    pol.kyverno.io/autogen-controllers: none
+    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   webhookConfiguration:
     failurePolicy: Ignore
@@ -72,21 +108,34 @@ spec:
         any:
           - resources:
               kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - falco
+                - tailscale
+                - local-path-storage
+                - velero
+                - monitoring
       validate:
         failureAction: Enforce
         message: "Images must come from an approved registry."
         pattern:
           spec:
             containers:
-              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/* | minio/minio* | cr.l5d.io/* | argoproj.github.io/* | cloudflare/* | velero/* | reg.kyverno.io/* | ecr-public.aws.com/* | gcr.io/*"
+              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/cloudflare/* | docker.io/minio/* | docker.io/louislam/* | docker.io/grafana/* | docker.io/coredns/* | docker.io/velero/* | docker.io/falcosecurity/* | cr.l5d.io/* | argoproj.github.io/* | reg.kyverno.io/* | ecr-public.aws.com/* | gcr.io/*"
 ---
+# --- require-run-as-nonroot ---
+# Tightened from optional pattern to anyPattern — now requires runAsNonRoot: true
+# at either pod-level or container-level securityContext.
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
   name: require-run-as-nonroot
   annotations:
     policies.kyverno.io/category: Pod Security
-    pol.kyverno.io/autogen-controllers: none
+    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   webhookConfiguration:
     failurePolicy: Ignore
@@ -109,8 +158,213 @@ spec:
                 - monitoring
       validate:
         failureAction: Enforce
-        message: "Containers should run as non-root."
+        message: "Containers must run as non-root. Set runAsNonRoot: true in pod or container securityContext."
+        anyPattern:
+          - spec:
+              securityContext:
+                runAsNonRoot: "true"
+          - spec:
+              containers:
+                - securityContext:
+                    runAsNonRoot: "true"
+---
+# --- disallow-privileged-containers ---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-privileged-containers
+  annotations:
+    policies.kyverno.io/category: Pod Security
+    pod-policies.kyverno.io/autogen-controllers: none
+spec:
+  webhookConfiguration:
+    failurePolicy: Ignore
+  background: true
+  rules:
+    - name: privileged-containers
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - falco
+                - tailscale
+                - local-path-storage
+                - velero
+                - monitoring
+      validate:
+        failureAction: Enforce
+        message: "Privileged containers are not allowed."
         pattern:
           spec:
-            =(securityContext):
-              =(runAsNonRoot): "true"
+            containers:
+              - =(securityContext):
+                  =(privileged): "false"
+---
+# --- require-seccomp ---
+# Requires seccompProfile at pod-level or container-level (RuntimeDefault or Localhost).
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-seccomp
+  annotations:
+    policies.kyverno.io/category: Pod Security
+    pod-policies.kyverno.io/autogen-controllers: none
+spec:
+  webhookConfiguration:
+    failurePolicy: Ignore
+  background: true
+  rules:
+    - name: require-seccomp
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - falco
+                - tailscale
+                - local-path-storage
+                - velero
+                - monitoring
+      validate:
+        failureAction: Enforce
+        message: "Seccomp profile must be set (RuntimeDefault or Localhost) at pod or container level."
+        anyPattern:
+          - spec:
+              securityContext:
+                seccompProfile:
+                  type: "RuntimeDefault"
+          - spec:
+              securityContext:
+                seccompProfile:
+                  type: "Localhost"
+          - spec:
+              containers:
+                - securityContext:
+                    seccompProfile:
+                      type: "RuntimeDefault"
+          - spec:
+              containers:
+                - securityContext:
+                    seccompProfile:
+                      type: "Localhost"
+---
+# --- disallow-host-namespace ---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-host-namespace
+  annotations:
+    policies.kyverno.io/category: Pod Security
+    pod-policies.kyverno.io/autogen-controllers: none
+spec:
+  webhookConfiguration:
+    failurePolicy: Ignore
+  background: true
+  rules:
+    - name: no-host-namespace
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - falco
+                - tailscale
+                - local-path-storage
+                - velero
+                - monitoring
+      validate:
+        failureAction: Enforce
+        message: "Host PID and IPC namespaces are not allowed."
+        pattern:
+          spec:
+            =(hostPID): "false"
+            =(hostIPC): "false"
+---
+# --- restrict-capabilities ---
+# Requires containers to drop ALL capabilities if capabilities are set.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-capabilities
+  annotations:
+    policies.kyverno.io/category: Pod Security
+    pod-policies.kyverno.io/autogen-controllers: none
+spec:
+  webhookConfiguration:
+    failurePolicy: Ignore
+  background: true
+  rules:
+    - name: require-drop-all
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - falco
+                - tailscale
+                - local-path-storage
+                - velero
+                - monitoring
+      validate:
+        failureAction: Enforce
+        message: "Containers must drop ALL capabilities."
+        pattern:
+          spec:
+            containers:
+              - =(securityContext):
+                  =(capabilities):
+                    drop:
+                      - ALL
+---
+# --- disallow-host-path ---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-host-path
+  annotations:
+    policies.kyverno.io/category: Pod Security
+    pod-policies.kyverno.io/autogen-controllers: none
+spec:
+  webhookConfiguration:
+    failurePolicy: Ignore
+  background: true
+  rules:
+    - name: no-host-path
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - falco
+                - tailscale
+                - local-path-storage
+                - velero
+                - monitoring
+      validate:
+        failureAction: Enforce
+        message: "HostPath volumes are not allowed."
+        pattern:
+          spec:
+            =(volumes):
+              - X(hostPath): null

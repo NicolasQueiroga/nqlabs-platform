@@ -22,7 +22,7 @@ spec:
     targetRevision: HEAD
     path: infrastructure/monitoring
     directory:
-      include: "{externalsecrets.yaml,routes.yaml,datasources.yaml,blackbox-probes.yaml,blackbox-rules.yaml,alertmanager-discord.yaml}"
+      include: "{externalsecrets.yaml,routes.yaml,datasources.yaml,blackbox-probes.yaml,blackbox-rules.yaml,alertmanager-discord.yaml,network-policies.yaml}"
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
@@ -37,3 +37,5 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+    retry:
+      limit: 5

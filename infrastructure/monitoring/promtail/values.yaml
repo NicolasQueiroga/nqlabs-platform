@@ -16,3 +16,16 @@ resources:
     memory: 64Mi
   limits:
     memory: 256Mi
+
+# Security contexts (Kyverno compliance)
+# Promtail needs to read /var/log and /var/lib/docker/containers but
+# should still drop capabilities and use seccomp.
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL

@@ -13,7 +13,9 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    argocd.argoproj.io/sync-wave: "1"
+    # Wave 2: after external-secrets-config (wave 1) so the ClusterSecretStore
+    # is Ready before cert-manager-config creates ExternalSecrets that reference it.
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   project: platform
   source:
@@ -29,6 +31,12 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest
+    retry:
+      limit: 5
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

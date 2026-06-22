@@ -56,6 +56,20 @@ singleBinary:
     limits:
       memory: 1Gi
 
+  # Security contexts (Kyverno compliance)
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
 # Rules sidecar — watches ConfigMaps for Loki rules
 # Resource requests (Kyverno require-resource-requests)
 sidecar:
@@ -84,6 +98,18 @@ gateway:
       memory: 64Mi
     limits:
       memory: 128Mi
+  # Security contexts (Kyverno compliance)
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
 
 # No public Loki UI/API route; Grafana talks to Loki inside the cluster.
 lokiCanary:

@@ -13,6 +13,9 @@ storageClass:
   create: true
   defaultClass: true   # Default StorageClass — PVCs without explicit class use this
   name: local-path
+  # WaitForFirstConsumer: delays binding until a Pod is scheduled, ensuring
+  # the PV is created on the correct node. Important for multi-node clusters.
+  volumeBindingMode: WaitForFirstConsumer
 
 # Node path where volumes are created
 nodePathMap:

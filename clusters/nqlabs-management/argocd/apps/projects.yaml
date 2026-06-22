@@ -11,10 +11,15 @@ metadata:
   name: platform
   namespace: argocd
   annotations:
-    # Root app must create projects before Applications reference them.
-    argocd.argoproj.io/sync-wave: "-10"
+    # AppProjects must exist before any Application references them.
+    # sync-wave -11 ensures they're created before the argocd app at -10.
+    argocd.argoproj.io/sync-wave: "-11"
 spec:
   description: Core platform infrastructure, controllers, networking, storage, delivery, and observability.
+
+  # Only allow Applications defined in the argocd namespace to use this project.
+  sourceNamespaces:
+    - argocd
 
   sourceRepos:
     - https://github.com/NicolasQueiroga/nqlabs-platform.git
@@ -43,6 +48,9 @@ spec:
 
   # Platform apps intentionally manage cluster-scoped primitives: CRDs,
   # ClusterRoles, ClusterIssuers, GatewayClasses, Cilium resources, etc.
+  # Wildcards are intentional — the platform project is trusted and manages
+  # all cluster infrastructure. Narrowing would require listing every CRD
+  # kind and updating on each new CRD addition.
   clusterResourceWhitelist:
     - group: "*"
       kind: "*"
@@ -61,9 +69,12 @@ metadata:
   name: services-staging
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-10"
+    argocd.argoproj.io/sync-wave: "-11"
 spec:
   description: Staging service workloads.
+
+  sourceNamespaces:
+    - argocd
 
   sourceRepos:
     - https://github.com/NicolasQueiroga/nqlabs-platform.git
@@ -94,6 +105,8 @@ spec:
       kind: Service
     - group: ""
       kind: ServiceAccount
+    - group: ""
+      kind: PersistentVolumeClaim
     - group: apps
       kind: Deployment
     - group: apps
@@ -141,9 +154,12 @@ metadata:
   name: services-production
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-10"
+    argocd.argoproj.io/sync-wave: "-11"
 spec:
   description: Production service workloads.
+
+  sourceNamespaces:
+    - argocd
 
   sourceRepos:
     - https://github.com/NicolasQueiroga/nqlabs-platform.git
@@ -174,6 +190,8 @@ spec:
       kind: Service
     - group: ""
       kind: ServiceAccount
+    - group: ""
+      kind: PersistentVolumeClaim
     - group: apps
       kind: Deployment
     - group: apps
@@ -221,9 +239,12 @@ metadata:
   name: services-preview
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-10"
+    argocd.argoproj.io/sync-wave: "-11"
 spec:
   description: Ephemeral per-PR preview workloads. Deployed to the nqlabs-staging cluster.
+
+  sourceNamespaces:
+    - argocd
 
   sourceRepos:
     - https://github.com/NicolasQueiroga/nqlabs-platform.git
@@ -247,18 +268,34 @@ spec:
       kind: Service
     - group: ""
       kind: ServiceAccount
+    - group: ""
+      kind: PersistentVolumeClaim
+    - group: ""
+      kind: LimitRange
+    - group: ""
+      kind: ResourceQuota
     - group: apps
       kind: Deployment
+    - group: apps
+      kind: StatefulSet
     - group: apps
       kind: ReplicaSet
     - group: autoscaling
       kind: HorizontalPodAutoscaler
+    - group: batch
+      kind: Job
+    - group: batch
+      kind: CronJob
     - group: policy
       kind: PodDisruptionBudget
     - group: networking.k8s.io
       kind: NetworkPolicy
     - group: cilium.io
       kind: CiliumNetworkPolicy
+    - group: rbac.authorization.k8s.io
+      kind: Role
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
     - group: external-secrets.io
@@ -267,6 +304,10 @@ spec:
       kind: ServiceMonitor
     - group: argoproj.io
       kind: Rollout
+    - group: argoproj.io
+      kind: AnalysisTemplate
+    - group: argoproj.io
+      kind: Experiment
 
   orphanedResources:
     warn: false

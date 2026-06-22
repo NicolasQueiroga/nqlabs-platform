@@ -1,4 +1,7 @@
 # etcd Service — exposes client port to CoreDNS and external-dns
+# ClusterIP is pinned to 10.105.253.211 so CoreDNS can reference it by IP
+# (avoids bootstrap DNS loop). If recreating, update the endpoint in
+# coredns/values.yaml etcd plugin configBlock.
 apiVersion: v1
 kind: Service
 metadata:
@@ -7,13 +10,11 @@ metadata:
   labels:
     app: etcd-dns
 spec:
-  type: ClusterIP   # Real ClusterIP so CoreDNS can connect by IP, no DNS lookup needed
+  type: ClusterIP
+  clusterIP: 10.105.253.211
   selector:
     app: etcd-dns
   ports:
     - name: client
       port: 2379
       targetPort: 2379
-    - name: peer
-      port: 2380
-      targetPort: 2380
