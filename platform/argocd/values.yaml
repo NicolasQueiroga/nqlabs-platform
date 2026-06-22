@@ -26,6 +26,22 @@ configs:
     # Allow ArgoCD to manage resources across all namespaces
     application.resourceTrackingMethod: annotation
 
+    # External URL (used for OIDC redirect URIs and UI links).
+    url: https://argocd.platform.nqlabs.network
+
+    # SSO via Authentik (OIDC). Client secret is read from the ESO-managed
+    # argocd-oidc-secret (see extraObjects). Group claims drive RBAC below.
+    oidc.config: |
+      name: Authentik
+      issuer: https://auth.platform.nqlabs.network/application/o/argocd/
+      clientID: argocd
+      clientSecret: $argocd-oidc-secret:client_secret
+      requestedScopes:
+        - openid
+        - profile
+        - email
+        - groups
+
     # Global diff customizations — stop controller-defaulted fields from
     # causing false OutOfSync across all Applications.
     #
@@ -132,7 +148,41 @@ redis:
     limits:
       memory: 512Mi
 
-# Dex — SSO/OIDC provider (disabled until Phase 2)
+  # RBAC — map Authentik groups to ArgoCD roles.
+  rbac:
+    # No access by default; access is granted only via group membership.
+    policy.default: ""
+    scopes: "[groups]"
+    policy.csv: |
+      g, platform-admins, role:admin
+      g, platform-viewers, role:readonly
+
+# OIDC client secret for the Authentik SSO config, sourced from 1Password.
+# Labeled app.kubernetes.io/part-of: argocd so ArgoCD can resolve the
+# $argocd-oidc-secret:client_secret reference in oidc.config.
+extraObjects:
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: argocd-oidc-secret
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        name: nqlabs-1password
+        kind: ClusterSecretStore
+      target:
+        name: argocd-oidc-secret
+        creationPolicy: Owner
+        template:
+          metadata:
+            labels:
+              app.kubernetes.io/part-of: argocd
+      data:
+        - secretKey: client_secret
+          remoteRef:
+            key: argocd-oidc/client_secret
+
+# Dex — not used; SSO is handled by Authentik via native oidc.config above.
 dex:
   enabled: false
 

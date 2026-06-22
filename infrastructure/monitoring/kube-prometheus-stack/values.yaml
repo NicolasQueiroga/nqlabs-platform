@@ -38,6 +38,10 @@ grafana:
     userKey: admin-user
     passwordKey: admin-password
 
+  # OIDC client secret for Authentik SSO (key GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET).
+  # Grafana maps the GF_<SECTION>_<KEY> env var to [auth.generic_oauth] client_secret.
+  envFromSecret: grafana-oidc
+
   ingress:
     enabled: false   # HTTPRoute used instead
 
@@ -50,6 +54,23 @@ grafana:
     server:
       root_url: https://grafana.platform.nqlabs.network
       serve_from_sub_path: false
+    # SSO via Authentik (OIDC). client_secret comes from the grafana-oidc
+    # Secret via GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET (envFromSecret above).
+    auth:
+      # Hide the local login form; use SSO. (Admin user still works at /login.)
+      oauth_auto_login: false
+    "auth.generic_oauth":
+      enabled: true
+      name: Authentik
+      client_id: grafana
+      scopes: "openid profile email groups"
+      auth_url: https://auth.platform.nqlabs.network/application/o/authorize/
+      token_url: https://auth.platform.nqlabs.network/application/o/token/
+      api_url: https://auth.platform.nqlabs.network/application/o/userinfo/
+      # Map Authentik groups -> Grafana roles.
+      role_attribute_path: "contains(groups[*], 'platform-admins') && 'Admin' || 'Viewer'"
+      allow_assign_grafana_admin: true
+      use_pkce: true
 
   sidecar:
     dashboards:
