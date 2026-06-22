@@ -110,7 +110,7 @@ nqlabs-platform/
 │   ├── storage/              # local-path now, Rook/Ceph later
 │   ├── monitoring/           # Prometheus, Grafana, Alertmanager, Loki/Promtail
 │   ├── security/             # cert-manager, External Secrets + 1Password ClusterSecretStore
-│   └── identity/             # future SSO / workload identity
+│   └── identity/             # Authentik SSO IdP (CloudNativePG + Valkey) + OIDC/forward-auth
 ├── charts/nqlabs-service/    # reusable service chart (single- or multi-workload)
 ├── apps/<app>/               # deployment contracts: environments/*.yaml + previews/*.yaml
 ├── terraform/                # optional service scaffolding (writes descriptors)
