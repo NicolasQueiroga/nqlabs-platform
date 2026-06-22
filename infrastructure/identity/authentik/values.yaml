@@ -50,6 +50,17 @@ global:
     # Redis/Valkey connection (non-secret host).
     - name: AUTHENTIK_REDIS__HOST
       value: authentik-valkey
+    # OIDC client secrets exposed to blueprints via !Env (worker applies them).
+    - name: AUTHENTIK_ARGOCD_OIDC_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secrets
+          key: argocd_oidc_client_secret
+    - name: AUTHENTIK_GRAFANA_OIDC_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secrets
+          key: grafana_oidc_client_secret
 
 authentik:
   log_level: info
@@ -119,4 +130,5 @@ worker:
 # step). Left empty here so the initial deploy uses Authentik's built-in
 # default blueprints.
 blueprints:
-  configMaps: []
+  configMaps:
+    - authentik-blueprints

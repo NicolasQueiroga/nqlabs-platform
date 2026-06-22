@@ -1,0 +1,26 @@
+# Kustomize entrypoint for the Authentik raw manifests + blueprint ConfigMap.
+#
+# The authentik Helm chart is a separate ArgoCD source; this kustomization
+# delivers the data layer, secrets, route, and the declarative blueprints
+# (mounted into Authentik via blueprints.configMaps: [authentik-blueprints]).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: authentik
+
+resources:
+  - manifests/externalsecrets.yaml
+  - manifests/postgres-cluster.yaml
+  - manifests/valkey.yaml
+  - manifests/httproute.yaml
+
+configMapGenerator:
+  - name: authentik-blueprints
+    files:
+      - blueprints/10-groups.yaml
+      - blueprints/20-oidc.yaml
+      - blueprints/30-proxy.yaml
+
+# Stable name so the chart's blueprints.configMaps reference resolves and
+# ConfigMap volume updates propagate in place (Authentik re-reads blueprints).
+generatorOptions:
+  disableNameSuffixHash: true

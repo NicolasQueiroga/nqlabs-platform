@@ -1,0 +1,33 @@
+# NQLabs platform groups + a groups OIDC scope mapping.
+#
+# Groups are the unit of access control across the platform. Membership is
+# assigned per-user in Authentik; apps map these group names to roles.
+version: 1
+metadata:
+  name: nqlabs-groups
+  labels:
+    blueprints.goauthentik.io/instance: nqlabs
+entries:
+  - model: authentik_core.group
+    identifiers:
+      name: platform-admins
+    attrs:
+      # Full administrative access (Authentik admin + admin role in downstream apps).
+      is_superuser: true
+
+  - model: authentik_core.group
+    identifiers:
+      name: platform-viewers
+    attrs:
+      is_superuser: false
+
+  # Scope mapping that adds a `groups` claim to OIDC tokens so ArgoCD/Grafana
+  # can map group membership to roles.
+  - model: authentik_providers_oauth2.scopemapping
+    identifiers:
+      name: "NQLabs OIDC groups"
+    attrs:
+      scope_name: groups
+      description: "NQLabs group membership"
+      expression: |
+        return [group.name for group in request.user.ak_groups.all()]

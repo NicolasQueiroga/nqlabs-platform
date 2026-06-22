@@ -1,0 +1,118 @@
+# Proxy providers (reverse-proxy / forward-auth) for the non-OIDC platform UIs,
+# all served by the embedded Authentik outpost.
+#
+# Each provider authenticates the request against Authentik, then proxies to the
+# in-cluster backend. The app HTTPRoutes point at the embedded outpost
+# (authentik-server:9000) instead of the backend directly (see manifests).
+version: 1
+metadata:
+  name: nqlabs-proxy
+  labels:
+    blueprints.goauthentik.io/instance: nqlabs
+entries:
+  # ── Prometheus ──────────────────────────────────────────────────────────
+  - id: prometheus-provider
+    model: authentik_providers_proxy.proxyprovider
+    identifiers:
+      name: prometheus
+    attrs:
+      mode: proxy
+      external_host: https://prometheus.platform.nqlabs.network
+      internal_host: http://kube-prometheus-stack-prometheus.monitoring:9090
+      internal_host_ssl_validation: false
+      authorization_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+  - model: authentik_core.application
+    identifiers:
+      slug: prometheus
+    attrs:
+      name: Prometheus
+      provider: !KeyOf prometheus-provider
+      meta_launch_url: https://prometheus.platform.nqlabs.network
+      group: Platform
+
+  # ── Alertmanager ────────────────────────────────────────────────────────
+  - id: alertmanager-provider
+    model: authentik_providers_proxy.proxyprovider
+    identifiers:
+      name: alertmanager
+    attrs:
+      mode: proxy
+      external_host: https://alertmanager.platform.nqlabs.network
+      internal_host: http://kube-prometheus-stack-alertmanager.monitoring:9093
+      internal_host_ssl_validation: false
+      authorization_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+  - model: authentik_core.application
+    identifiers:
+      slug: alertmanager
+    attrs:
+      name: Alertmanager
+      provider: !KeyOf alertmanager-provider
+      meta_launch_url: https://alertmanager.platform.nqlabs.network
+      group: Platform
+
+  # ── Uptime Kuma ─────────────────────────────────────────────────────────
+  - id: uptime-provider
+    model: authentik_providers_proxy.proxyprovider
+    identifiers:
+      name: uptime
+    attrs:
+      mode: proxy
+      external_host: https://uptime.platform.nqlabs.network
+      internal_host: http://uptime-kuma.monitoring:3001
+      internal_host_ssl_validation: false
+      authorization_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+  - model: authentik_core.application
+    identifiers:
+      slug: uptime
+    attrs:
+      name: Uptime Kuma
+      provider: !KeyOf uptime-provider
+      meta_launch_url: https://uptime.platform.nqlabs.network
+      group: Platform
+
+  # ── Argo Rollouts dashboard ───────────────────────────────────────────────
+  - id: rollouts-provider
+    model: authentik_providers_proxy.proxyprovider
+    identifiers:
+      name: rollouts
+    attrs:
+      mode: proxy
+      external_host: https://rollouts.platform.nqlabs.network
+      internal_host: http://argo-rollouts-dashboard.argo-rollouts:3100
+      internal_host_ssl_validation: false
+      authorization_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+  - model: authentik_core.application
+    identifiers:
+      slug: rollouts
+    attrs:
+      name: Argo Rollouts
+      provider: !KeyOf rollouts-provider
+      meta_launch_url: https://rollouts.platform.nqlabs.network
+      group: Platform
+
+  # ── Attach all proxy providers to the embedded outpost ────────────────────
+  - model: authentik_outposts.outpost
+    identifiers:
+      managed: goauthentik.io/outposts/embedded
+    attrs:
+      type: proxy
+      config:
+        authentik_host: https://auth.platform.nqlabs.network
+        authentik_host_browser: https://auth.platform.nqlabs.network
+      providers:
+        - !KeyOf prometheus-provider
+        - !KeyOf alertmanager-provider
+        - !KeyOf uptime-provider
+        - !KeyOf rollouts-provider

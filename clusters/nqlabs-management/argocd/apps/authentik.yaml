@@ -32,7 +32,7 @@ spec:
       ref: values
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
-      path: infrastructure/identity/authentik/manifests
+      path: infrastructure/identity/authentik
   destination:
     server: https://kubernetes.default.svc
     namespace: authentik
