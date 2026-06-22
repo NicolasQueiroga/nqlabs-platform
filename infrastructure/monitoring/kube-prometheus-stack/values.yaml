@@ -57,8 +57,10 @@ grafana:
     # SSO via Authentik (OIDC). client_secret comes from the grafana-oidc
     # Secret via GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET (envFromSecret above).
     auth:
-      # Hide the local login form; use SSO. (Admin user still works at /login.)
-      oauth_auto_login: false
+      # Disable the local login form — SSO via Authentik is the only login.
+      # Break-glass: use kubectl port-forward to access Grafana directly.
+      oauth_auto_login: true
+      disable_login_form: true
     "auth.generic_oauth":
       enabled: true
       name: Authentik

@@ -23,6 +23,10 @@ configs:
     server.insecure: "true"
 
   cm:
+    # Disable the built-in admin user — SSO via Authentik is the only login.
+    # Break-glass: use kubectl port-forward + argocd account CLI if needed.
+    accounts.admin.enabled: "false"
+
     # Allow ArgoCD to manage resources across all namespaces
     application.resourceTrackingMethod: annotation
 

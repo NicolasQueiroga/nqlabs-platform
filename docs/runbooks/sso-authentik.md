@@ -109,17 +109,38 @@ kubectl port-forward -n monitoring svc/uptime-kuma 3001:3001
 # Access at http://localhost:3001
 ```
 
-For OIDC services (ArgoCD, Grafana), you may need to use a local admin account
-or service account token if OIDC is unavailable.
+For OIDC services (ArgoCD, Grafana), local admin login is disabled — SSO via
+Authentik is the only login method. When Authentik is down, use kubectl
+port-forward to access services directly (bypassing the gateway and auth).
 
-**ArgoCD admin access:**
+**ArgoCD break-glass (admin disabled):**
 ```bash
-# Get the initial admin password (if not changed)
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
-
-# Port-forward
+# Port-forward the ArgoCD server
 kubectl port-forward -n argocd svc/argocd-server 8080:443
 # Access at https://localhost:8080
+
+# To re-enable the admin user temporarily:
+kubectl patch configmap argocd-cm -n argocd --type=merge -p '{"data":{"accounts.admin.enabled":"true"}}'
+# Then restart the ArgoCD server:
+kubectl rollout restart deploy/argocd-server -n argocd
+# Get the admin password:
+kubectl -n argocd get secret argocd-secret -o jsonpath='{.data.admin\.password}' | base64 -d
+```
+
+**Grafana break-glass (login form disabled):**
+```bash
+# Port-forward Grafana
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
+# Access at http://localhost:3000
+
+# The local admin user still exists in the grafana-admin-credentials secret.
+# To login via port-forward, temporarily re-enable the login form:
+kubectl patch configmap kube-prometheus-stack-grafana -n monitoring --type=merge \
+  -p '{"data":{"grafana.ini":{"auth":{"disable_login_form":"false","oauth_auto_login":"false"}}}}'
+# Then restart Grafana:
+kubectl rollout restart deploy/kube-prometheus-stack-grafana -n monitoring
+# Get the admin password:
+kubectl get secret grafana-admin-credentials -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d
 ```
 
 ## Verification
