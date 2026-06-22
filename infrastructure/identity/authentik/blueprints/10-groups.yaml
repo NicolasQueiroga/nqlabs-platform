@@ -2,27 +2,64 @@
 #
 # Groups are the unit of access control across the platform. Membership is
 # assigned per-user in Authentik; apps map these group names to roles.
+#
+# Group hierarchy:
+#   platform-admins  → full admin everywhere (Authentik superuser + admin role in apps)
+#   platform-viewers → read-only on OIDC apps (ArgoCD, Grafana); no forward-auth access
+#   sre              → access to all platform tools (not Authentik superuser)
+#   data             → Grafana + Prometheus only
+#   demo-app         → ArgoCD (own project) + Rollouts dashboard
+#
+# Users can be in multiple groups (union semantics).
+# Adding a user to a group in Authentik propagates on next token refresh.
 version: 1
 metadata:
   name: nqlabs-groups
   labels:
     blueprints.goauthentik.io/instance: nqlabs
 entries:
-  - model: authentik_core.group
+  # ── Platform-wide groups ──────────────────────────────────────────────
+  - id: group-platform-admins
+    model: authentik_core.group
     identifiers:
       name: platform-admins
     attrs:
-      # Full administrative access (Authentik admin + admin role in downstream apps).
       is_superuser: true
 
-  - model: authentik_core.group
+  - id: group-platform-viewers
+    model: authentik_core.group
     identifiers:
       name: platform-viewers
     attrs:
       is_superuser: false
 
-  # Scope mapping that adds a `groups` claim to OIDC tokens so ArgoCD/Grafana
-  # can map group membership to roles.
+  # ── Team groups ───────────────────────────────────────────────────────
+  # Teams get service-level access via policy bindings in 20-oidc.yaml
+  # and 30-proxy.yaml. Fine-grained path/method control is Phase 2 (OPA).
+  - id: group-sre
+    model: authentik_core.group
+    identifiers:
+      name: sre
+    attrs:
+      is_superuser: false
+
+  - id: group-data
+    model: authentik_core.group
+    identifiers:
+      name: data
+    attrs:
+      is_superuser: false
+
+  - id: group-demo-app
+    model: authentik_core.group
+    identifiers:
+      name: demo-app
+    attrs:
+      is_superuser: false
+
+  # ── OIDC groups scope mapping ─────────────────────────────────────────
+  # Adds a `groups` claim to OIDC tokens so ArgoCD/Grafana can map group
+  # membership to roles.
   - model: authentik_providers_oauth2.scopemapping
     identifiers:
       name: "NQLabs OIDC groups"

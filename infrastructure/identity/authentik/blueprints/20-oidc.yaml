@@ -39,7 +39,8 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
         - !Find [authentik_providers_oauth2.scopemapping, [name, "NQLabs OIDC groups"]]
 
-  - model: authentik_core.application
+  - id: argocd-app
+    model: authentik_core.application
     identifiers:
       slug: argocd
     attrs:
@@ -48,6 +49,36 @@ entries:
       meta_launch_url: https://argocd.platform.nqlabs.network
       meta_description: "GitOps continuous delivery"
       group: Platform
+
+  # ── ArgoCD group bindings ─────────────────────────────────────────────
+  # platform-admins → admin role (via ArgoCD RBAC policy.csv)
+  # platform-viewers → readonly role (via ArgoCD RBAC policy.csv)
+  # sre → admin role (same as platform-admins but not Authentik superuser)
+  # demo-app → access to ArgoCD (project scoping via ArgoCD RBAC, Phase 2 OPA)
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf argocd-app
+      group: !Find [authentik_core.group, [name, platform-admins]]
+    attrs:
+      order: 10
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf argocd-app
+      group: !Find [authentik_core.group, [name, platform-viewers]]
+    attrs:
+      order: 20
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf argocd-app
+      group: !Find [authentik_core.group, [name, sre]]
+    attrs:
+      order: 30
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf argocd-app
+      group: !Find [authentik_core.group, [name, demo-app]]
+    attrs:
+      order: 40
 
   # ── Grafana ───────────────────────────────────────────────────────────────
   - id: grafana-provider
@@ -78,7 +109,8 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
         - !Find [authentik_providers_oauth2.scopemapping, [name, "NQLabs OIDC groups"]]
 
-  - model: authentik_core.application
+  - id: grafana-app
+    model: authentik_core.application
     identifiers:
       slug: grafana
     attrs:
@@ -87,3 +119,33 @@ entries:
       meta_launch_url: https://grafana.platform.nqlabs.network
       meta_description: "Metrics dashboards"
       group: Platform
+
+  # ── Grafana group bindings ─────────────────────────────────────────────
+  # platform-admins → Admin role (via Grafana role_attribute_path)
+  # platform-viewers → Viewer role (via Grafana role_attribute_path)
+  # sre → Admin role (same mapping as platform-admins)
+  # data → Viewer role (via Grafana role_attribute_path)
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf grafana-app
+      group: !Find [authentik_core.group, [name, platform-admins]]
+    attrs:
+      order: 10
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf grafana-app
+      group: !Find [authentik_core.group, [name, platform-viewers]]
+    attrs:
+      order: 20
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf grafana-app
+      group: !Find [authentik_core.group, [name, sre]]
+    attrs:
+      order: 30
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf grafana-app
+      group: !Find [authentik_core.group, [name, data]]
+    attrs:
+      order: 40
