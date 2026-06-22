@@ -30,7 +30,10 @@ spec:
     - from:
         - podSelector: {}
 ---
-# Allow Gateway (namespaces with gateway-access label) to reach monitoring UIs
+# Allow Gateway (namespaces with gateway-access label) to reach monitoring UIs.
+# Also allow traffic from the Cilium Envoy gateway proxy, which runs with
+# hostNetwork: true in kube-system. Its traffic appears as the node IP, not
+# from a pod in any namespace, so namespaceSelector alone doesn't match.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -45,6 +48,8 @@ spec:
         - namespaceSelector:
             matchLabels:
               gateway-access: "true"
+        - ipBlock:
+            cidr: 192.168.15.0/24
       ports:
         - port: 80
           protocol: TCP
