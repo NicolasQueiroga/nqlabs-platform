@@ -58,7 +58,7 @@ data:
 
       - name: Argo Rollouts
         group: GitOps
-        url: http://argo-rollouts-dashboard.argo-rollouts.svc.cluster.local:3100
+        url: http://argo-rollouts-dashboard.argo-rollouts.svc.cluster.local:3100/rollouts
         interval: 1m
         conditions:
           - "[STATUS] == 200"
