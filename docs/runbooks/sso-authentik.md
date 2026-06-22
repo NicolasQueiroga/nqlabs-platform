@@ -81,6 +81,47 @@ there and map them to roles in the consuming app (ArgoCD `policy.csv`, Grafana
 - **Gotcha:** Authentik blueprint `!Env` tags need a default — `!Env [VAR, ""]`,
   not `!Env [VAR]` (the single-element form crashes the YAML loader).
 
+## Break-glass access (when Authentik is down)
+
+Forward-auth protected services (Prometheus, Alertmanager, Rollouts, Uptime)
+depend on Authentik being up. If Authentik is down, use kubectl port-forward
+to bypass the gateway and auth layer:
+
+```bash
+# Prometheus
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090
+# Access at http://localhost:9090
+
+# Alertmanager
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-alertmanager 9093:9093
+# Access at http://localhost:9093
+
+# Grafana (OIDC, but still works with local admin if configured)
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
+# Access at http://localhost:3000
+
+# Argo Rollouts dashboard
+kubectl port-forward -n argo-rollouts svc/argo-rollouts-dashboard 3100:3100
+# Access at http://localhost:3100
+
+# Uptime Kuma
+kubectl port-forward -n monitoring svc/uptime-kuma 3001:3001
+# Access at http://localhost:3001
+```
+
+For OIDC services (ArgoCD, Grafana), you may need to use a local admin account
+or service account token if OIDC is unavailable.
+
+**ArgoCD admin access:**
+```bash
+# Get the initial admin password (if not changed)
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+
+# Port-forward
+kubectl port-forward -n argocd svc/argocd-server 8080:443
+# Access at https://localhost:8080
+```
+
 ## Verification
 
 ```bash
