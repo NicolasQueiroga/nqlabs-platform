@@ -111,7 +111,14 @@ spec:
     - name: platform-gateway
       sectionName: http
   rules:
-    - filters:
+    # Explicit match-all. The Gateway API defaults an omitted matches to
+    # PathPrefix "/"; declaring it keeps git as the true source of truth and
+    # prevents a permanent ArgoCD OutOfSync on the atomically-managed rules list.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
         - type: RequestRedirect
           requestRedirect:
             scheme: https
