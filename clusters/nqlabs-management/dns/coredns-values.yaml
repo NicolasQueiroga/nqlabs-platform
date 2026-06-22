@@ -68,7 +68,7 @@ servers:
         configBlock: |-
           stubzones
           path /skydns
-          endpoint http://etcd-dns.dns.svc.cluster.local:2379
+          endpoint http://10.97.76.140:2379
       - name: forward
         parameters: . 1.1.1.1 8.8.8.8
       - name: cache

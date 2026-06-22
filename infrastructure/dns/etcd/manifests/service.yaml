@@ -1,7 +1,7 @@
 # etcd Service — exposes client port to CoreDNS and external-dns
-# ClusterIP is pinned to 10.105.253.211 so CoreDNS can reference it by IP
-# (avoids bootstrap DNS loop). If recreating, update the endpoint in
-# coredns/values.yaml etcd plugin configBlock.
+# ClusterIP is pinned so CoreDNS can reference it by IP (avoids bootstrap
+# DNS loop on Talos where hostDNS can't resolve cluster.local at startup).
+# If recreating, update the endpoint in coredns-values.yaml etcd plugin.
 apiVersion: v1
 kind: Service
 metadata:
@@ -11,7 +11,7 @@ metadata:
     app: etcd-dns
 spec:
   type: ClusterIP
-  clusterIP: 10.105.253.211
+  clusterIP: 10.97.76.140
   selector:
     app: etcd-dns
   ports:

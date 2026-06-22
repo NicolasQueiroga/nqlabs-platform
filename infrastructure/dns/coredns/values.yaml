@@ -93,13 +93,13 @@ servers:
       # hostnames via 169.254.116.108 at startup time because the host DNS cache is
       # not yet ready when CoreDNS first initialises. Using the ClusterIP breaks
       # that dependency. Update this if the etcd-dns Service is ever recreated.
-      # etcd-dns ClusterIP: 10.105.253.211
+      # etcd-dns ClusterIP: 10.97.76.140
       - name: etcd
         parameters: nqlabs.network
         configBlock: |-
           stubzones
           path /skydns
-          endpoint http://10.105.253.211:2379
+          endpoint http://10.97.76.140:2379
       # Forward everything else to upstream resolvers
       - name: forward
         parameters: . 1.1.1.1 8.8.8.8
