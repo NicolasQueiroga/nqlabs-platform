@@ -76,6 +76,15 @@ configs:
         - '.spec.data[]?.remoteRef.nullBytePolicy'
         - '.spec.target.deletionPolicy'
 
+  # RBAC — map Authentik groups to ArgoCD roles.
+  rbac:
+    # No access by default; access is granted only via group membership.
+    policy.default: ""
+    scopes: "[groups]"
+    policy.csv: |
+      g, platform-admins, role:admin
+      g, platform-viewers, role:readonly
+
 # ArgoCD server — UI and API
 server:
   replicas: 1
@@ -161,15 +170,6 @@ redis:
       memory: 128Mi
     limits:
       memory: 512Mi
-
-  # RBAC — map Authentik groups to ArgoCD roles.
-  rbac:
-    # No access by default; access is granted only via group membership.
-    policy.default: ""
-    scopes: "[groups]"
-    policy.csv: |
-      g, platform-admins, role:admin
-      g, platform-viewers, role:readonly
 
 # OIDC client secret for the Authentik SSO config, sourced from 1Password.
 # Labeled app.kubernetes.io/part-of: argocd so ArgoCD can resolve the
