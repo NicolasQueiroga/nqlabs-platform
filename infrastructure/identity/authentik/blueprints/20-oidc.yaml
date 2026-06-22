@@ -16,7 +16,7 @@ entries:
     attrs:
       client_type: confidential
       client_id: argocd
-      client_secret: !Env [AUTHENTIK_ARGOCD_OIDC_SECRET]
+      client_secret: !Env [AUTHENTIK_ARGOCD_OIDC_SECRET, ""]
       sub_mode: hashed_user_id
       include_claims_in_id_token: true
       authorization_flow:
@@ -54,7 +54,7 @@ entries:
     attrs:
       client_type: confidential
       client_id: grafana
-      client_secret: !Env [AUTHENTIK_GRAFANA_OIDC_SECRET]
+      client_secret: !Env [AUTHENTIK_GRAFANA_OIDC_SECRET, ""]
       sub_mode: hashed_user_id
       include_claims_in_id_token: true
       authorization_flow:
