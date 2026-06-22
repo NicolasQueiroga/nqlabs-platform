@@ -52,10 +52,12 @@ spec:
         - path:
             type: PathPrefix
             value: /
+      # Routed through the Authentik embedded outpost (forward-auth). The outpost
+      # authenticates, then reverse-proxies to the Prometheus backend.
       backendRefs:
-        - name: kube-prometheus-stack-prometheus
-          namespace: monitoring
-          port: 9090
+        - name: authentik-server
+          namespace: authentik
+          port: 80
 
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -77,10 +79,11 @@ spec:
         - path:
             type: PathPrefix
             value: /
+      # Routed through the Authentik embedded outpost (forward-auth).
       backendRefs:
-        - name: kube-prometheus-stack-alertmanager
-          namespace: monitoring
-          port: 9093
+        - name: authentik-server
+          namespace: authentik
+          port: 80
 
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -102,7 +105,8 @@ spec:
         - path:
             type: PathPrefix
             value: /
+      # Routed through the Authentik embedded outpost (forward-auth).
       backendRefs:
-        - name: uptime-kuma
-          namespace: monitoring
-          port: 3001
+        - name: authentik-server
+          namespace: authentik
+          port: 80

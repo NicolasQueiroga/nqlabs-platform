@@ -44,13 +44,8 @@ dashboard:
     limits:
       memory: 256Mi
 
+  # The dashboard HTTPRoute is defined in rbac/httproute.yaml instead, routed
+  # through the Authentik embedded outpost (forward-auth) rather than directly
+  # to the dashboard service. See docs/decisions/identity-provider.md.
   httproute:
-    enabled: true
-    annotations:
-      external-dns.alpha.kubernetes.io/hostname: rollouts.platform.nqlabs.network
-    parentRefs:
-      - name: platform-gateway
-        namespace: platform
-        sectionName: https
-    hostnames:
-      - rollouts.platform.nqlabs.network
+    enabled: false

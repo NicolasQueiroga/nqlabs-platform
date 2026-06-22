@@ -32,6 +32,11 @@ spec:
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
       path: infrastructure/delivery/argo-rollouts/rbac
+    # Management-only dashboard route (through the Authentik outpost). Kept out of
+    # the shared rbac dir so it is not applied to the staging/production clusters.
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/delivery/argo-rollouts/dashboard-route
   destination:
     server: https://kubernetes.default.svc
     namespace: argo-rollouts

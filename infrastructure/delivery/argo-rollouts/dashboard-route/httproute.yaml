@@ -1,0 +1,29 @@
+# Argo Rollouts dashboard route (management cluster only).
+#
+# Routed through the Authentik embedded outpost (forward-auth) instead of
+# directly to the dashboard service, so the read-only dashboard requires an
+# authenticated Authentik session. The chart's own httproute is disabled
+# (dashboard.httproute.enabled: false in values.yaml).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: argo-rollouts-dashboard
+  namespace: argo-rollouts
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: rollouts.platform.nqlabs.network
+spec:
+  parentRefs:
+    - name: platform-gateway
+      namespace: platform
+      sectionName: https
+  hostnames:
+    - rollouts.platform.nqlabs.network
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: authentik-server
+          namespace: authentik
+          port: 80

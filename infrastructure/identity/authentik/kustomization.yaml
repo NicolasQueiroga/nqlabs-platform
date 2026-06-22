@@ -12,6 +12,7 @@ resources:
   - manifests/postgres-cluster.yaml
   - manifests/valkey.yaml
   - manifests/httproute.yaml
+  - manifests/referencegrant.yaml
 
 configMapGenerator:
   - name: authentik-blueprints

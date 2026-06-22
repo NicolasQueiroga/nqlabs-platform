@@ -1,12 +1,10 @@
-# CiliumNetworkPolicy for the argo-rollouts namespace.
+# CiliumNetworkPolicy for the argo-rollouts namespace dashboard (port 3100).
 #
-# The Cilium Gateway API proxy uses the reserved "ingress" Cilium identity
-# and connects directly to pod container ports (not service ports). A standard
-# K8s NetworkPolicy cannot match this identity, so a CiliumNetworkPolicy is
-# required to allow the gateway to reach the argo-rollouts dashboard (port 3100).
-#
-# NOTE: this file is managed as a 4th source on the argo-rollouts ArgoCD Application.
-# See clusters/nqlabs-management/argocd/apps/argo-rollouts.yaml.
+# On the management cluster the dashboard is fronted by the Authentik embedded
+# outpost (forward-auth), so the authentik namespace must be allowed to reach it.
+# The reserved "ingress" entity is also allowed as a fallback / for direct
+# gateway access on the staging/production clusters (where authentik is absent,
+# the authentik rule simply matches nothing).
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -17,6 +15,13 @@ spec:
   ingress:
     - fromEntities:
         - ingress
+      toPorts:
+        - ports:
+            - port: "3100"
+              protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: authentik
       toPorts:
         - ports:
             - port: "3100"
