@@ -61,6 +61,15 @@ spec:
 
   orphanedResources:
     warn: true
+    ignore:
+      # Prometheus Operator creates these headless Services dynamically; they are
+      # expected in the monitoring namespace but are not tracked by any ArgoCD app.
+      - group: ""
+        kind: Service
+        name: prometheus-operated
+      - group: ""
+        kind: Service
+        name: alertmanager-operated
 
 ---
 apiVersion: argoproj.io/v1alpha1
