@@ -12,7 +12,28 @@
 # allowedRoutes uses from: Selector with label gateway-access: "true".
 # Namespaces with HTTPRoutes must have this label to attach to the gateway.
 # This prevents unauthorized namespaces from hijacking hostnames.
+#
+# The Namespace resources below ensure the gateway-access label is applied
+# to existing namespaces via ServerSideApply (managedNamespaceMetadata only
+# applies labels at namespace creation, not to existing namespaces).
 
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+  labels:
+    gateway-access: "true"
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    gateway-access: "true"
+
+---
 apiVersion: v1
 kind: Namespace
 metadata:
