@@ -36,6 +36,11 @@ metadata:
 spec:
   replicas: 1
   serviceName: authentik-valkey
+  # Declared explicitly to match API server defaults (keeps ArgoCD in sync
+  # without normalizers). Retain PVCs on delete/scale for data safety.
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
   selector:
     matchLabels:
       app.kubernetes.io/name: valkey
@@ -77,6 +82,8 @@ spec:
           ports:
             - name: valkey
               containerPort: 6379
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -103,11 +110,14 @@ spec:
             - name: data
               mountPath: /data
   volumeClaimTemplates:
-    - metadata:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
         name: data
       spec:
         accessModes: [ReadWriteOnce]
         storageClassName: local-path
+        volumeMode: Filesystem
         resources:
           requests:
             storage: 1Gi
