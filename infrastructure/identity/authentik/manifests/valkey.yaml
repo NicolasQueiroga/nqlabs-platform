@@ -1,0 +1,113 @@
+# Valkey (BSD Redis fork) for Authentik — cache + Celery broker.
+#
+# Single instance for Phase 0. Image from ghcr.io (Kyverno-approved). Runs
+# non-root with a password (requirepass) from 1Password via ESO. PVC mounted
+# directly (no subPath) so non-root writes work on Talos local-path.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authentik-valkey
+  namespace: authentik
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+  labels:
+    app.kubernetes.io/name: valkey
+    app.kubernetes.io/part-of: authentik
+spec:
+  selector:
+    app.kubernetes.io/name: valkey
+    app.kubernetes.io/part-of: authentik
+  ports:
+    - name: valkey
+      port: 6379
+      targetPort: valkey
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: authentik-valkey
+  namespace: authentik
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+  labels:
+    app.kubernetes.io/name: valkey
+    app.kubernetes.io/part-of: authentik
+spec:
+  replicas: 1
+  serviceName: authentik-valkey
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: valkey
+      app.kubernetes.io/part-of: authentik
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: valkey
+        app.kubernetes.io/part-of: authentik
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: valkey
+          image: ghcr.io/valkey-io/valkey:8.0-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - valkey-server
+            - --requirepass
+            - $(VALKEY_PASSWORD)
+            - --save
+            - "60"
+            - "1"
+            - --appendonly
+            - "yes"
+            - --dir
+            - /data
+          env:
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authentik-valkey-auth
+                  key: password
+          ports:
+            - name: valkey
+              containerPort: 6379
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "valkey-cli -a \"$VALKEY_PASSWORD\" ping | grep PONG"]
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "valkey-cli -a \"$VALKEY_PASSWORD\" ping | grep PONG"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 1Gi

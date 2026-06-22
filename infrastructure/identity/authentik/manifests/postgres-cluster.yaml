@@ -1,0 +1,46 @@
+# PostgreSQL for Authentik, managed by CloudNativePG.
+#
+# Single instance for Phase 0 (single-node management cluster). Scale
+# .spec.instances to 3 for HA once NUC nodes are added — CNPG handles
+# replication and failover.
+#
+# Runs non-root (uid 26) on local-path. CNPG mounts the PVC directly (no
+# subPath), so the Talos non-root-write restriction does not apply.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: authentik-pg
+  namespace: authentik
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.6
+
+  # Owner role + database created from the ESO-managed basic-auth secret so the
+  # password matches what Authentik uses (authentik-postgres/password in 1Password).
+  bootstrap:
+    initdb:
+      database: authentik
+      owner: authentik
+      secret:
+        name: authentik-pg-app
+
+  storage:
+    storageClass: local-path
+    size: 5Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+  # Surface CNPG/Postgres metrics to kube-prometheus-stack.
+  monitoring:
+    enablePodMonitor: true
+
+  affinity:
+    # Single-node Phase 0: allow scheduling without anti-affinity blocking.
+    podAntiAffinityType: preferred

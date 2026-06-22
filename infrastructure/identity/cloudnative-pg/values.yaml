@@ -1,0 +1,30 @@
+# CloudNativePG operator — NQLabs Platform
+#
+# Chart: cnpg/cloudnative-pg
+# Provides the PostgreSQL operator used by the platform identity layer
+# (Authentik) and available for any future stateful service needing Postgres.
+#
+# Images are on ghcr.io/cloudnative-pg/* (Kyverno-approved registry).
+
+# Resource requests/limits (Kyverno require-resource-requests compliance).
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+# Surface operator metrics to kube-prometheus-stack.
+monitoring:
+  podMonitorEnabled: true
+
+# The operator runs non-root by default; keep a restricted-compliant context.
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  capabilities:
+    drop:
+      - ALL
+  seccompProfile:
+    type: RuntimeDefault

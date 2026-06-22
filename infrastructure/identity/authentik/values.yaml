@@ -1,0 +1,122 @@
+# Authentik Helm values — NQLabs Platform identity provider.
+#
+# Chart: authentik/authentik
+# External data layer: CloudNativePG (authentik-pg-rw) + Valkey (authentik-valkey).
+# The bundled bitnami postgresql/redis subcharts are disabled (their images are
+# not on a Kyverno-approved registry, and we want operator-managed Postgres).
+#
+# All secrets come from the ESO-managed `authentik-secrets` Secret (see
+# manifests/externalsecrets.yaml), injected via global.env secretKeyRef.
+
+global:
+  # Pod-level security context for all components (Kyverno: runAsNonRoot + seccomp).
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+
+  # Sensitive config + connection details injected from the ESO secret.
+  # Explicit env always overrides the chart's config secret (envFrom).
+  env:
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secrets
+          key: secret_key
+    - name: AUTHENTIK_POSTGRESQL__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secrets
+          key: postgres_password
+    - name: AUTHENTIK_REDIS__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secrets
+          key: redis_password
+    # Bootstrap the initial akadmin user + API token on first install.
+    - name: AUTHENTIK_BOOTSTRAP_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secrets
+          key: bootstrap_password
+    - name: AUTHENTIK_BOOTSTRAP_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secrets
+          key: bootstrap_token
+    # Redis/Valkey connection (non-secret host).
+    - name: AUTHENTIK_REDIS__HOST
+      value: authentik-valkey
+
+authentik:
+  log_level: info
+  # secret_key intentionally empty here — provided via global.env (secretKeyRef).
+  secret_key: ""
+  error_reporting:
+    enabled: false
+  postgresql:
+    host: authentik-pg-rw
+    name: authentik
+    user: authentik
+    port: 5432
+    # password provided via global.env AUTHENTIK_POSTGRESQL__PASSWORD
+
+# Disable bundled subcharts — we use external CNPG Postgres + Valkey.
+postgresql:
+  enabled: false
+redis:
+  enabled: false
+
+# GeoIP requires a MaxMind license; not needed.
+geoip:
+  enabled: false
+
+server:
+  replicas: 1
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  metrics:
+    serviceMonitor:
+      enabled: true
+  service:
+    type: ClusterIP
+    servicePortHttp: 80
+
+worker:
+  replicas: 1
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+# Declarative IdP config (groups, OIDC/proxy providers, applications, outpost)
+# is delivered via blueprints mounted from a ConfigMap (added in the blueprints
+# step). Left empty here so the initial deploy uses Authentik's built-in
+# default blueprints.
+blueprints:
+  configMaps: []

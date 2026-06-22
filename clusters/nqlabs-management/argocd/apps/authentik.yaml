@@ -1,0 +1,54 @@
+# Authentik identity provider for nqlabs-management.
+#
+# Platform SSO + forward-auth. Multi-source:
+#   1. authentik Helm chart (server + worker) with values from git
+#   2. git repo as the $values ref
+#   3. raw manifests: CNPG Postgres Cluster, Valkey, ExternalSecrets, HTTPRoute
+#
+# Depends on: cloudnative-pg operator (wave 1, CRDs) and external-secrets (wave 0).
+# sync-wave 5 so those are healthy first. Within the app, sync-waves order
+# ExternalSecrets (-3) -> Postgres/Valkey (-2) -> Authentik + route (0).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: authentik
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://charts.goauthentik.io
+      chart: authentik
+      targetRevision: "2026.5.3"
+      helm:
+        releaseName: authentik
+        valueFiles:
+          - $values/infrastructure/identity/authentik/values.yaml
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/identity/authentik/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: authentik
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        # Restricted PSA: Authentik + data layer all run non-root (no subPath).
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/enforce-version: latest
+        # Allow HTTPRoutes in this namespace to attach to the platform gateway.
+        gateway-access: "true"
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
