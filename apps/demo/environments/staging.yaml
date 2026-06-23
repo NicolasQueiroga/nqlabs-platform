@@ -15,7 +15,7 @@ argocd:
 
 image:
   repository: ghcr.io/nicolasqueiroga/nqlabs-demo
-  tag: sha-5e13c02a11c3
+  tag: sha-55f42774beba
 
 container:
   port: 8080
