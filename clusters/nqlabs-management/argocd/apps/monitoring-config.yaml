@@ -17,6 +17,14 @@ metadata:
     argocd.argoproj.io/sync-wave: "4"
 spec:
   project: platform
+  # Prometheus Operator creates these services automatically.
+  # They're not in Git but are expected to exist.
+  orphanedResources:
+    ignore:
+      - kind: Service
+        name: alertmanager-operated
+      - kind: Service
+        name: prometheus-operated
   source:
     repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
     targetRevision: HEAD
