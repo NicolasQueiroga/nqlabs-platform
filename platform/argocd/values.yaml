@@ -119,10 +119,10 @@ controller:
   replicas: 1
   resources:
     requests:
-      cpu: 100m
-      memory: 512Mi
+      cpu: 200m
+      memory: 1Gi
     limits:
-      memory: 2Gi
+      memory: 4Gi
   readinessProbe:
     timeoutSeconds: 5
     failureThreshold: 6
