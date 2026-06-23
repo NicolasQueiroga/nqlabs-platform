@@ -103,7 +103,7 @@ spec:
 # health checks. This CCNP does not change the egress posture — it only
 # ensures the ingress side of target namespaces doesn't block health checks.
 apiVersion: cilium.io/v2
-kind: CiliumClusterNetworkPolicy
+kind: CiliumClusterwideNetworkPolicy
 metadata:
   name: monitoring-allow-health-checks
 spec:
