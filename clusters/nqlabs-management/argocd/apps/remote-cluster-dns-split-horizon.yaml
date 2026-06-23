@@ -1,0 +1,58 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: staging-cluster-dns-split-horizon
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: clusters/nqlabs-staging/bootstrap
+    directory:
+      include: "coredns-nqlabs-stub.yaml"
+  destination:
+    name: nqlabs-staging
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    retry:
+      limit: 5
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: production-cluster-dns-split-horizon
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: clusters/nqlabs-production/bootstrap
+    directory:
+      include: "coredns-nqlabs-stub.yaml"
+  destination:
+    name: nqlabs-production
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    retry:
+      limit: 5
+    syncOptions:
+      - ServerSideApply=true
