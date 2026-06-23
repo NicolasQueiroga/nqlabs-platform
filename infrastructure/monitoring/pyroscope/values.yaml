@@ -6,7 +6,6 @@ pyroscope:
   disableSelfProfile: false
   extraArgs:
     log.level: info
-    pyroscopedb.retention-period: 30d
     pyroscopedb.max-block-duration: 30m
   resources:
     requests:
