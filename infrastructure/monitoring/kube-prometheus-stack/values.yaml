@@ -33,10 +33,10 @@ kubeScheduler:
 grafana:
   enabled: true
 
-  admin:
-    existingSecret: grafana-admin-credentials
-    userKey: admin-user
-    passwordKey: admin-password
+  # Grafana access is owned by Authentik, not a standalone local-admin
+  # credential in 1Password. The chart may create an internal bootstrap admin
+  # Secret, but the login form is disabled and OAuth auto-login is enforced;
+  # Authentik groups below decide who becomes Grafana Admin/Viewer.
 
   # OIDC client secret for Authentik SSO (key GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET).
   # Grafana maps the GF_<SECTION>_<KEY> env var to [auth.generic_oauth] client_secret.
