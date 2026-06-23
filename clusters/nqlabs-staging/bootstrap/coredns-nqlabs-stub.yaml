@@ -14,14 +14,18 @@ data:
             lameduck 5s
         }
         ready
-        log . { class error }
+        log . {
+            class error
+        }
         prometheus :9153
         kubernetes cluster.local in-addr.arpa ip6.arpa {
             pods insecure
             fallthrough in-addr.arpa ip6.arpa
             ttl 30
         }
-        forward . /etc/resolv.conf { max_concurrent 1000 }
+        forward . /etc/resolv.conf {
+           max_concurrent 1000
+        }
         cache 30 {
            disable success cluster.local
            disable denial cluster.local
@@ -32,7 +36,9 @@ data:
     }
     nqlabs.network:53 {
         errors
-        log . { class error }
+        log . {
+            class error
+        }
         template IN A platform.nqlabs.network {
             match ^[a-z0-9-]+\.platform\.nqlabs\.network\.$
             answer "{{ .Name }} 60 IN A 192.168.15.195"
