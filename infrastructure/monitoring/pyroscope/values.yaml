@@ -14,12 +14,16 @@ pyroscope:
     limits:
       memory: 1Gi
   podSecurityContext:
-    fsGroup: 10001
-    runAsUser: 10001
-    runAsNonRoot: true
+    # Talos + local-path subPath bind mounts block non-root writes to the
+    # metastore subPath even with fsGroup. Scoped to monitoring namespace.
+    fsGroup: 0
+    runAsUser: 0
+    runAsNonRoot: false
     seccompProfile:
       type: RuntimeDefault
   securityContext:
+    runAsUser: 0
+    runAsNonRoot: false
     allowPrivilegeEscalation: false
     capabilities:
       drop:

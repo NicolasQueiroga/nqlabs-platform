@@ -112,6 +112,11 @@ PYROSCOPE_SERVER_ADDRESS=http://pyroscope.monitoring.svc.cluster.local:4040
 Remote apps should not write directly to management backends unless the local
 collector is unavailable or an app cannot use a collector.
 
+Pyroscope currently runs as root for the same Talos/local-path subPath reason as
+Prometheus and Alertmanager: its metastore mounts a subPath from the PVC and
+non-root writes fail at the kernel bind-mount layer. Keep this scoped to the
+privileged `monitoring` namespace and revisit when storage moves off local-path.
+
 ## Verification
 
 Strict Argo verification must check all three:
