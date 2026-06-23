@@ -38,6 +38,44 @@ ESO needs one manual bootstrap secret:
 The token value lives in 1Password and is applied manually once during bootstrap.
 Never commit it.
 
+## Rotate the 1Password service account token
+
+Rotation is manual because the token is the trust root ESO uses to read every
+other secret.
+
+1. Create a new 1Password service account token with access to the `NQLabs` vault.
+2. Store the new token in 1Password item `Service Account Auth Token: NQ Labs`,
+   field `credential`.
+3. Update the bootstrap Secret on every cluster that runs ESO:
+
+   ```bash
+   op item get "Service Account Auth Token: NQ Labs" \
+     --account my.1password.com --fields credential --format json \
+     | python3 -c "import json,sys; sys.stdout.write(json.load(sys.stdin)['value'])" \
+     | kubectl -n external-secrets create secret generic onepassword-service-account-token \
+         --from-file=token=/dev/stdin \
+         --dry-run=client -o yaml \
+     | kubectl apply -f -
+   ```
+
+4. Restart ESO so all replicas pick up the token immediately:
+
+   ```bash
+   kubectl -n external-secrets rollout restart deploy/external-secrets
+   kubectl -n external-secrets rollout restart deploy/external-secrets-webhook
+   kubectl -n external-secrets rollout restart deploy/external-secrets-cert-controller
+   ```
+
+5. Verify:
+
+   ```bash
+   kubectl get clustersecretstore nqlabs-1password
+   kubectl get externalsecret -A
+   ```
+
+6. Revoke the old service account token in 1Password only after all clusters show
+   `ClusterSecretStore/nqlabs-1password` Ready/Valid.
+
 ## ClusterSecretStore
 
 Current store:
@@ -133,7 +171,9 @@ kubectl get secret <name> -n <namespace> -o jsonpath='{.data}' | python3 -m json
 | ExternalSecret | Namespace | Target Secret | Purpose |
 |----------------|-----------|---------------|---------|
 | `tailscale-operator-oauth` | `tailscale` | `operator-oauth` | Tailscale Operator OAuth credentials |
-| `grafana-admin-credentials` | `monitoring` | `grafana-admin-credentials` | Grafana admin login |
+| `grafana-oidc` | `monitoring` | `grafana-oidc` | Grafana Authentik OIDC client secret |
+| `alertmanager-discord-webhook` | `monitoring` | `alertmanager-discord-webhook` | Alertmanager Discord receiver webhook |
+| `velero-credentials` | `velero` | `velero-credentials` | MinIO/AWS/Azure backup credentials |
 
 ## Common failure modes
 

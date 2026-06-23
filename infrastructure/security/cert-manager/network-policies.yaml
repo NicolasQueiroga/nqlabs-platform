@@ -1,0 +1,31 @@
+# NetworkPolicies for cert-manager.
+#
+# Keep ingress narrow without blocking Kubernetes API server admission calls to
+# cert-manager-webhook. The API server originates from node/LAN IPs in this lab.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cert-manager-deny-ingress
+  namespace: cert-manager
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 9402
+          protocol: TCP
+    - from:
+        - ipBlock:
+            cidr: 192.168.15.0/24
+      ports:
+        - port: 10250
+          protocol: TCP
+

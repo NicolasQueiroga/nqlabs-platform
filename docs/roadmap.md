@@ -17,18 +17,19 @@ bank-grade, fully-featured private cloud. Tracked here.
 
 ## Security / supply chain
 
-- [x] **Kyverno** policy engine on **management** — 4 baseline ClusterPolicies in Audit
-  (disallow-latest-tag, require-resource-requests, restrict-image-registries,
-  require-run-as-nonroot) + verify-image-signatures. PolicyReports generating.
-  - [x] replicate Kyverno to staging/production (auditing service pods there)
-  - [ ] flip clean rules Audit → Enforce once the fleet passes
+- [x] **Kyverno** policy engine on all clusters — baseline policies in Enforce,
+  autogen enabled for controllers, service-namespace label/limit policies,
+  generate defaults for service namespaces, mutate managed labels, metrics scraped.
+  Image signatures remain Audit until current app images are proven signed.
 - [x] **Supply-chain CI** — reusable Trivy scan + Cosign keyless sign + SBOM attestation
   workflow; Kyverno verify-image-signatures audits ghcr signatures. App repos call it
   from their build (wire into `nqlabs-demo` build to activate).
   - [ ] **Harbor** self-hosted registry — DEFERRED: needs distributed storage (Rook/Ceph)
     for a non-single-node install; GHCR + scan/sign/verify covers the core meanwhile.
     Requirements: [planning/harbor-openbao-requirements.md](planning/harbor-openbao-requirements.md).
-- [x] **Falco** runtime security — modern_ebpf DaemonSet live on all 3 clusters (alert mode).
+- [x] **Falco** runtime security — modern_ebpf DaemonSet live on all 3 clusters,
+  custom NQLabs rules, metrics, validation fixture, and management Falcosidekick
+  forwarding to Alertmanager.
 - [x] CiliumNetworkPolicy **default-deny** baseline — chart supports it; live on demo
   (default-deny ingress, allow in-cluster/host/ingress; verified still reachable).
 - [ ] **OpenBao** — DEFERRED (large migration). Requirements + migration plan:
@@ -36,7 +37,8 @@ bank-grade, fully-featured private cloud. Tracked here.
 
 ## Resilience / scale
 
-- [x] **Velero** backup/DR — LIVE on management, on-demand, 3 targets (MinIO default + AWS S3 + Azure Blob offsite). All BSLs Available; restore-tested. Runbook: backup-velero.md.
+- [x] **Velero** backup/DR — LIVE on management/staging/production with node-agent
+  file backup, scheduled local/offsite backups, metrics, and restore-test runbook.
 - [ ] **Rook/Ceph** distributed storage — hardware-gated (needs spare OSD disks).
   Requirements: [planning/storage-and-ha-requirements.md](planning/storage-and-ha-requirements.md).
 - [ ] **HA multi-node** clusters — hardware-gated (needs 3 CP nodes/cluster; NUCs).

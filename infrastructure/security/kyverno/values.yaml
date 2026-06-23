@@ -4,6 +4,9 @@
 # backgroundController.replicas to 2+ for HA.
 admissionController:
   replicas: 1
+  serviceMonitor:
+    enabled: true
+    interval: 30s
   resources:
     requests:
       cpu: 100m
@@ -21,6 +24,9 @@ admissionController:
         - ALL
 backgroundController:
   replicas: 1
+  serviceMonitor:
+    enabled: true
+    interval: 30s
   resources:
     requests:
       cpu: 50m
@@ -38,6 +44,9 @@ backgroundController:
         - ALL
 reportsController:
   replicas: 1
+  serviceMonitor:
+    enabled: true
+    interval: 30s
   resources:
     requests:
       cpu: 50m
@@ -55,6 +64,9 @@ reportsController:
         - ALL
 cleanupController:
   replicas: 1
+  serviceMonitor:
+    enabled: true
+    interval: 30s
   resources:
     requests:
       cpu: 25m
@@ -70,3 +82,7 @@ cleanupController:
     capabilities:
       drop:
         - ALL
+
+grafana:
+  enabled: true
+  namespace: monitoring

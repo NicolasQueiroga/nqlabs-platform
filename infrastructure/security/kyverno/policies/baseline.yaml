@@ -6,10 +6,8 @@
 # velero, monitoring, dns — system/infra namespaces that may need exceptions.
 # Add/remove namespaces from the exclude lists as needed.
 #
-# NOTE: pod-policies.kyverno.io/autogen-controllers: none disables Kyverno's
-# auto-generation of controller rules (Deployments, StatefulSets, etc.).
-# Policies only match raw Pods. Remove this annotation to enable autogen
-# (recommended for tighter security — applies to controllers too).
+# Autogen is intentionally enabled so policies validate controllers
+# (Deployment/StatefulSet/DaemonSet/etc.) as well as raw Pods.
 
 # --- disallow-latest-tag ---
 apiVersion: kyverno.io/v1
@@ -19,7 +17,6 @@ metadata:
   annotations:
     policies.kyverno.io/title: Disallow Latest Tag
     policies.kyverno.io/category: Supply Chain
-    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   webhookConfiguration:
     failurePolicy: Ignore
@@ -56,7 +53,6 @@ metadata:
   name: require-resource-requests
   annotations:
     policies.kyverno.io/category: Best Practices
-    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   webhookConfiguration:
     failurePolicy: Ignore
@@ -100,7 +96,6 @@ metadata:
   name: restrict-image-registries
   annotations:
     policies.kyverno.io/category: Supply Chain
-    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   webhookConfiguration:
     failurePolicy: Ignore
@@ -139,7 +134,6 @@ metadata:
   name: require-run-as-nonroot
   annotations:
     policies.kyverno.io/category: Pod Security
-    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   webhookConfiguration:
     failurePolicy: Ignore
@@ -180,7 +174,6 @@ metadata:
   name: disallow-privileged-containers
   annotations:
     policies.kyverno.io/category: Pod Security
-    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   webhookConfiguration:
     failurePolicy: Ignore
@@ -219,7 +212,6 @@ metadata:
   name: require-seccomp
   annotations:
     policies.kyverno.io/category: Pod Security
-    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   webhookConfiguration:
     failurePolicy: Ignore
@@ -271,7 +263,6 @@ metadata:
   name: disallow-host-namespace
   annotations:
     policies.kyverno.io/category: Pod Security
-    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   webhookConfiguration:
     failurePolicy: Ignore
@@ -309,7 +300,6 @@ metadata:
   name: restrict-capabilities
   annotations:
     policies.kyverno.io/category: Pod Security
-    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   webhookConfiguration:
     failurePolicy: Ignore
@@ -349,7 +339,6 @@ metadata:
   name: disallow-host-path
   annotations:
     policies.kyverno.io/category: Pod Security
-    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   webhookConfiguration:
     failurePolicy: Ignore

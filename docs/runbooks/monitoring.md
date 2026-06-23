@@ -24,6 +24,10 @@ ArgoCD apps:
 Hubble metrics come from Cilium's `hubble-metrics` ServiceMonitor. Hubble UI is
 protected through Authentik forward-auth.
 
+Security alerts are in `infrastructure/monitoring/security-rules.yaml` and cover
+cert expiry, ExternalSecret sync errors, Falco events, Kyverno violations, and
+Velero scheduled backup failures.
+
 ## Grafana credentials
 
 Grafana admin credentials are stored in 1Password item `grafana`:

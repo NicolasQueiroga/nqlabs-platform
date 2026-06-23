@@ -1,7 +1,7 @@
-# Velero — scheduled + on-demand backup/DR with node-agent file backup. Three targets:
-#   minio (default) — local, free, fast; for routine pre-change snapshots
-#   aws            — offsite S3 (us-east-1)        | real DR, on demand:
-#   azure          — offsite Blob (Cool, cheapest) |   velero backup create X --storage-location aws
+# Velero for staging/production clusters.
+#
+# Remote clusters have no local MinIO; use offsite AWS as default and Azure as a
+# second on-demand/weekly target. Node-agent file backup covers local-path PV data.
 initContainers:
   - name: velero-plugin-for-aws
     image: docker.io/velero/velero-plugin-for-aws:v1.14.1
@@ -27,16 +27,9 @@ credentials:
 configuration:
   defaultVolumesToFsBackup: true
   backupStorageLocation:
-    - name: minio
-      provider: aws
-      default: true
-      bucket: velero
-      config:
-        region: minio
-        s3Url: http://minio.minio:9000
-        s3ForcePathStyle: "true"
     - name: aws
       provider: aws
+      default: true
       bucket: nqlabs-velero-backup
       credential:
         name: velero-credentials
@@ -62,7 +55,6 @@ nodeAgent:
     limits: { memory: 512Mi }
   tolerations:
     - operator: Exists
-
 metrics:
   serviceMonitor:
     autodetect: false
@@ -70,67 +62,27 @@ metrics:
   nodeAgentPodMonitor:
     autodetect: false
     enabled: true
-  prometheusRule:
-    autodetect: false
-    enabled: true
-    spec:
-      - alert: VeleroBackupFailed
-        expr: velero_backup_last_status{schedule!=""} != 1
-        for: 15m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Velero scheduled backup failed"
-          description: "Schedule {{ $labels.schedule }} last backup failed."
-      - alert: VeleroNoRecentBackup
-        expr: ((time() - velero_backup_last_successful_timestamp{schedule!=""}) > 30 * 3600) or absent(velero_backup_last_successful_timestamp{schedule!=""})
-        for: 1h
-        labels:
-          severity: warning
-        annotations:
-          summary: "No recent Velero scheduled backup"
-          description: "No successful scheduled Velero backup in the expected window."
-
 schedules:
-  management-daily-local:
+  cluster-daily-aws:
     disabled: false
-    schedule: "0 5 * * *"
+    schedule: "0 6 * * *"
     template:
       ttl: 168h
-      storageLocation: minio
-      defaultVolumesToFsBackup: true
-      includedNamespaces:
-        - argocd
-        - authentik
-        - cert-manager
-        - dns
-        - external-secrets
-        - monitoring
-        - velero
-  management-weekly-offsite-aws:
-    disabled: false
-    schedule: "30 5 * * 0"
-    template:
-      ttl: 720h
       storageLocation: aws
       defaultVolumesToFsBackup: true
-      includedNamespaces:
-        - argocd
-        - authentik
-        - cert-manager
-        - dns
-        - external-secrets
-        - monitoring
-        - velero
+  cluster-weekly-azure:
+    disabled: false
+    schedule: "30 6 * * 0"
+    template:
+      ttl: 720h
+      storageLocation: azure
+      defaultVolumesToFsBackup: true
 resources:
   requests: { cpu: 50m, memory: 128Mi }
   limits: { memory: 512Mi }
-
-# Security contexts (Kyverno compliance)
 podSecurityContext:
   seccompProfile:
     type: RuntimeDefault
-
 containerSecurityContext:
   allowPrivilegeEscalation: false
   capabilities:

@@ -1,0 +1,42 @@
+# Manual Falco validation job.
+#
+# Apply on any cluster to trigger the NQLabs Shell Spawned In Container rule,
+# then verify Falco logs/metrics/alerts. Do not wire into ArgoCD; this is a
+# repeatable test fixture.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: falco-shell-validation
+  namespace: falco
+  labels:
+    app.kubernetes.io/name: falco-validation
+    app.kubernetes.io/part-of: nqlabs-platform
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: falco-validation
+        app.kubernetes.io/part-of: nqlabs-platform
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: trigger-shell
+          image: docker.io/busybox:1.37.0
+          command: ["sh", "-c", "echo falco-validation && sleep 2"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+

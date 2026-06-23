@@ -1,0 +1,31 @@
+# NetworkPolicies for External Secrets Operator.
+#
+# Allows API-server admission traffic to the webhook, Prometheus scraping of
+# metrics, and intra-namespace control-plane traffic. Egress remains unrestricted
+# because ESO must reach 1Password APIs and Kubernetes APIs.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: external-secrets-deny-ingress
+  namespace: external-secrets
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 8080
+          protocol: TCP
+    - from:
+        - ipBlock:
+            cidr: 192.168.15.0/24
+      ports:
+        - port: 10250
+          protocol: TCP
+

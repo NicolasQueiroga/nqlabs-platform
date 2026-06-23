@@ -1,0 +1,35 @@
+# Prometheus Operator CRDs for early ServiceMonitor/PrometheusRule rendering.
+#
+# Installed before cert-manager/ESO/Kyverno/Falco apps because those charts now
+# render ServiceMonitor objects. kube-prometheus-stack still owns the Prometheus
+# runtime at wave 3; this app only makes the API types available early.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-crds
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: platform
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: prometheus-operator-crds
+    targetRevision: "29.0.0"
+    helm:
+      releaseName: prometheus-operator-crds
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+

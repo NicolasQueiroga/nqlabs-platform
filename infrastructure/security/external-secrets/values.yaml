@@ -19,7 +19,7 @@
 # After ESO is deployed, all platform secrets are defined as ExternalSecret
 # resources in infrastructure/security/external-secrets/secrets/
 
-replicaCount: 1
+replicaCount: 2
 
 installCRDs: true
 
@@ -28,8 +28,12 @@ metrics:
   service:
     enabled: true
 
-# Leader election for HA (single replica for Phase 0)
-leaderElect: false
+serviceMonitor:
+  enabled: true
+  renderMode: alwaysRender
+
+# Leader election required for safe multi-replica controller HA.
+leaderElect: true
 
 resources:
   requests:
@@ -40,6 +44,7 @@ resources:
 
 # cert-controller — manages TLS certs for ESO webhooks
 certController:
+  replicaCount: 2
   resources:
     requests:
       cpu: 25m
@@ -49,6 +54,7 @@ certController:
 
 # webhook — validates ExternalSecret/SecretStore resources at admission
 webhook:
+  replicaCount: 2
   resources:
     requests:
       cpu: 25m

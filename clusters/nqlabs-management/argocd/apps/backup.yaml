@@ -33,7 +33,6 @@ spec:
       - ServerSideApply=true
 ---
 # Velero on-demand backup to MinIO (default) + AWS S3 + Azure Blob.
-# No schedule, no node-agent — trigger manually before risky ops.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -61,6 +60,92 @@ spec:
       path: infrastructure/backup/velero/manifests
   destination:
     server: https://kubernetes.default.svc
+    namespace: velero
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+# Velero on staging: offsite AWS/Azure + node-agent file backup.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: staging-velero
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://vmware-tanzu.github.io/helm-charts
+      chart: velero
+      targetRevision: "12.0.3"
+      helm:
+        releaseName: velero
+        valueFiles:
+          - $values/infrastructure/backup/velero/values-remote.yaml
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/backup/velero/manifests
+  destination:
+    name: nqlabs-staging
+    namespace: velero
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+# Velero on production: offsite AWS/Azure + node-agent file backup.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: production-velero
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://vmware-tanzu.github.io/helm-charts
+      chart: velero
+      targetRevision: "12.0.3"
+      helm:
+        releaseName: velero
+        valueFiles:
+          - $values/infrastructure/backup/velero/values-remote.yaml
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/backup/velero/manifests
+  destination:
+    name: nqlabs-production
     namespace: velero
   syncPolicy:
     automated:

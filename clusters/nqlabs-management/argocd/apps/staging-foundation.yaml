@@ -161,7 +161,7 @@ spec:
     targetRevision: HEAD
     path: infrastructure/security/external-secrets
     directory:
-      include: "cluster-secret-store.yaml"
+      include: "{cluster-secret-store.yaml,network-policies.yaml}"
   destination:
     name: nqlabs-staging
     namespace: external-secrets
@@ -280,7 +280,7 @@ spec:
     targetRevision: HEAD
     path: infrastructure/security/cert-manager
     directory:
-      include: "{cluster-issuers.yaml,externalsecrets.yaml}"
+      include: "{cluster-issuers.yaml,externalsecrets.yaml,network-policies.yaml}"
   destination:
     name: nqlabs-staging
     namespace: cert-manager

@@ -1,0 +1,18 @@
+# Management-only Falco integration.
+#
+# Staging/production run Falco + metrics, but only management has the central
+# Alertmanager runtime. Falcosidekick forwards warning+ events there.
+falcosidekick:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+  prometheusRules:
+    enabled: true
+  config:
+    alertmanager:
+      hostport: http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093
+      endpoint: /api/v2/alerts
+      minimumpriority: warning
+      extralabels: source:falco,cluster:nqlabs-management
+

@@ -20,6 +20,17 @@ falco:
   json_include_output_property: true
   json_include_tags_property: true
 
+metrics:
+  enabled: true
+  interval: 5m
+  outputRule: true
+  service:
+    create: true
+
+serviceMonitor:
+  create: true
+  interval: 30s
+
 # Priority class — Falco is a critical security component that should run
 # on every node, even under resource pressure.
 priorityClassName: system-node-critical
@@ -53,7 +64,40 @@ falcoctl:
           cpu: 25m
           memory: 32Mi
         limits:
-          memory: 128Mi
+        memory: 128Mi
+
+customRules:
+  nqlabs_rules.yaml: |-
+    - rule: NQLabs Shell Spawned In Container
+      desc: Detect an interactive shell spawned inside any container.
+      condition: spawned_process and container and proc.name in (shell_binaries)
+      output: >
+        Shell spawned in container (user=%user.name command=%proc.cmdline
+        container=%container.name image=%container.image.repository:%container.image.tag
+        k8s_ns=%k8s.ns.name k8s_pod=%k8s.pod.name)
+      priority: WARNING
+      tags: [nqlabs, container, shell, runtime]
+
+    - rule: NQLabs Kubectl Binary In Container
+      desc: Detect kubectl execution from inside a workload container.
+      condition: spawned_process and container and proc.name=kubectl
+      output: >
+        kubectl executed in container (user=%user.name command=%proc.cmdline
+        container=%container.name image=%container.image.repository:%container.image.tag
+        k8s_ns=%k8s.ns.name k8s_pod=%k8s.pod.name)
+      priority: WARNING
+      tags: [nqlabs, kubectl, runtime]
+
+    - rule: NQLabs Talosctl Binary In Container
+      desc: Detect talosctl execution from inside a workload container.
+      condition: spawned_process and container and proc.name=talosctl
+      output: >
+        talosctl executed in container (user=%user.name command=%proc.cmdline
+        container=%container.name image=%container.image.repository:%container.image.tag
+        k8s_ns=%k8s.ns.name k8s_pod=%k8s.pod.name)
+      priority: CRITICAL
+      tags: [nqlabs, talos, runtime]
+
     follow:
       resources:
         requests:

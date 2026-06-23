@@ -255,7 +255,9 @@ Design decision: [dns-architecture.md](../decisions/dns-architecture.md)
 |----------|-------|
 | Namespace | `cert-manager` |
 | Chart | `jetstack/cert-manager` |
-| Replicas | 1 controller + cainjector + webhook |
+| Replicas | 2 controller + cainjector + webhook |
+| Observability | ServiceMonitor + certificate expiry alerts |
+| Network | namespace NetworkPolicy |
 
 Manages TLS certificates for all platform services. Two cluster issuers:
 
@@ -284,6 +286,8 @@ Config: `infrastructure/security/cert-manager/`
 | Chart | `external-secrets/external-secrets` v2.6.0 |
 | Backend | 1Password SDK (NQLabs vault) |
 | Auth | Service account token (one-time bootstrap) |
+| Replicas | 2 controller + webhook + cert-controller (leader election on) |
+| Observability | ServiceMonitor + sync-error alerts |
 
 ESO synchronizes secrets from 1Password into Kubernetes Secrets. The
 platform uses a single `ClusterSecretStore` named `nqlabs-1password` that
@@ -313,10 +317,10 @@ Config: `infrastructure/security/external-secrets/`
 |----------|-------|
 | Namespace | `kyverno` |
 | Chart | `kyverno/kyverno` |
-| Mode | Audit (enforcement planned after fleet validation) |
+| Mode | Enforce for baseline/platform guardrails; image verification Audit |
 | Controllers | Admission (1), Background (1), Reports (1), Cleanup (1) |
 
-Kyverno enforces platform security policies. Four baseline ClusterPolicies
+Kyverno enforces platform security policies. Baseline ClusterPolicies
 are currently in **Enforce** mode with webhook `failurePolicy: Ignore`
 (so Kyverno being down never blocks admission):
 
@@ -325,15 +329,23 @@ are currently in **Enforce** mode with webhook `failurePolicy: Ignore`
 3. **`restrict-image-registries`** — allows only approved registries
    (docker.io, ghcr.io, quay.io, registry.k8s.io, ecr-public.aws.com)
 4. **`require-run-as-nonroot`** — requires pods to run as non-root user
+5. **`disallow-privileged-containers`**, **`require-seccomp`**,
+   **`disallow-host-namespace`**, **`restrict-capabilities`**,
+   **`disallow-host-path`** — pod security controls
+6. **NQLabs service-namespace guardrails** — required labels, memory limits,
+   generated CiliumNetworkPolicy/ResourceQuota/LimitRange, and managed-label mutation
 
 Additionally, `verify-image-signatures` audits Cosign signatures on
 ghcr.io images.
 
+Autogen is enabled, so Pod policies validate controller templates as well as
+raw Pods. Kyverno metrics are scraped with ServiceMonitors and surfaced through
+PolicyReports/Prometheus alerts.
+
 System namespaces (kube-system, falco, tailscale, local-path-storage,
 velero, monitoring, dns) are excluded from pod policies.
 
-Kyverno is replicated to staging and production clusters (audit mode) to
-monitor service pods there.
+Kyverno is replicated to staging and production clusters.
 
 Config: `infrastructure/security/kyverno/`
 
@@ -347,11 +359,13 @@ Config: `infrastructure/security/kyverno/`
 | Mode | Detection/alert only (never blocks) |
 | Priority | `system-node-critical` |
 | Tolerations | All nodes (including control plane) |
+| Observability | metrics ServiceMonitor + custom NQLabs rules |
 
 Falco instruments kernel syscalls via eBPF and alerts on suspicious
 runtime behavior (unexpected process execution, file access, network
 connections). JSON events are output to stdout and collected by promtail
-into Loki for correlation with other observability data.
+into Loki for correlation with other observability data. Management also runs
+Falcosidekick to forward warning+ events to Alertmanager.
 
 Runs as a DaemonSet on all nodes. Requires privileged mode (intentional —
 needed for eBPF kernel instrumentation).
@@ -760,12 +774,12 @@ Config: `infrastructure/storage/minio/minio.yaml`
 |----------|-------|
 | Namespace | `velero` |
 | Kind | Deployment (1 replica) |
-| Mode | On-demand (no schedule, no node-agent) |
-| Backup targets | 3 (MinIO default, AWS S3, Azure Blob) |
+| Mode | scheduled + on-demand; node-agent file backup enabled |
+| Backup targets | management: MinIO/AWS/Azure; staging/production: AWS/Azure |
 
-Velero provides Kubernetes backup and disaster recovery. It is configured
-for on-demand use (no scheduled backups, no node-agent for volume
-snapshots) — the operator triggers backups before changes.
+Velero provides Kubernetes backup and disaster recovery. It runs on all three
+clusters. Scheduled backups provide baseline coverage; operators can still
+trigger pre-change backups manually.
 
 **Three backup storage locations:**
 

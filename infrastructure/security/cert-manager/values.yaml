@@ -14,7 +14,11 @@
 crds:
   enabled: true   # Install CRDs with the chart
 
-replicaCount: 1
+replicaCount: 2
+
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
 
 # Prometheus metrics
 prometheus:
@@ -39,6 +43,7 @@ resources:
 
 # cainjector — injects CA certificates into webhooks
 cainjector:
+  replicaCount: 2
   resources:
     requests:
       cpu: 25m
@@ -48,6 +53,10 @@ cainjector:
 
 # webhook — validates cert-manager resources at admission time
 webhook:
+  replicaCount: 2
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 1
   resources:
     requests:
       cpu: 25m

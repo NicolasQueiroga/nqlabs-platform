@@ -1,0 +1,208 @@
+# Additional platform guardrails: labels, limits, namespace defaults, and safe
+# metadata mutation for service-factory namespaces.
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-nqlabs-workload-labels
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    policies.kyverno.io/category: NQLabs Platform
+spec:
+  webhookConfiguration:
+    failurePolicy: Ignore
+  background: true
+  rules:
+    - name: require-platform-labels
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaceSelector:
+                matchExpressions:
+                  - key: nqlabs.network/environment
+                    operator: Exists
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kyverno
+                - falco
+                - tailscale
+                - local-path-storage
+                - velero
+                - dns
+                - cert-manager
+                - external-secrets
+      validate:
+        failureAction: Enforce
+        message: "Workloads must carry NQLabs ownership and environment labels."
+        pattern:
+          metadata:
+            labels:
+              app.kubernetes.io/name: "?*"
+              app.kubernetes.io/part-of: "?*"
+              nqlabs.network/environment: "?*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resource-limits
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    policies.kyverno.io/category: Best Practices
+spec:
+  webhookConfiguration:
+    failurePolicy: Ignore
+  background: true
+  rules:
+    - name: require-memory-limit
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaceSelector:
+                matchExpressions:
+                  - key: nqlabs.network/environment
+                    operator: Exists
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kyverno
+                - falco
+                - tailscale
+                - local-path-storage
+                - velero
+                - dns
+                - cert-manager
+                - external-secrets
+      validate:
+        failureAction: Enforce
+        message: "Memory limits are required. CPU limits remain optional to avoid throttling."
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  limits:
+                    memory: "?*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: mutate-nqlabs-managed-label
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    policies.kyverno.io/category: NQLabs Platform
+spec:
+  webhookConfiguration:
+    failurePolicy: Ignore
+  background: true
+  rules:
+    - name: add-managed-label
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaceSelector:
+                matchExpressions:
+                  - key: nqlabs.network/environment
+                    operator: Exists
+      mutate:
+        patchStrategicMerge:
+          metadata:
+            labels:
+              +(nqlabs.network/managed-by): service-factory
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: generate-service-namespace-defaults
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    policies.kyverno.io/category: NQLabs Platform
+spec:
+  webhookConfiguration:
+    failurePolicy: Ignore
+  background: true
+  rules:
+    - name: generate-default-cilium-network-policy
+      match:
+        any:
+          - resources:
+              kinds: [Namespace]
+              selector:
+                matchExpressions:
+                  - key: nqlabs.network/environment
+                    operator: In
+                    values: [staging, production, preview]
+      generate:
+        apiVersion: cilium.io/v2
+        kind: CiliumNetworkPolicy
+        name: namespace-default-allow-platform-ingress
+        namespace: "{{ request.object.metadata.name }}"
+        synchronize: true
+        data:
+          spec:
+            endpointSelector: {}
+            enableDefaultDeny:
+              ingress: true
+              egress: false
+            ingress:
+              - fromEntities:
+                  - cluster
+                  - host
+                  - remote-node
+                  - health
+                  - ingress
+                  - kube-apiserver
+    - name: generate-default-resource-quota
+      match:
+        any:
+          - resources:
+              kinds: [Namespace]
+              selector:
+                matchExpressions:
+                  - key: nqlabs.network/environment
+                    operator: In
+                    values: [staging, production, preview]
+      generate:
+        apiVersion: v1
+        kind: ResourceQuota
+        name: namespace-default-quota
+        namespace: "{{ request.object.metadata.name }}"
+        synchronize: true
+        data:
+          spec:
+            hard:
+              requests.cpu: "4"
+              requests.memory: 8Gi
+              limits.memory: 16Gi
+              pods: "20"
+    - name: generate-default-limit-range
+      match:
+        any:
+          - resources:
+              kinds: [Namespace]
+              selector:
+                matchExpressions:
+                  - key: nqlabs.network/environment
+                    operator: In
+                    values: [staging, production, preview]
+      generate:
+        apiVersion: v1
+        kind: LimitRange
+        name: namespace-default-limits
+        namespace: "{{ request.object.metadata.name }}"
+        synchronize: true
+        data:
+          spec:
+            limits:
+              - type: Container
+                defaultRequest:
+                  cpu: 10m
+                  memory: 32Mi
+                default:
+                  memory: 128Mi

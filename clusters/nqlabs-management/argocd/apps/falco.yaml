@@ -19,6 +19,7 @@ spec:
         releaseName: falco
         valueFiles:
           - $values/infrastructure/security/falco/values.yaml
+          - $values/infrastructure/security/falco/values-management.yaml
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
       ref: values

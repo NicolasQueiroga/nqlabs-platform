@@ -1,9 +1,7 @@
 # cert-manager for nqlabs-management.
 #
-# ServiceMonitor is disabled because cert-manager (sync-wave 0) installs before
-# kube-prometheus-stack (sync-wave 3) which provides the ServiceMonitor CRD.
-# To enable: move cert-manager to sync-wave 4+ (after kube-prometheus-stack),
-# or install the ServiceMonitor CRD separately at an earlier wave.
+# ServiceMonitor is enabled in values.yaml. The monitoring-crds app at wave -1
+# installs the Prometheus Operator CRDs before this chart renders.
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -24,9 +22,6 @@ spec:
         releaseName: cert-manager
         valueFiles:
           - $values/infrastructure/security/cert-manager/values.yaml
-        parameters:
-          - name: prometheus.servicemonitor.enabled
-            value: "false"
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
       ref: values

@@ -23,7 +23,7 @@ spec:
     targetRevision: HEAD
     path: infrastructure/security/cert-manager
     directory:
-      include: "{cluster-issuers.yaml,externalsecrets.yaml}"
+      include: "{cluster-issuers.yaml,externalsecrets.yaml,network-policies.yaml}"
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
