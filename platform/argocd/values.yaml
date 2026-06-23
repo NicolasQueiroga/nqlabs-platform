@@ -76,6 +76,39 @@ configs:
         - '.spec.data[]?.remoteRef.nullBytePolicy'
         - '.spec.target.deletionPolicy'
 
+    # Velero CR health. ArgoCD has no built-in health for Velero storage
+    # locations/schedules, so otherwise Velero Applications remain Progressing
+    # even when pods run and BSLs are Available.
+    resource.customizations.health.velero.io_BackupStorageLocation: |
+      hs = {}
+      if obj.status ~= nil and obj.status.phase == "Available" then
+        hs.status = "Healthy"
+        hs.message = "BackupStorageLocation available"
+        return hs
+      end
+      hs.status = "Progressing"
+      if obj.status ~= nil and obj.status.phase ~= nil then
+        hs.message = obj.status.phase
+      else
+        hs.message = "Waiting for BackupStorageLocation validation"
+      end
+      return hs
+
+    resource.customizations.health.velero.io_Schedule: |
+      hs = {}
+      if obj.status ~= nil and obj.status.phase == "Enabled" then
+        hs.status = "Healthy"
+        hs.message = "Schedule enabled"
+        return hs
+      end
+      hs.status = "Progressing"
+      if obj.status ~= nil and obj.status.phase ~= nil then
+        hs.message = obj.status.phase
+      else
+        hs.message = "Waiting for schedule status"
+      end
+      return hs
+
   # RBAC — map Authentik groups to ArgoCD roles.
   rbac:
     # No access by default; access is granted only via group membership.
