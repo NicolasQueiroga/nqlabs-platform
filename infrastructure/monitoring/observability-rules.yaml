@@ -142,3 +142,46 @@ spec:
           annotations:
             summary: "Gatus is down"
             description: "Gatus metrics endpoint is down."
+
+    - name: nqlabs.identity.availability
+      rules:
+        - alert: NQLabsAuthentikServerDown
+          expr: up{job=~".*authentik.*server.*"} == 0 or absent(up{job=~".*authentik.*server.*"})
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Authentik server is down"
+            description: "Authentik server is not responding to Prometheus scrape. SSO and forward-auth are unavailable."
+        - alert: NQLabsAuthentikWorkerDown
+          expr: up{job=~".*authentik.*worker.*"} == 0 or absent(up{job=~".*authentik.*worker.*"})
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Authentik worker is down"
+            description: "Authentik worker is not responding. Blueprint reconciliation and background tasks are stalled."
+        - alert: NQLabsAuthentikPostgresDown
+          expr: cnpg_pg_status{cluster="authentik-pg"} == 0 or absent(cnpg_pg_status{cluster="authentik-pg"})
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Authentik PostgreSQL is down"
+            description: "CNPG cluster authentik-pg is not healthy. Authentik cannot persist sessions or users."
+        - alert: NQLabsAuthentikValkeyDown
+          expr: up{job=~".*valkey.*"} == 0 or absent(up{job=~".*valkey.*"})
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Authentik Valkey is down"
+            description: "Valkey cache/broker is down. Authentik performance degraded, Celery tasks stalled."
+        - alert: NQLabsAuthentikPostgresBackupFailing
+          expr: cnpg_backup_last_failed_timestamp_seconds{cluster="authentik-pg"} > cnpg_backup_last_succeeded_timestamp_seconds{cluster="authentik-pg"}
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "Authentik PostgreSQL backups are failing"
+            description: "Last CNPG backup for authentik-pg failed more recently than the last success."

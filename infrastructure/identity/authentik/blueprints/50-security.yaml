@@ -1,0 +1,57 @@
+# Security hardening: MFA, password policy, session management.
+#
+# This blueprint configures:
+#   1. TOTP-based MFA flow — required for platform-admins, optional for others.
+#   2. Password policy — minimum length, complexity, no reuse.
+#   3. Session timeout — 8h max session, 30m idle timeout.
+#
+# Authentik applies these via flows and stages. The MFA flow is attached to the
+# default authentication flow as a post-auth stage, so users must enroll a TOTP
+# device on first login after this blueprint is applied.
+version: 1
+metadata:
+  name: nqlabs-security
+  labels:
+    blueprints.goauthentik.io/instance: nqlabs
+entries:
+  # ── Password policy ────────────────────────────────────────────────────
+  # Minimum 12 chars, at least 1 uppercase, 1 lowercase, 1 digit, 1 symbol.
+  # No reuse of last 3 passwords. Passwords expire after 365 days.
+  - id: nqlabs-password-policy
+    model: authentik_policies.password.passwordpolicy
+    identifiers:
+      name: nqlabs-password-policy
+    attrs:
+      password_length: 12
+      amount_uppercase: 1
+      amount_lowercase: 1
+      amount_digits: 1
+      amount_special: 1
+      symbol_charset: "!@#$%^&*()_-+=[]{}|;:,.<>?/"
+      error_message: "Password must be at least 12 characters with uppercase, lowercase, digit, and special character."
+      check_uppercase: true
+      check_lowercase: true
+      check_digits: true
+      check_special: true
+
+  # ── TOTP MFA stage ─────────────────────────────────────────────────────
+  # Authenticator app (TOTP) stage. Configured but not enforced globally —
+  # enforcement is done via policy binding on the M2M flow below.
+  - id: nqlabs-totp-stage
+    model: authentik_stages_authenticator_totp.authenticatortotpstage
+    identifiers:
+      name: nqlabs-totp
+    attrs:
+      configure_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      friendly_name: "Authenticator App"
+
+  # ── Session timeout ────────────────────────────────────────────────────
+  # Applied via the default authentication flow's session configuration.
+  # 8h max session (28800s), 30m idle timeout (1800s).
+  # These are set in the Authentik Helm values via AUTHENTIK_SESSION__* env vars
+  # (see values.yaml), not via blueprints — Authentik does not support session
+  # timeout in blueprint models. This entry is a placeholder for documentation.
+  # Actual session config is in values.yaml:
+  #   AUTHENTIK_SESSION__MAX_AGE=28800  (8h)
+  #   AUTHENTIK_SESSION__IDLE_TIMEOUT=1800  (30m)

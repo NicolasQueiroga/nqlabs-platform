@@ -10,10 +10,12 @@ namespace: authentik
 resources:
   - manifests/externalsecrets.yaml
   - manifests/postgres-cluster.yaml
+  - manifests/postgres-backup.yaml
   - manifests/valkey.yaml
   - manifests/httproute.yaml
   - manifests/hubble-route.yaml
   - manifests/referencegrant.yaml
+  - manifests/network-policies.yaml
 
 configMapGenerator:
   - name: authentik-blueprints
@@ -21,6 +23,8 @@ configMapGenerator:
       - blueprints/10-groups.yaml
       - blueprints/20-oidc.yaml
       - blueprints/30-proxy.yaml
+      - blueprints/40-service-accounts.yaml
+      - blueprints/50-security.yaml
 
 # Stable name so the chart's blueprints.configMaps reference resolves and
 # ConfigMap volume updates propagate in place (Authentik re-reads blueprints).

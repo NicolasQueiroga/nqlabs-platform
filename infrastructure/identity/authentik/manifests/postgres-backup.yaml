@@ -1,0 +1,57 @@
+# CNPG backup configuration for Authentik PostgreSQL.
+#
+# WAL archiving + scheduled backups to MinIO (S3-compatible, in-cluster).
+# The MinIO `authentik-pg` bucket is created by the MinIO make-bucket Job.
+#
+# S3 credentials come from 1Password (same velero-minio access/secret keys,
+# since MinIO uses root creds for all buckets). The secret is formatted as
+# a CNPG-compatible S3 credentials secret (access_key_id + secret_access_key).
+#
+# Backup schedule: daily at 02:00 UTC. Retention: 7 backups (7 days).
+# WAL files are archived continuously, enabling point-in-time recovery (PITR).
+---
+# S3 credentials for CNPG backup + WAL archiving.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: authentik-pg-backup-s3
+  namespace: authentik
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  refreshPolicy: CreatedOnce
+  refreshInterval: 1h
+  secretStoreRef:
+    name: nqlabs-1password
+    kind: ClusterSecretStore
+  target:
+    name: authentik-pg-backup-s3
+    creationPolicy: Owner
+    template:
+      metadata:
+        labels:
+          cnpg.io/reload: "true"
+      data:
+        ACCESS_KEY_ID: "{{ .access_key }}"
+        SECRET_ACCESS_KEY: "{{ .secret_key }}"
+  data:
+    - secretKey: access_key
+      remoteRef:
+        key: velero-minio/access-key
+    - secretKey: secret_key
+      remoteRef:
+        key: velero-minio/secret-key
+---
+# Scheduled backup: daily at 02:00 UTC, keep 7 backups.
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: authentik-pg-daily
+  namespace: authentik
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  schedule: "0 2 * * *"
+  backupOwnerReference: self
+  cluster:
+    name: authentik-pg

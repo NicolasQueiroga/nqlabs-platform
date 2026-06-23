@@ -13,7 +13,7 @@ on whether the target application speaks OIDC:
 | Application | OIDC-native | Integration |
 |-------------|-------------|-------------|
 | ArgoCD, Grafana | yes | Direct **OIDC** — the app redirects to Authentik; group claims map to in-app roles (RBAC) |
-| Prometheus, Alertmanager, Argo Rollouts, Uptime Kuma, Hubble | no | **Forward-auth** via the Authentik proxy outpost (reverse-proxy mode) at the gateway; no request reaches the backend without a valid Authentik session + group membership |
+| Prometheus, Alertmanager, Argo Rollouts, Gatus, Hubble, Thanos, Pyroscope | no | **Forward-auth** via the Authentik proxy outpost (reverse-proxy mode) at the gateway; no request reaches the backend without a valid Authentik session + group membership |
 
 ## Why Authentik over Keycloak
 
@@ -43,7 +43,8 @@ migrated from later if that ever becomes the case.
   auth.platform ───────▶│ Authentik (server + worker) │
                         │  ├─ OIDC provider           │◀── ArgoCD / Grafana (OIDC)
                         │  └─ embedded proxy outpost  │◀── Prometheus / Alertmanager /
-                        └──────────────┬──────────────┘     Rollouts / Uptime / Hubble
+                        └──────────────┬──────────────┘     Rollouts / Gatus / Hubble /
+                                       │                     Thanos / Pyroscope
                                        │                     (forward-auth, reverse-proxy)
                         ┌──────────────┴──────────────┐
                         │ CloudNativePG (PostgreSQL)  │   data layer
@@ -87,3 +88,4 @@ Generated once and stored in 1Password (NQLabs vault), consumed via ExternalSecr
 - `authentik-postgres` — `password`
 - `argocd-oidc` — `client_secret`
 - `grafana-oidc` — `client_secret`
+- `gatus-oidc` — `client_secret`

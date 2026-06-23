@@ -41,6 +41,25 @@ spec:
   monitoring:
     enablePodMonitor: true
 
+  # WAL archiving to MinIO (S3-compatible) for point-in-time recovery.
+  # The authentik-pg bucket is created by the MinIO make-bucket Job.
+  # Credentials come from the authentik-pg-backup-s3 secret (ESO-managed).
+  backup:
+    barmanObjectStore:
+      destinationPath: s3://authentik-pg/wal
+      endpointURL: http://minio.minio:9000
+      s3Credentials:
+        accessKeyId:
+          name: authentik-pg-backup-s3
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: authentik-pg-backup-s3
+          key: SECRET_ACCESS_KEY
+      wal:
+        maxParallel: 2
+        compression: gzip
+    retentionPolicy: "7d"
+
   affinity:
     # Single-node Phase 0: allow scheduling without anti-affinity blocking.
     podAntiAffinityType: preferred

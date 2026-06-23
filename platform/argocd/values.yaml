@@ -45,6 +45,7 @@ configs:
         - profile
         - email
         - groups
+      usePKCE: true
 
     # Global diff customizations — stop controller-defaulted fields from
     # causing false OutOfSync across all Applications.

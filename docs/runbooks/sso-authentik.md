@@ -12,7 +12,7 @@ Every platform UI authenticates against it:
 |----|--------|--------|
 | ArgoCD | OIDC (native) | group → role: `platform-admins`=admin, `platform-viewers`=readonly |
 | Grafana | OIDC (native) | `platform-admins`=Admin, else Viewer |
-| Prometheus, Alertmanager, Uptime Kuma, Argo Rollouts | Forward-auth (embedded proxy outpost) | any authenticated user in a bound group |
+| Prometheus, Alertmanager, Gatus, Argo Rollouts, Thanos, Pyroscope | Forward-auth (embedded proxy outpost) | any authenticated user in a bound group |
 
 Data layer: CloudNativePG (`authentik-pg`) + Valkey (`authentik-valkey`) in the
 `authentik` namespace on the management cluster.
@@ -37,6 +37,7 @@ Data layer: CloudNativePG (`authentik-pg`) + Valkey (`authentik-valkey`) in the
 | `authentik-postgres` | password | CNPG cluster + Authentik |
 | `argocd-oidc` | client_secret | ArgoCD oidc.config + Authentik blueprint (!Env) |
 | `grafana-oidc` | client_secret | Grafana auth.generic_oauth + Authentik blueprint (!Env) |
+| `gatus-oidc` | client_secret | Gatus OIDC config + Authentik blueprint (!Env) |
 
 The first admin user is `akadmin`; its password is `authentik/bootstrap_password`.
 
@@ -83,9 +84,9 @@ there and map them to roles in the consuming app (ArgoCD `policy.csv`, Grafana
 
 ## Break-glass access (when Authentik is down)
 
-Forward-auth protected services (Prometheus, Alertmanager, Rollouts, Uptime)
-depend on Authentik being up. If Authentik is down, use kubectl port-forward
-to bypass the gateway and auth layer:
+Forward-auth protected services (Prometheus, Alertmanager, Rollouts, Gatus,
+Thanos, Pyroscope) depend on Authentik being up. If Authentik is down, use
+kubectl port-forward to bypass the gateway and auth layer:
 
 ```bash
 # Prometheus
@@ -104,9 +105,9 @@ kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
 kubectl port-forward -n argo-rollouts svc/argo-rollouts-dashboard 3100:3100
 # Access at http://localhost:3100
 
-# Uptime Kuma
-kubectl port-forward -n monitoring svc/uptime-kuma 3001:3001
-# Access at http://localhost:3001
+# Gatus
+kubectl port-forward -n monitoring svc/gatus 8081:8081
+# Access at http://localhost:8081
 ```
 
 For OIDC services (ArgoCD, Grafana), local admin login is disabled — SSO via
@@ -141,6 +142,65 @@ kubectl patch configmap kube-prometheus-stack-grafana -n monitoring --type=merge
 kubectl rollout restart deploy/kube-prometheus-stack-grafana -n monitoring
 # Get the admin password:
 kubectl get secret grafana-admin-credentials -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d
+```
+
+## CNPG backup & restore
+
+Authentik PostgreSQL is backed up via CloudNativePG's native backup mechanism.
+WAL files are archived continuously to MinIO (`s3://authentik-pg/wal`), and a
+scheduled full backup runs daily at 02:00 UTC (`ScheduledBackup` CR).
+
+### Check backup status
+
+```bash
+# List recent backups
+kubectl get backups.postgresql.cnpg.io -n authentik
+# Check WAL archiving status
+kubectl describe cluster authentik-pg -n authentik | grep -A5 "WAL Archiving"
+# Check the scheduled backup CR
+kubectl get scheduledbackup authentik-pg-daily -n authentik
+```
+
+### Restore from backup
+
+```bash
+# 1. (Optional) Point-in-time recovery — restore to a specific timestamp
+kubectl apply -n authentik -f - <<EOF
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: authentik-pg-restored
+spec:
+  bootstrap:
+    recovery:
+      backup:
+        name: <backup-name>
+      targetTime: "2026-01-15T10:30:00+00:00"
+  storage:
+    storageClass: local-path
+    size: 5Gi
+EOF
+
+# 2. Full restore from latest backup
+kubectl apply -n authentik -f - <<EOF
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: authentik-pg-restored
+spec:
+  bootstrap:
+    recovery:
+      backup:
+        name: <backup-name>
+  storage:
+    storageClass: local-path
+    size: 5Gi
+EOF
+
+# 3. Once restored, update Authentik to point at the new cluster:
+#    kubectl patch deployment authentik-server -n authentik \
+#      --type=json -p='[{"op":"replace","path":"/spec/template/spec/containers/0/env/1/value","value":"authentik-pg-restored-rw"}]'
+#    Or update the values.yaml postgresql.host and sync the ArgoCD app.
 ```
 
 ## Verification
