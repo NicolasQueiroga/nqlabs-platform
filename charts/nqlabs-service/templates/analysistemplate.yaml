@@ -38,7 +38,7 @@ spec:
                 restartPolicy: Never
                 containers:
                   - name: check
-                    image: curlimages/curl:8.10.1
+                    image: docker.io/curlimages/curl:8.10.1
                     command: [sh, -c]
                     args:
                       - 'code=$(curl -s -o /dev/null -m 5 -w "%{http_code}" "{{`{{args.service-url}}`}}"); echo "got $code"; test "$code" -ge 200 -a "$code" -lt 400'
