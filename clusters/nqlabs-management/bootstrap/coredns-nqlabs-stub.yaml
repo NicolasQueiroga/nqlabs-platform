@@ -4,12 +4,13 @@
 # nqlabs.network:53 block so ALL pods resolve platform/staging/production hostnames
 # directly to the management Gateway LoadBalancer IP without per-app hostAliases.
 #
-# Apply AFTER cluster bootstrap and Gateway creation:
+# Manual recovery apply (normally ArgoCD app cluster-dns-split-horizon owns this):
 #   kubectl -n kube-system patch configmap coredns --type=merge --patch-file=clusters/nqlabs-management/bootstrap/coredns-nqlabs-stub.yaml
 #   kubectl -n kube-system rollout restart deployment/coredns
 #
-# This will revert if the node is rebuilt and Talos re-applies its manifests.
-# Re-apply this patch during management cluster bootstrap.
+# The management root app-of-apps applies this file via
+# clusters/nqlabs-management/argocd/apps/cluster-dns-split-horizon.yaml so node
+# rebuilds converge without per-app hostAliases or manual DNS records.
 #
 # In-cluster target: 192.168.15.195 (management Cilium Gateway LB)
 # External/tailnet clients still resolve these names to the Proxmox Tailscale edge

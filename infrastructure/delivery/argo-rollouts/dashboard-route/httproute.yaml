@@ -27,3 +27,6 @@ spec:
         - name: authentik-server
           namespace: authentik
           port: 80
+      timeouts:
+        request: 300s
+        backendRequest: 300s

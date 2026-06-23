@@ -35,4 +35,8 @@ spec:
         - name: {{ include "nqlabs-service.fullname" . }}
           port: {{ .Values.service.port }}
         {{- end }}
+      {{- with .Values.route.timeouts }}
+      timeouts:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 {{- end }}

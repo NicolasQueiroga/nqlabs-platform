@@ -158,9 +158,30 @@ A new Talos cluster has no CNI until Cilium is installed.
 Required order:
 
 1. Install Gateway API CRDs.
-2. Install Cilium with cluster-specific `k8sServiceHost` and Cilium values.
-3. Validate node Ready and pod networking.
-4. Apply Cilium LB IPAM/L2 config for that cluster's unique LB range.
+2. Install Prometheus Operator CRDs. Cilium values render Hubble `ServiceMonitor`
+   resources, so the CRD must exist before Helm renders Cilium:
+
+   ```bash
+   helm template prometheus-operator-crds \
+     prometheus-community/prometheus-operator-crds \
+     --version 29.0.0 \
+     | kubectl apply -f -
+   ```
+
+3. Install Cilium with shared values plus the cluster override file:
+
+   ```bash
+   helm upgrade --install cilium cilium/cilium \
+     --namespace kube-system \
+     --version 1.19.4 \
+     -f infrastructure/networking/cilium/values.yaml \
+     -f clusters/<cluster>/cilium/values.yaml
+   ```
+
+   The override owns `k8sServiceHost`, `k8sServicePort`, and the operator replica
+   count. Do not reuse the management API IP for staging/production.
+4. Validate node Ready and pod networking.
+5. Apply Cilium LB IPAM/L2 config for that cluster's unique LB range.
 
 Only after Cilium is healthy should ArgoCD/root GitOps be bootstrapped.
 

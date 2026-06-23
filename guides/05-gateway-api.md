@@ -130,6 +130,18 @@ This means:
 - one fewer component to version, upgrade, and debug
 - deep integration with Cilium's eBPF networking and observability
 
+## Current traffic policy boundary
+
+Every first-party HTTPRoute now declares route-level timeouts (`request` and
+`backendRequest`, 300s) and the `nqlabs-service` chart defaults new app routes to
+the same values.
+
+Do **not** add `BackendTrafficPolicy` YAML unless the live cluster serves that CRD.
+As of Cilium 1.19.4 / current Gateway API CRDs, the cluster serves
+`HTTPRoute`, `GRPCRoute`, `TLSRoute`, `BackendLBPolicy`, and `BackendTLSPolicy`, but
+not `BackendTrafficPolicy`. Rate limiting/circuit breaking should wait for a
+served stable API or be implemented with a reviewed Cilium/Envoy policy design.
+
 ## The version mismatch lesson
 
 This platform encountered a real failure when enabling Gateway API:

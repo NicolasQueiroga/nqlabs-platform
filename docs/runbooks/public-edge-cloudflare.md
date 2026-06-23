@@ -16,13 +16,15 @@ public `*.io` HTTPRoute when `routes.public.enabled` (default off, requires revi
    - create a tunnel `nqlabs`, copy its **token**.
 2. **Store the token** in 1Password (NQLabs vault) as item `cloudflared-tunnel`,
    field `token`. (The ExternalSecret reads `cloudflared-tunnel/token`.)
-3. **Public DNS** (`nqlabs.io` zone, Cloudflare): add the public hostnames as
-   tunnel public hostnames (dashboard), e.g. `checkout.nqlabs.io` → service
-   `http://<cluster-gateway-or-service>`. Cloudflare creates the proxied CNAMEs.
-4. **Deploy cloudflared**: add an ArgoCD Application for
-   `infrastructure/networking/cloudflared` to the management app-of-apps targeting
-   the cluster that hosts the public services (namespace `cloudflared`,
-   `CreateNamespace=true`). It becomes Healthy once the token secret materializes.
+3. **Public hostname registry**: update/review
+   `infrastructure/networking/cloudflared/public-hostnames.md` first. This is the
+   Git source of truth for the remotely-managed tunnel's hostname → origin rules.
+4. **Public DNS** (`nqlabs.io` zone, Cloudflare): add the reviewed public hostnames
+   as tunnel public hostnames (dashboard/API). Cloudflare creates the proxied
+   CNAMEs. Do not point directly at pod IPs or bypass the production Gateway.
+5. **Deploy cloudflared**: the `production-cloudflared` ArgoCD Application already
+   targets `infrastructure/networking/cloudflared` on the production cluster
+   (namespace `cloudflared`). It becomes Healthy once the token secret materializes.
 
 ## Exposure rules (enforced by the platform)
 
@@ -30,6 +32,8 @@ public `*.io` HTTPRoute when `routes.public.enabled` (default off, requires revi
 - a public route must declare **explicit paths** (never publish `/admin`, `/metrics`, …).
 - production public exposure requires explicit approval.
 - a routine image bump must never add or change public exposure.
+- Cloudflare dashboard/API hostname changes must mirror
+  `infrastructure/networking/cloudflared/public-hostnames.md`.
 
 ## Verify
 

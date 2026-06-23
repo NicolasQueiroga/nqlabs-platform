@@ -283,6 +283,10 @@ spec:
       backendRefs:
         - name: {{ include "nqlabs-service.wl.fullname" $ctx }}
           port: {{ $svcPort }}
+      {{- with (dig "timeouts" (dig "route" "timeouts" dict $ctx.root.Values) $r) }}
+      timeouts:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 {{- end }}
 {{- end }}
 {{- end -}}

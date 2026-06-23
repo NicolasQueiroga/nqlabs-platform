@@ -30,6 +30,13 @@ resources:
   limits:
     memory: 128Mi
 
+prometheus:
+  service:
+    enabled: true
+  monitor:
+    enabled: true
+    interval: 30s
+
 # Liveness probe — CoreDNS health endpoint
 livenessProbe:
   enabled: true
@@ -57,6 +64,8 @@ servers:
         configBlock: |-
           lameduck 5s
       - name: ready
+      - name: prometheus
+        parameters: 0.0.0.0:9153
       # Tailscale-only enforcement:
       #   proxmox.platform  → 100.105.35.84  (Proxmox Tailscale IP, direct)
       #   *.platform        → 100.105.35.84 (Proxmox tailscale0 HAProxy passthrough)

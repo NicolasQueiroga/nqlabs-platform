@@ -9,6 +9,7 @@ The monitoring stack is deployed by ArgoCD using kube-prometheus-stack.
 | Grafana | `https://grafana.platform.nqlabs.network` |
 | Prometheus | `https://prometheus.platform.nqlabs.network` |
 | Alertmanager | `https://alertmanager.platform.nqlabs.network` |
+| Hubble UI | `https://hubble.platform.nqlabs.network` |
 
 ArgoCD apps:
 
@@ -19,6 +20,9 @@ ArgoCD apps:
 | `blackbox-exporter` | HTTP/TLS endpoint probing for platform and demo service URLs |
 | `loki` | Single-binary Loki log store with local-path persistence |
 | `promtail` | DaemonSet log shipper for Kubernetes pod/container logs |
+
+Hubble metrics come from Cilium's `hubble-metrics` ServiceMonitor. Hubble UI is
+protected through Authentik forward-auth.
 
 ## Grafana credentials
 

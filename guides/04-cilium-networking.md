@@ -92,8 +92,13 @@ Read that file and identify where the following are configured:
 - Talos cgroup settings
 - Kubernetes API host and port
 - Hubble relay and UI
+- Hubble metrics and ServiceMonitor
 - Gateway API enablement
 - Operator replica count
+
+Because Hubble metrics render a `ServiceMonitor`, the Prometheus Operator CRDs must
+exist before installing/upgrading Cilium with these values. This does not require a
+Prometheus server yet; it only makes the API type available.
 
 Do not just copy the values. Explain what each setting is responsible for and what
 would break if it were removed.
@@ -161,6 +166,6 @@ The point is not to memorize answers. The point is to build a diagnostic path.
 3. Why is Hubble part of observability rather than just networking?
 4. What would change when moving from one node to six NUCs?
 5. What is the relationship between Cilium and Gateway API? Are they the same thing?
-6. Why does the Cilium operator have `replicas: 1` on the lab cluster?
-   What should this be set to on a production cluster, and why?
-
+6. Why does each cluster have its own `clusters/<cluster>/cilium/values.yaml` override?
+7. Why does the Cilium operator stay at `replicas: 1` on single-node VMs and move
+   to `2` only after multi-node scheduling exists?

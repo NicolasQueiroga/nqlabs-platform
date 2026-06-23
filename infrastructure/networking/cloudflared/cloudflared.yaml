@@ -2,12 +2,11 @@
 #
 # Gives *.nqlabs.io services a real public ingress without exposing a public IP.
 # cloudflared dials OUT to Cloudflare; Cloudflare terminates public TLS and
-# forwards matched hostnames over the tunnel to the cluster. Ingress rules
-# (hostname -> origin) are managed in the Cloudflare dashboard for a remotely-
-# managed tunnel; the pod only needs the tunnel token.
-#
-# NOT wired into the app-of-apps yet: it requires a Cloudflare tunnel + the token
-# in 1Password. See docs/runbooks/public-edge-cloudflare.md to activate.
+# forwards matched hostnames over the tunnel to the cluster. This deployment is
+# wired into the management app-of-apps as production-cloudflared; the token comes
+# from 1Password. Remotely-managed tunnel ingress rules are mirrored in git via
+# docs/runbooks/public-edge-cloudflare.md and must be reviewed before production
+# exposure changes.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -52,6 +51,38 @@ spec:
           resources:
             requests: { cpu: 25m, memory: 64Mi }
             limits: { memory: 128Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudflared-metrics
+  namespace: cloudflared
+  labels:
+    app.kubernetes.io/name: cloudflared
+spec:
+  selector:
+    app.kubernetes.io/name: cloudflared
+  ports:
+    - name: metrics
+      port: 2000
+      targetPort: 2000
+      protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cloudflared
+  namespace: cloudflared
+  labels:
+    app.kubernetes.io/name: cloudflared
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cloudflared
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
 ---
 # Tunnel token from 1Password via External Secrets.
 apiVersion: external-secrets.io/v1

@@ -1,0 +1,10 @@
+# Cilium cluster override — nqlabs-staging
+# Use with: -f infrastructure/networking/cilium/values.yaml -f clusters/nqlabs-staging/cilium/values.yaml
+
+k8sServiceHost: 192.168.15.32
+k8sServicePort: 6443
+
+# Single-node staging VM today. Raise to 2 only after multiple schedulable nodes
+# exist on the NUC/HA cluster.
+operator:
+  replicas: 1

@@ -1,0 +1,29 @@
+// Desired NQLabs Tailnet ACL policy.
+//
+// Source of truth for Tailscale admin console / API policy. Kubernetes cannot
+// safely apply this by itself because tailnet ACLs are global account state.
+// Apply through Tailscale Admin → Access Controls, or the tailnet policy API,
+// after reviewing blast radius.
+{
+  "tagOwners": {
+    // Tailscale operator Services/Connectors use tag:k8s.
+    "tag:k8s": ["autogroup:admin"],
+  },
+
+  "acls": [
+    // Tailnet members can use NQLabs private DNS and reach the lab subnet route.
+    {
+      "action": "accept",
+      "src": ["autogroup:member"],
+      "dst": [
+        "tag:k8s:53",
+        "192.168.15.0/24:*",
+      ],
+    },
+  ],
+
+  "ssh": [
+    // Keep Tailscale SSH explicit. The platform primarily uses normal SSH to
+    // the Proxmox host; enable Tailnet SSH here only if desired later.
+  ],
+}

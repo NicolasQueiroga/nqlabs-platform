@@ -143,8 +143,27 @@ Applications should not use it.
 
 | Cluster | Node IP | k8sServiceHost |
 |---------|---------|----------------|
-| lab (UTM laptop) | 192.168.64.3 | 192.168.64.3 |
-| NUC cluster | TBD | TBD |
+| nqlabs-management | 192.168.15.31 | 192.168.15.31 |
+| nqlabs-staging | 192.168.15.32 | 192.168.15.32 |
+| nqlabs-production | 192.168.15.33 | 192.168.15.33 |
+
+Install Cilium with both value files so cluster identity stays declarative:
+
+```bash
+helm template prometheus-operator-crds \
+  prometheus-community/prometheus-operator-crds \
+  --version 29.0.0 \
+  | kubectl apply -f -
+
+helm upgrade --install cilium cilium/cilium \
+  --namespace kube-system \
+  --version 1.19.4 \
+  -f infrastructure/networking/cilium/values.yaml \
+  -f clusters/<cluster>/cilium/values.yaml
+```
+
+On current single-node VMs, `operator.replicas=1`. Raise to `2` only after the
+NUC/HA cluster has multiple schedulable nodes.
 
 ## Adding new platform services
 

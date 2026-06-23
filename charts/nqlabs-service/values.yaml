@@ -146,15 +146,23 @@ rbac:
 # preferred NQLabs service policy mechanism because Cilium is the platform CNI and
 # supports richer L3/L4/L7/FQDN controls than standard Kubernetes NetworkPolicy.
 ciliumNetworkPolicy:
-  enabled: false
+  enabled: true
   # Defaults to this chart's app selector when left empty.
   endpointSelector: {}
-  # Enable default deny per direction when the policy is enabled. Add explicit
-  # ingress/egress allow rules before enabling for real workloads.
+  # Default-deny ingress, then allow normal in-cluster sources. This pairs with
+  # the clusterwide service-namespace CCNP so new apps inherit isolation instead
+  # of depending on a human remembering to enable policy.
   enableDefaultDeny:
     ingress: true
     egress: false
-  ingress: []
+  ingress:
+    - fromEntities:
+        - cluster
+        - host
+        - remote-node
+        - health
+        - ingress
+        - kube-apiserver
   egress: []
   ingressDeny: []
   egressDeny: []
@@ -194,6 +202,9 @@ route:
   enabled: false
   host: ""
   annotations: {}
+  timeouts:
+    request: 300s
+    backendRequest: 300s
   parentRefs:
     - name: platform-gateway
       namespace: platform
@@ -217,6 +228,9 @@ routes:
       namespace: platform
       sectionName: https
     annotations: {}
+    timeouts:
+      request: 300s
+      backendRequest: 300s
     paths:
       - type: PathPrefix
         value: /
@@ -228,6 +242,9 @@ routes:
       namespace: platform
       sectionName: https
     annotations: {}
+    timeouts:
+      request: 300s
+      backendRequest: 300s
     # No default path: public exposure must declare explicit, reviewed paths.
     paths: []
   preview:
@@ -238,6 +255,9 @@ routes:
       namespace: platform
       sectionName: https
     annotations: {}
+    timeouts:
+      request: 300s
+      backendRequest: 300s
     paths:
       - type: PathPrefix
         value: /

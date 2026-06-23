@@ -6,7 +6,7 @@
 #
 # OIDC services (ArgoCD, Grafana, Gatus) serve login pages at public URLs, so
 # they remain as edge probes expecting 2xx. Forward-auth services (Prometheus,
-# Alertmanager, Rollouts) are split into internal + edge-auth probes.
+# Alertmanager, Rollouts, Hubble) are split into internal + edge-auth probes.
 
 ---
 # Internal service health probes — verify backends are up (bypass gateway/auth)
@@ -39,6 +39,8 @@ spec:
         - http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093/-/healthy
         # Argo Rollouts dashboard — serves UI on /, no dedicated healthz
         - http://argo-rollouts-dashboard.argo-rollouts.svc.cluster.local:3100/
+        # Hubble UI — service endpoint on port 80
+        - http://hubble-ui.kube-system.svc.cluster.local/
         # Gatus — service endpoint on port 8080
         - http://gatus.monitoring.svc.cluster.local:8080/health
 
@@ -70,6 +72,7 @@ spec:
         - https://prometheus.platform.nqlabs.network
         - https://alertmanager.platform.nqlabs.network
         - https://rollouts.platform.nqlabs.network
+        - https://hubble.platform.nqlabs.network
 
 ---
 # Edge probes for OIDC services — verify login pages are served (2xx)

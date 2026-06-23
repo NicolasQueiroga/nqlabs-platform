@@ -24,6 +24,8 @@ sources:
   - service
   - ingress
   - gateway-httproute
+  - gateway-grpcroute
+  - gateway-tlsroute
 
 # Log level
 logLevel: info
@@ -40,6 +42,11 @@ annotationFilter: "external-dns.alpha.kubernetes.io/hostname"
 policy: upsert-only
 
 txtOwnerId: nqlabs-lab
+txtPrefix: external-dns-
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
 
 # Resource requests (Kyverno require-resource-requests)
 resources:

@@ -1,0 +1,33 @@
+# Persist the in-cluster kube-dns split-horizon CoreDNS patch.
+#
+# Talos creates the base kube-system/coredns ConfigMap during bootstrap. This
+# ArgoCD app server-side-applies the NQLabs Corefile so rebuilds converge back to
+# the platform DNS view without manual kubectl patch commands.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-dns-split-horizon
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: clusters/nqlabs-management/bootstrap
+    directory:
+      include: "coredns-nqlabs-stub.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    retry:
+      limit: 5
+    syncOptions:
+      - ServerSideApply=true

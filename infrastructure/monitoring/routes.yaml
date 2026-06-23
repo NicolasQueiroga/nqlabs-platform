@@ -31,6 +31,9 @@ spec:
         - name: kube-prometheus-stack-grafana
           namespace: monitoring
           port: 80
+      timeouts:
+        request: 300s
+        backendRequest: 300s
 
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -58,6 +61,9 @@ spec:
         - name: authentik-server
           namespace: authentik
           port: 80
+      timeouts:
+        request: 300s
+        backendRequest: 300s
 
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -84,6 +90,9 @@ spec:
         - name: authentik-server
           namespace: authentik
           port: 80
+      timeouts:
+        request: 300s
+        backendRequest: 300s
 
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -110,3 +119,6 @@ spec:
         - name: gatus
           namespace: monitoring
           port: 8080
+      timeouts:
+        request: 300s
+        backendRequest: 300s

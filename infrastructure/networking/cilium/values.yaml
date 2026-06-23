@@ -83,14 +83,30 @@ cgroup:
     enabled: false
   hostRoot: /sys/fs/cgroup
 
-# Override per cluster — must match the control plane IP/port
-# Management cluster: 192.168.15.31 (talos-8m9-8ow)
-# Staging/production clusters: override with --set k8sServiceHost=<IP>
+# Override per cluster — must match the control plane IP/port.
+# Use shared values PLUS clusters/<cluster>/cilium/values.yaml; do not rely on
+# this management default for staging/production.
 k8sServiceHost: 192.168.15.31
 k8sServicePort: 6443
 
 hubble:
   enabled: true
+  metrics:
+    # Export flow/drop/TCP/DNS/HTTP metrics to Prometheus.
+    # ServiceMonitor requires kube-prometheus-stack CRDs to exist before upgrade.
+    enabled:
+      - dns:query;ignoreAAAA
+      - drop
+      - tcp
+      - flow
+      - icmp
+      - http
+    enableOpenMetrics: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+    dashboards:
+      enabled: true
   relay:
     enabled: true
     # Resource requests (Kyverno require-resource-requests)

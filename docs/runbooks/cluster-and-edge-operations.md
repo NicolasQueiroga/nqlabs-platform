@@ -63,6 +63,10 @@ Proxmox UI: https://proxmox.platform.nqlabs.network:8006 → pveproxy directly o
 - Tailscale operator + CoreDNS split DNS + the subnet-router Connector are GitOps-managed:
   `clusters/nqlabs-management/argocd/apps/tailscale-operator.yaml` and `tailscale-config.yaml`,
   values in `infrastructure/networking/tailscale/`.
+- Tailnet ACL/tag intent is stored in
+  `infrastructure/networking/tailscale/tailnet-policy.hujson`. Review and apply it
+  through Tailscale Admin → Access Controls or the tailnet policy API. Do **not**
+  let cluster GitOps mutate global tailnet ACLs automatically.
 - HAProxy config lives on the desktop at `/etc/haproxy/haproxy.cfg` (not in git). After
   editing: `haproxy -c -f /etc/haproxy/haproxy.cfg && systemctl reload haproxy`.
 

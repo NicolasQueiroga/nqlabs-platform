@@ -702,12 +702,13 @@ Config: `infrastructure/monitoring/uptime-kuma/`
 |----------|-------|
 | Namespace | `kube-system` |
 | Components | Hubble Relay + Hubble UI |
-| Access | `hubble-relay` service (port 80), `hubble-ui` service (port 80) |
+| Access | `hubble.platform.nqlabs.network` via Authentik forward-auth; `hubble observe` CLI |
+| Metrics | `hubble-metrics` ServiceMonitor + Grafana dashboard |
 
 Hubble is part of Cilium and provides deep network flow observability. It
 shows a service map of all network connections in the cluster, with
 filtering by namespace, pod, and policy. Accessed via `hubble observe` CLI
-or the Hubble UI.
+or the Authentik-protected Hubble UI.
 
 Config: `infrastructure/networking/cilium/values.yaml`
 
@@ -1022,6 +1023,7 @@ Runbook: [secrets.md](../runbooks/secrets.md)
 | `alertmanager.platform.nqlabs.network` | Alertmanager | Forward-auth |
 | `rollouts.platform.nqlabs.network` | Argo Rollouts Dashboard | Forward-auth |
 | `uptime.platform.nqlabs.network` | Uptime Kuma | Forward-auth |
+| `hubble.platform.nqlabs.network` | Hubble UI | Forward-auth |
 
 ### Key IP Addresses
 
