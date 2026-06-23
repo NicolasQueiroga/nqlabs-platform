@@ -30,7 +30,7 @@ securityContext:
   enabled: true
 
 podAnnotations:
-  nqlabs.network/restartedAt: "2026-06-23T02:47:00Z"
+  nqlabs.network/restartedAt: "2026-06-23T02:51:00Z"
 
 route:
   enabled: true

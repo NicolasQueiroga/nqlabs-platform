@@ -98,7 +98,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "nqlabs-service.wl.selectorLabels" . | nindent 8 }}
+        {{- include "nqlabs-service.wl.labels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "nqlabs-service.serviceAccountName" $root }}
       {{- with $root.Values.imagePullSecrets }}
