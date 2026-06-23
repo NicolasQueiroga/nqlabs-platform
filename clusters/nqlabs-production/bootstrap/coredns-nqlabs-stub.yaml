@@ -10,7 +10,9 @@ data:
   Corefile: |
     .:53 {
         errors
-        health { lameduck 5s }
+        health {
+            lameduck 5s
+        }
         ready
         log . { class error }
         prometheus :9153
