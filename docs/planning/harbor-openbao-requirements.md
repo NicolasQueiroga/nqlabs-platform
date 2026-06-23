@@ -68,7 +68,12 @@ needs Raft quorum → 3+ nodes; clusters are single control-plane VMs today.
    auth). Keep `nqlabs-1password` during transition.
 4. Repoint ExternalSecrets `secretStoreRef` → `nqlabs-openbao` and `remoteRef` keys to
    OpenBao paths, one component at a time; verify each Secret still materializes.
-5. Decommission the 1Password ClusterSecretStore when nothing references it.
+5. Remove or re-evaluate the temporary `refreshPolicy: CreatedOnce` settings added to
+   static operational credentials (`authentik`, `gatus-oidc`, `thanos-objstore`,
+   `velero-credentials`) to avoid 1Password provider rate limits. With OpenBao,
+   prefer provider-backed periodic refresh/rotation where automated rotation exists;
+   keep `CreatedOnce` only for deliberately immutable bootstrap credentials.
+6. Decommission the 1Password ClusterSecretStore when nothing references it.
 
 ### Migration B — PKI / CA (internal CA → OpenBao PKI)
 1. Enable OpenBao `pki`; create the NQLabs root + intermediate CA.

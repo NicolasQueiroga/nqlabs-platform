@@ -210,3 +210,10 @@ contains the global `resource.customizations.ignoreDifferences.external-secrets.
 
 Phase 2 may migrate the backend from 1Password to OpenBao. The desired application
 manifests should stay mostly the same; the `ClusterSecretStore` backend changes.
+
+Temporary note: several static operational credentials use
+`refreshPolicy: CreatedOnce` to avoid 1Password SDK provider rate limits during
+fleet-wide reconciliation. When OpenBao is introduced, remove or re-evaluate that
+policy per secret: use periodic refresh/rotation for OpenBao-managed credentials
+where rotation is automated, and reserve `CreatedOnce` for intentionally immutable
+bootstrap credentials only.
