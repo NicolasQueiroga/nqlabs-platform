@@ -41,7 +41,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: gatus
-          image: ghcr.io/twin/gatus:latest
+          image: ghcr.io/twin/gatus:v5.25.0
           ports:
             - name: http
               containerPort: 8080

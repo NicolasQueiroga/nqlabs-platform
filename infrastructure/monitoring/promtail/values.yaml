@@ -6,6 +6,22 @@
 config:
   clients:
     - url: http://loki-gateway.monitoring.svc.cluster.local/loki/api/v1/push
+  snippets:
+    pipelineStages:
+      - cri: {}
+      - match:
+          selector: '{namespace="falco"}'
+          stages:
+            - json:
+                expressions:
+                  falco_priority: priority
+                  falco_rule: rule
+                  falco_source: source
+                  falco_output: output
+            - labels:
+                falco_priority:
+                falco_rule:
+                falco_source:
 
 serviceMonitor:
   enabled: true

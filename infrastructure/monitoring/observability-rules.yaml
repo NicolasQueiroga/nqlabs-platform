@@ -1,0 +1,144 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: nqlabs-observability-alerts
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus-stack-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: nqlabs.recording.node
+      interval: 30s
+      rules:
+        - record: nqlabs:node_cpu_utilization:ratio
+          expr: 1 - avg by (cluster, instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))
+        - record: nqlabs:node_memory_utilization:ratio
+          expr: 1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+        - record: nqlabs:node_filesystem_utilization:ratio
+          expr: 1 - (node_filesystem_avail_bytes{fstype!="",mountpoint!~"/run.*|/var/lib/kubelet/pods.*"} / node_filesystem_size_bytes{fstype!="",mountpoint!~"/run.*|/var/lib/kubelet/pods.*"})
+        - record: nqlabs:namespace_cpu_usage:cores
+          expr: sum by (cluster, namespace) (rate(container_cpu_usage_seconds_total{container!="",image!=""}[5m]))
+        - record: nqlabs:namespace_memory_working_set:bytes
+          expr: sum by (cluster, namespace) (container_memory_working_set_bytes{container!="",image!=""})
+
+    - name: nqlabs.platform.availability
+      rules:
+        - alert: NQLabsPrometheusDown
+          expr: absent(up{job=~"kube-prometheus-stack-prometheus|prometheus-operated"} == 1)
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Prometheus is not being scraped"
+            description: "Prometheus scrape target is absent or down."
+        - alert: NQLabsAlertmanagerDown
+          expr: absent(up{job=~"kube-prometheus-stack-alertmanager|alertmanager-operated"} == 1)
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Alertmanager is not being scraped"
+            description: "Alertmanager scrape target is absent or down."
+        - alert: NQLabsGrafanaDown
+          expr: up{job=~"kube-prometheus-stack-grafana|grafana"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Grafana target is down"
+            description: "Grafana is not responding to Prometheus scrape."
+        - alert: NQLabsKubeStateMetricsDown
+          expr: up{job=~".*kube-state-metrics.*"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "kube-state-metrics is down"
+            description: "kube-state-metrics target {{ $labels.instance }} is down."
+        - alert: NQLabsNodeExporterDown
+          expr: up{job=~".*node-exporter.*"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "node-exporter is down"
+            description: "node-exporter target {{ $labels.instance }} is down."
+
+    - name: nqlabs.node.resources
+      rules:
+        - alert: NQLabsNodeCPUHigh
+          expr: nqlabs:node_cpu_utilization:ratio > 0.85
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node CPU utilization high"
+            description: "{{ $labels.instance }} CPU utilization is above 85% for 15m."
+        - alert: NQLabsNodeMemoryHigh
+          expr: nqlabs:node_memory_utilization:ratio > 0.90
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node memory utilization high"
+            description: "{{ $labels.instance }} memory utilization is above 90% for 10m."
+        - alert: NQLabsNodeFilesystemFilling
+          expr: nqlabs:node_filesystem_utilization:ratio > 0.85
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node filesystem filling"
+            description: "{{ $labels.instance }} {{ $labels.mountpoint }} filesystem is above 85%."
+        - alert: NQLabsNodeNotReady
+          expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node not Ready"
+            description: "Node {{ $labels.node }} is not Ready."
+
+    - name: nqlabs.observability.pipeline
+      rules:
+        - alert: NQLabsThanosReceiveDown
+          expr: up{job=~".*thanos.*receive.*"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Thanos Receive is down"
+            description: "Remote-write ingestion is unavailable."
+        - alert: NQLabsRemoteMetricsMissing
+          expr: absent(up{cluster="nqlabs-staging"}) or absent(up{cluster="nqlabs-production"})
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Remote cluster metrics missing"
+            description: "No metrics are arriving from staging or production."
+        - alert: NQLabsOtelCollectorDown
+          expr: up{job="otel-collector"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "OpenTelemetry collector is down"
+            description: "otel-collector target {{ $labels.instance }} is down."
+        - alert: NQLabsPromtailDown
+          expr: up{job=~".*promtail.*"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Promtail is down"
+            description: "Promtail target {{ $labels.instance }} is down."
+        - alert: NQLabsGatusDown
+          expr: up{job="gatus"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Gatus is down"
+            description: "Gatus metrics endpoint is down."

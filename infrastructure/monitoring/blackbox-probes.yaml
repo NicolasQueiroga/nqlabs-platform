@@ -102,3 +102,58 @@ spec:
         - https://argocd.platform.nqlabs.network
         - https://grafana.platform.nqlabs.network
         - https://uptime.platform.nqlabs.network
+        - https://demo.staging.nqlabs.network
+        - https://demo.production.nqlabs.network
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: nqlabs-dns
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: blackbox-exporter
+    nqlabs.network/component: dns-probes
+spec:
+  jobName: nqlabs-dns
+  interval: 1m
+  scrapeTimeout: 10s
+  module: dns_a_nqlabs
+  prober:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+    scheme: http
+    path: /probe
+  targets:
+    staticConfig:
+      labels:
+        cluster: nqlabs-management
+        probe_scope: dns
+      static:
+        - 10.96.0.10
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: nqlabs-tcp
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: blackbox-exporter
+    nqlabs.network/component: tcp-probes
+spec:
+  jobName: nqlabs-tcp
+  interval: 1m
+  scrapeTimeout: 10s
+  module: tcp_connect
+  prober:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+    scheme: http
+    path: /probe
+  targets:
+    staticConfig:
+      labels:
+        cluster: nqlabs-management
+        probe_scope: tcp
+      static:
+        - kubernetes.default.svc.cluster.local:443
+        - thanos-receive.monitoring.svc.cluster.local:19291

@@ -34,6 +34,20 @@ config:
         tls_config:
           insecure_skip_verify: false
 
+    dns_a_nqlabs:
+      prober: dns
+      timeout: 5s
+      dns:
+        query_name: nqlabs.network
+        query_type: A
+        preferred_ip_protocol: ip4
+
+    tcp_connect:
+      prober: tcp
+      timeout: 5s
+      tcp:
+        preferred_ip_protocol: ip4
+
 resources:
   requests:
     cpu: 10m

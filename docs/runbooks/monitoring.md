@@ -4,6 +4,10 @@
 
 The monitoring stack is deployed by ArgoCD using kube-prometheus-stack.
 
+Layer 3 observability architecture (remote Prometheus Agent, Thanos, Tempo,
+Pyroscope, OTel Collector, and application telemetry contract) is documented in
+[`observability-layer-3.md`](./observability-layer-3.md).
+
 | Component | URL |
 |-----------|-----|
 | Grafana | `https://grafana.platform.nqlabs.network` |

@@ -14,7 +14,7 @@ spec:
     - name: nqlabs.endpoint-availability
       rules:
         - alert: NQLabsEndpointDown
-          expr: probe_success{job="nqlabs-endpoints"} == 0
+          expr: probe_success{job=~"nqlabs-(internal-health|edge-auth|edge-oidc|dns|tcp)"} == 0
           for: 2m
           labels:
             severity: critical
@@ -24,7 +24,7 @@ spec:
             description: "{{ $labels.instance }} failed the internal Blackbox probe for more than 2 minutes."
 
         - alert: NQLabsEndpointSlow
-          expr: probe_duration_seconds{job="nqlabs-endpoints"} > 2
+          expr: probe_duration_seconds{job=~"nqlabs-(internal-health|edge-auth|edge-oidc|dns|tcp)"} > 2
           for: 5m
           labels:
             severity: warning
@@ -34,7 +34,7 @@ spec:
             description: "{{ $labels.instance }} has taken more than 2 seconds to respond for 5 minutes."
 
         - alert: NQLabsEndpointTLSExpiringSoon
-          expr: (probe_ssl_earliest_cert_expiry{job="nqlabs-endpoints"} - time()) / 86400 < 14
+          expr: (probe_ssl_earliest_cert_expiry{job=~"nqlabs-(internal-health|edge-auth|edge-oidc)"} - time()) / 86400 < 14
           for: 15m
           labels:
             severity: warning

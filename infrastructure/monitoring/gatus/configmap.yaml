@@ -95,3 +95,38 @@ data:
           follow-redirects: false
         conditions:
           - "[STATUS] == 200"
+
+      - name: Demo Staging
+        group: Services / Staging
+        url: https://demo.staging.nqlabs.network
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Demo Production
+        group: Services / Production
+        url: https://demo.production.nqlabs.network
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Thanos Query
+        group: Observability
+        url: http://thanos-query-frontend.monitoring.svc.cluster.local:9090/-/healthy
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Tempo
+        group: Observability
+        url: http://tempo.monitoring.svc.cluster.local:3200/ready
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Pyroscope
+        group: Observability
+        url: http://pyroscope.monitoring.svc.cluster.local:4040/ready
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"

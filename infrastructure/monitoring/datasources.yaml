@@ -20,3 +20,25 @@ data:
         isDefault: false
         jsonData:
           maxLines: 1000
+      - name: Thanos
+        type: prometheus
+        access: proxy
+        url: http://thanos-query-frontend.monitoring.svc.cluster.local:9090
+        isDefault: false
+        jsonData:
+          timeInterval: 30s
+      - name: Tempo
+        type: tempo
+        access: proxy
+        url: http://tempo.monitoring.svc.cluster.local:3200
+        isDefault: false
+        jsonData:
+          tracesToLogsV2:
+            datasourceUid: Loki
+          serviceMap:
+            datasourceUid: Thanos
+      - name: Pyroscope
+        type: grafana-pyroscope-datasource
+        access: proxy
+        url: http://pyroscope.monitoring.svc.cluster.local:4040
+        isDefault: false

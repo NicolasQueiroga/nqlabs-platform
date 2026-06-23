@@ -9,6 +9,23 @@ deploymentMode: SingleBinary
 
 loki:
   auth_enabled: false
+  podSecurityContext:
+    fsGroup: 10001
+    fsGroupChangePolicy: OnRootMismatch
+    runAsGroup: 10001
+    runAsNonRoot: true
+    runAsUser: 10001
+    seccompProfile:
+      type: RuntimeDefault
+
+  containerSecurityContext:
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
 
   commonConfig:
     path_prefix: /var/loki
@@ -126,3 +143,17 @@ chunksCache:
   enabled: false
 resultsCache:
   enabled: false
+
+monitoring:
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: kube-prometheus-stack
+    interval: 30s
+  rules:
+    enabled: true
+    labels:
+      prometheus: kube-prometheus-stack-prometheus
+      role: alert-rules
+    additionalRuleLabels:
+      namespace: monitoring

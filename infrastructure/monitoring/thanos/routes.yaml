@@ -1,0 +1,56 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: thanos-query
+  namespace: monitoring
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: thanos.platform.nqlabs.network
+spec:
+  parentRefs:
+    - name: platform-gateway
+      namespace: platform
+      sectionName: https
+  hostnames:
+    - thanos.platform.nqlabs.network
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: authentik-server
+          namespace: authentik
+          port: 80
+      timeouts:
+        request: 300s
+        backendRequest: 300s
+---
+# Private remote_write ingestion endpoint for remote PrometheusAgent instances.
+# This is private *.network reachability, not public internet exposure.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: thanos-receive
+  namespace: monitoring
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: thanos-receive.platform.nqlabs.network
+spec:
+  parentRefs:
+    - name: platform-gateway
+      namespace: platform
+      sectionName: https
+  hostnames:
+    - thanos-receive.platform.nqlabs.network
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/v1/receive
+      backendRefs:
+        - name: thanos-receive
+          namespace: monitoring
+          port: 19291
+      timeouts:
+        request: 300s
+        backendRequest: 300s

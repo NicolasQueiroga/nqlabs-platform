@@ -196,7 +196,7 @@ spec:
           - $values/infrastructure/delivery/argo-rollouts/values.yaml
         parameters:
           - name: controller.metrics.serviceMonitor.enabled
-            value: "false"
+            value: "true"
           - name: dashboard.enabled
             value: "false"
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
@@ -243,7 +243,7 @@ spec:
           - $values/infrastructure/security/cert-manager/values.yaml
         parameters:
           - name: prometheus.servicemonitor.enabled
-            value: "false"
+            value: "true"
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
       ref: values

@@ -148,6 +148,15 @@ prometheus:
     externalLabels:
       cluster: nqlabs-management
 
+    # Local Prometheus keeps 7d for fast queries; Thanos Receive stores a
+    # durable long-term copy and also ingests remote-cluster PrometheusAgent data.
+    remoteWrite:
+      - url: http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive
+        queueConfig:
+          capacity: 10000
+          maxSamplesPerSend: 2000
+          maxShards: 8
+
     # UI authentication is handled centrally by Authentik (forward-auth proxy
     # outpost at the gateway), NOT per-app basic auth. The prometheus-operator
     # reserves --web.config.file, so additionalArgs basic auth is unsupported.

@@ -1,0 +1,85 @@
+# Pyroscope — central continuous profiling store.
+# Chart: grafana/pyroscope 2.1.0
+
+pyroscope:
+  replicaCount: 1
+  disableSelfProfile: false
+  extraArgs:
+    log.level: info
+    pyroscopedb.retention-period: 30d
+    pyroscopedb.max-block-duration: 30m
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  podSecurityContext:
+    fsGroup: 10001
+    runAsUser: 10001
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  persistence:
+    enabled: true
+    storageClassName: local-path
+    accessModes:
+      - ReadWriteOnce
+    size: 20Gi
+
+minio:
+  enabled: false
+
+serviceMonitor:
+  enabled: true
+  namespaceSelector:
+    matchNames:
+      - monitoring
+  labels:
+    release: kube-prometheus-stack
+
+alloy:
+  enabled: true
+  global:
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 10001
+      runAsGroup: 10001
+      fsGroup: 10001
+      seccompProfile:
+        type: RuntimeDefault
+  alloy:
+    securityContext:
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      seccompProfile:
+        type: RuntimeDefault
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+  configReloader:
+    securityContext:
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      seccompProfile:
+        type: RuntimeDefault
+    resources:
+      requests:
+        cpu: 10m
+        memory: 50Mi
+      limits:
+        memory: 128Mi

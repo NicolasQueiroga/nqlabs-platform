@@ -1,0 +1,65 @@
+# Tempo — central trace store. Apps send OTLP to local otel-collector; collectors forward here.
+# Chart: grafana/tempo 1.24.4 (Tempo 2.9.0)
+
+replicas: 1
+
+tempo:
+  reportingEnabled: false
+  retention: 168h
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  metricsGenerator:
+    enabled: true
+    remoteWriteUrl: http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive
+    processor:
+      service_graphs: {}
+      span_metrics:
+        enable_target_info: true
+    storage:
+      path: /var/tempo/metrics
+    traces_storage:
+      path: /var/tempo/traces-wal
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+      wal:
+        path: /var/tempo/wal
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+securityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+persistence:
+  enabled: true
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  size: 20Gi
+
+serviceMonitor:
+  enabled: true
+  additionalLabels:
+    release: kube-prometheus-stack
+  interval: 30s
