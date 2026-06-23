@@ -89,3 +89,17 @@ Generated once and stored in 1Password (NQLabs vault), consumed via ExternalSecr
 - `argocd-oidc` — `client_secret`
 - `grafana-oidc` — `client_secret`
 - `gatus-oidc` — `client_secret`
+
+## Deferred (Layer 4)
+
+Items identified in the Layer 4 audit but not implemented yet:
+
+| Item | Why deferred | What's needed |
+|------|-------------|---------------|
+| CNPG HA | Single-node lab — can't do 3-instance quorum | 3+ compute nodes (NUC or VMs) |
+| Valkey HA | Cache is ephemeral, low priority | 3+ compute nodes for sentinel |
+| PgBouncer (connection pooling) | Separate deployment, not a storage issue | Deploy PgBouncer StatefulSet + configure Authentik to use it |
+| Path-level access control (OPA) | Phase 2 feature | OPA/Gatekeeper policies per app (e.g., data group can query but not delete) |
+| HTTP header injection for audit | App-specific config | Each app must consume `X-Forwarded-User` from Authentik proxy for per-user audit logging |
+| Rate limiting on login | Authentik doesn't support natively in blueprint | Cilium or Gateway API rate-limit policies on `auth.platform.nqlabs.network` |
+| Self-signed OIDC signing key | Works but not ideal for production | Replace with cert-manager-issued certificate or external CA |
