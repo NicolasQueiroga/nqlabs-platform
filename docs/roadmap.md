@@ -19,8 +19,8 @@ bank-grade, fully-featured private cloud. Tracked here.
 
 - [x] **Kyverno** policy engine on all clusters — baseline policies in Enforce,
   autogen enabled for controllers, service-namespace label/limit policies,
-  generate defaults for service namespaces, mutate managed labels, metrics scraped.
-  Image signatures remain Audit until current app images are proven signed.
+  generate defaults for service namespaces, mutate managed labels, metrics scraped,
+  image signature verification Enforce.
 - [x] **Supply-chain CI** — reusable Trivy scan + Cosign keyless sign + SBOM attestation
   workflow; Kyverno verify-image-signatures audits ghcr signatures. App repos call it
   from their build (wire into `nqlabs-demo` build to activate).

@@ -317,7 +317,7 @@ Config: `infrastructure/security/external-secrets/`
 |----------|-------|
 | Namespace | `kyverno` |
 | Chart | `kyverno/kyverno` |
-| Mode | Enforce for baseline/platform guardrails; image verification Audit |
+| Mode | Enforce for baseline/platform guardrails and image signature verification |
 | Controllers | Admission (1), Background (1), Reports (1), Cleanup (1) |
 
 Kyverno enforces platform security policies. Baseline ClusterPolicies
@@ -335,8 +335,8 @@ are currently in **Enforce** mode with webhook `failurePolicy: Ignore`
 6. **NQLabs service-namespace guardrails** — required labels, memory limits,
    generated CiliumNetworkPolicy/ResourceQuota/LimitRange, and managed-label mutation
 
-Additionally, `verify-image-signatures` audits Cosign signatures on
-ghcr.io images.
+Additionally, `verify-image-signatures` enforces Cosign keyless signatures on
+`ghcr.io/nicolasqueiroga/*` images produced by GitHub Actions.
 
 Autogen is enabled, so Pod policies validate controller templates as well as
 raw Pods. Kyverno metrics are scraped with ServiceMonitors and surfaced through

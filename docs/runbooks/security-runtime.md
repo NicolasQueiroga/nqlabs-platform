@@ -28,9 +28,16 @@ kubectl -n falco delete job falco-shell-validation --ignore-not-found
 
 ## Kyverno validation
 
-Kyverno policies run in Enforce for baseline controls and service-namespace
-guardrails. Image signature verification remains Audit until existing service
-images are proven signed.
+Kyverno policies run in Enforce for baseline controls, service-namespace
+guardrails, and NQLabs GHCR image signature verification.
+
+Before promoting a new app image into a protected namespace, verify locally:
+
+```bash
+cosign verify ghcr.io/nicolasqueiroga/<app>:<tag> \
+  --certificate-identity-regexp 'https://github.com/NicolasQueiroga/nqlabs-.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
 
 Useful checks:
 
@@ -43,4 +50,3 @@ kubectl get clusterpolicyreport
 Autogen is enabled, so Pod policies also validate controller templates
 (Deployment/StatefulSet/DaemonSet/etc.). If a controller sync is blocked, inspect
 the PolicyReport and the admission event before weakening a policy.
-
