@@ -150,6 +150,29 @@ metadata:
     app.kubernetes.io/name: otel-collector
     app.kubernetes.io/part-of: nqlabs-platform
 ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: otel-collector-allow-private-otlp
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/part-of: nqlabs-platform
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: otel-collector
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 4317
+        - protocol: TCP
+          port: 4318
+        - protocol: TCP
+          port: 13133
+---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
