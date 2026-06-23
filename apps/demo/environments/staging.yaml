@@ -28,9 +28,10 @@ podSecurityContext:
 
 securityContext:
   enabled: true
+  readOnlyRootFilesystem: false
 
 podAnnotations:
-  nqlabs.network/restartedAt: "2026-06-23T02:51:00Z"
+  nqlabs.network/restartedAt: "2026-06-23T02:58:00Z"
 
 route:
   enabled: true
