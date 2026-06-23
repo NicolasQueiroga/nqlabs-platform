@@ -64,7 +64,14 @@ falcoctl:
           cpu: 25m
           memory: 32Mi
         limits:
-        memory: 128Mi
+          memory: 128Mi
+    follow:
+      resources:
+        requests:
+          cpu: 25m
+          memory: 32Mi
+        limits:
+          memory: 128Mi
 
 customRules:
   nqlabs_rules.yaml: |-
@@ -97,11 +104,3 @@ customRules:
         k8s_ns=%k8s.ns.name k8s_pod=%k8s.pod.name)
       priority: CRITICAL
       tags: [nqlabs, talos, runtime]
-
-    follow:
-      resources:
-        requests:
-          cpu: 25m
-          memory: 32Mi
-        limits:
-          memory: 128Mi
