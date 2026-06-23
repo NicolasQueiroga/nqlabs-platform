@@ -181,6 +181,7 @@ extraObjects:
     metadata:
       name: argocd-oidc-secret
     spec:
+      refreshPolicy: CreatedOnce
       refreshInterval: 1h
       secretStoreRef:
         name: nqlabs-1password

@@ -91,6 +91,7 @@ metadata:
   name: cloudflared-tunnel
   namespace: cloudflared
 spec:
+  refreshPolicy: CreatedOnce
   refreshInterval: 1h
   secretStoreRef:
     kind: ClusterSecretStore
