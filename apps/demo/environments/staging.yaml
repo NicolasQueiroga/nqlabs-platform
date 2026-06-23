@@ -17,6 +17,18 @@ image:
   repository: ghcr.io/nicolasqueiroga/nqlabs-demo
   tag: sha-5e13c02a11c3
 
+container:
+  port: 8080
+
+service:
+  port: 8080
+
+podSecurityContext:
+  enabled: true
+
+securityContext:
+  enabled: true
+
 route:
   enabled: true
   host: demo.staging.nqlabs.network
