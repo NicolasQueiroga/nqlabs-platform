@@ -12,7 +12,9 @@
 # clusters/nqlabs-management/argocd/apps/cluster-dns-split-horizon.yaml so node
 # rebuilds converge without per-app hostAliases or manual DNS records.
 #
-# In-cluster target: 192.168.15.195 (management Cilium Gateway LB)
+# In-cluster default target: management Gateway 192.168.15.195.
+# Exact demo smoke-check hostnames below target remote node IPs because management
+# pods can reach remote node NodePorts but not remote Cilium Gateway LB IPs.
 # External/tailnet clients still resolve these names to the Proxmox Tailscale edge
 # via platform CoreDNS. This file is the inside-cluster split-horizon view.
 
@@ -54,6 +56,16 @@ data:
         errors
         log . {
             class error
+        }
+        template IN A demo.staging.nqlabs.network {
+            match ^demo\.staging\.nqlabs\.network\.$
+            answer "{{ .Name }} 60 IN A 192.168.15.32"
+            fallthrough
+        }
+        template IN A demo.production.nqlabs.network {
+            match ^demo\.production\.nqlabs\.network\.$
+            answer "{{ .Name }} 60 IN A 192.168.15.33"
+            fallthrough
         }
         template IN A platform.nqlabs.network {
             match ^[a-z0-9-]+\.platform\.nqlabs\.network\.$

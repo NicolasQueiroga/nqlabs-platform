@@ -98,14 +98,14 @@ data:
 
       - name: Demo Staging
         group: Services / Staging
-        url: https://demo.staging.nqlabs.network
+        url: https://demo.staging.nqlabs.network:31132
         interval: 1m
         conditions:
           - "[STATUS] == 200"
 
       - name: Demo Production
         group: Services / Production
-        url: https://demo.production.nqlabs.network
+        url: https://demo.production.nqlabs.network:32027
         interval: 1m
         conditions:
           - "[STATUS] == 200"
