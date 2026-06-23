@@ -15,7 +15,7 @@ argocd:
 
 image:
   repository: ghcr.io/nicolasqueiroga/nqlabs-demo
-  tag: sha-05ac950ffc3f
+  tag: sha-5e13c02a11c3
 
 route:
   enabled: true
