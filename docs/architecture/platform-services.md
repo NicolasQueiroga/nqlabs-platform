@@ -472,6 +472,16 @@ root Application (watches clusters/nqlabs-management/argocd/apps/)
 - `services-production` — production application workloads
 - `services-preview` — ephemeral preview environments
 
+**Orphaned-resource policy:** orphan warnings are disabled for the `platform`
+project and kept enabled for `services-staging`/`services-production`. Platform
+namespaces are intentionally co-managed by GitOps and operators: cert-manager,
+External Secrets Operator, Prometheus Operator, Tailscale Operator, CNPG, Helm,
+ArgoCD cluster registration, Velero, and bootstrap credentials all create
+runtime resources that are expected to be absent from Git. A curated ignore list
+for those resources becomes brittle and incomplete, especially where operators
+create random-suffixed resources. Service namespaces are different: each service
+owns its namespace, so orphan warnings there still indicate real workload drift.
+
 ArgoCD runs in insecure mode (HTTP) — TLS is terminated at the platform
 gateway. The OIDC config uses Authentik as the issuer with the `groups`
 scope for RBAC.
