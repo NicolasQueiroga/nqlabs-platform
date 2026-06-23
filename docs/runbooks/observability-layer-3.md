@@ -13,8 +13,14 @@ logs, traces, profiles, synthetic probes, alerting, and long-term metrics.
   Probes, and ScrapeConfigs in their cluster and remote_write to:
 
 ```text
-https://thanos-receive.platform.nqlabs.network/api/v1/receive
+http://thanos-receive.platform.nqlabs.network:31991/api/v1/receive
 ```
+
+Remote clusters resolve the exact `thanos-receive.platform.nqlabs.network` name
+to the management node (`192.168.15.31`) and use a pinned Thanos Receive NodePort
+because remote pod egress can reach the management node IP but not the management
+Cilium Gateway LoadBalancer IP. This endpoint is private LAN machine-to-machine
+telemetry, not public exposure.
 
 - Management Prometheus also remote_writes to in-cluster Thanos Receive:
 
@@ -47,8 +53,12 @@ otel-collector.monitoring.svc.cluster.local:4318  # OTLP/HTTP
 Remote collectors forward OTLP/HTTP to the private management route:
 
 ```text
-https://otel.platform.nqlabs.network
+http://otel.platform.nqlabs.network:31418
 ```
+
+Remote clusters resolve exact `otel.platform.nqlabs.network` to the management
+node and use the pinned OTel Collector NodePort for the same private LAN reason
+as remote metrics remote_write.
 
 Applications should prefer local in-cluster collector endpoints and let the
 platform forward cross-cluster traffic.

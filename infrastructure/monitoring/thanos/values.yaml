@@ -63,6 +63,9 @@ receive:
       memory: 1Gi
   podAntiAffinityPreset: ""
   service:
+    type: NodePort
+    nodePorts:
+      remote: "31991"
     additionalHeadless: true
 
 storegateway:

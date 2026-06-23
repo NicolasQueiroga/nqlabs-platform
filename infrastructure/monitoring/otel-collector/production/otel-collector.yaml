@@ -29,7 +29,7 @@ data:
             action: upsert
     exporters:
       otlphttp/tempo:
-        endpoint: https://otel.platform.nqlabs.network
+        endpoint: http://otel.platform.nqlabs.network:31418
     extensions:
       health_check:
         endpoint: 0.0.0.0:13133

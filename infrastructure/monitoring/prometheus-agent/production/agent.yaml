@@ -30,7 +30,7 @@ spec:
   scrapeConfigSelector: {}
   scrapeConfigNamespaceSelector: {}
   remoteWrite:
-    - url: https://thanos-receive.platform.nqlabs.network/api/v1/receive
+    - url: http://thanos-receive.platform.nqlabs.network:31991/api/v1/receive
       queueConfig:
         capacity: 10000
         maxSamplesPerSend: 2000
