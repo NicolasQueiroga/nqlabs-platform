@@ -159,6 +159,19 @@ spec:
 
   orphanedResources:
     warn: true
+    ignore:
+      # Kyverno generates these convention-based namespace defaults for every
+      # service namespace. Keep orphan warnings enabled for real workload drift,
+      # but do not warn on these platform-owned guardrails.
+      - group: cilium.io
+        kind: CiliumNetworkPolicy
+        name: namespace-default-allow-platform-ingress
+      - group: ""
+        kind: ResourceQuota
+        name: namespace-default-quota
+      - group: ""
+        kind: LimitRange
+        name: namespace-default-limits
 
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -244,6 +257,19 @@ spec:
 
   orphanedResources:
     warn: true
+    ignore:
+      # Kyverno generates these convention-based namespace defaults for every
+      # service namespace. Keep orphan warnings enabled for real workload drift,
+      # but do not warn on these platform-owned guardrails.
+      - group: cilium.io
+        kind: CiliumNetworkPolicy
+        name: namespace-default-allow-platform-ingress
+      - group: ""
+        kind: ResourceQuota
+        name: namespace-default-quota
+      - group: ""
+        kind: LimitRange
+        name: namespace-default-limits
 
 ---
 apiVersion: argoproj.io/v1alpha1
