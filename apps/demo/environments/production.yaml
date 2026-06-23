@@ -30,9 +30,6 @@ securityContext:
   enabled: true
   readOnlyRootFilesystem: false
 
-podAnnotations:
-  nqlabs.network/restartedAt: "2026-06-23T02:58:00Z"
-
 # Production progressive canary (review 5.6): promote through 10/25/50/100 with
 # manual pauses between steps. Basic (replica-ratio) canary — valid without a
 # traffic router. To shift traffic by exact weight, add Gateway API trafficRouting
