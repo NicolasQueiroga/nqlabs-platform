@@ -123,7 +123,7 @@ spec:
         pattern:
           spec:
             containers:
-              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/cloudflare/* | docker.io/minio/* | docker.io/louislam/* | docker.io/grafana/* | docker.io/coredns/* | docker.io/velero/* | docker.io/falcosecurity/* | cr.l5d.io/* | argoproj.github.io/* | reg.kyverno.io/* | ecr-public.aws.com/* | gcr.io/*"
+              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/cloudflare/* | docker.io/minio/* | docker.io/louislam/* | docker.io/grafana/* | docker.io/coredns/* | docker.io/velero/* | docker.io/falcosecurity/* | docker.io/curlimages/* | cr.l5d.io/* | argoproj.github.io/* | reg.kyverno.io/* | ecr-public.aws.com/* | gcr.io/*"
 ---
 # --- require-run-as-nonroot ---
 # Tightened from optional pattern to anyPattern — now requires runAsNonRoot: true
