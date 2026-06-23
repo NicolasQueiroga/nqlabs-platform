@@ -15,7 +15,22 @@ argocd:
 
 image:
   repository: ghcr.io/nicolasqueiroga/nqlabs-demo
-  tag: sha-aec3a454e4aa
+  tag: sha-55f42774beba
+
+container:
+  port: 8080
+
+service:
+  port: 8080
+
+podSecurityContext:
+  enabled: true
+
+securityContext:
+  enabled: true
+
+podAnnotations:
+  nqlabs.network/restartedAt: "2026-06-23T02:56:00Z"
 
 # Production progressive canary (review 5.6): promote through 10/25/50/100 with
 # manual pauses between steps. Basic (replica-ratio) canary — valid without a
