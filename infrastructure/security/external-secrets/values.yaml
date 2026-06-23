@@ -19,7 +19,7 @@
 # After ESO is deployed, all platform secrets are defined as ExternalSecret
 # resources in infrastructure/security/external-secrets/secrets/
 
-replicaCount: 2
+replicaCount: 1
 
 installCRDs: true
 
