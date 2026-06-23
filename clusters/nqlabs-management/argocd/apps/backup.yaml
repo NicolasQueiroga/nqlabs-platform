@@ -67,7 +67,9 @@ spec:
       selfHeal: true
     managedNamespaceMetadata:
       labels:
-        pod-security.kubernetes.io/enforce: baseline
+        # Velero node-agent needs hostPath access to kubelet pod/plugin dirs for
+        # file-level PV backup. Scope privileged PSA to the velero namespace only.
+        pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/enforce-version: latest
     retry:
       limit: 5
@@ -110,7 +112,9 @@ spec:
       selfHeal: true
     managedNamespaceMetadata:
       labels:
-        pod-security.kubernetes.io/enforce: baseline
+        # Velero node-agent needs hostPath access to kubelet pod/plugin dirs for
+        # file-level PV backup. Scope privileged PSA to the velero namespace only.
+        pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/enforce-version: latest
     retry:
       limit: 5
@@ -153,7 +157,9 @@ spec:
       selfHeal: true
     managedNamespaceMetadata:
       labels:
-        pod-security.kubernetes.io/enforce: baseline
+        # Velero node-agent needs hostPath access to kubelet pod/plugin dirs for
+        # file-level PV backup. Scope privileged PSA to the velero namespace only.
+        pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/enforce-version: latest
     retry:
       limit: 5

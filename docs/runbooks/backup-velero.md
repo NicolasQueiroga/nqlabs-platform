@@ -4,6 +4,11 @@ Velero runs on **management, staging, and production**. Management has local Min
 plus offsite AWS/Azure. Staging/production use offsite AWS/Azure. Node-agent file
 backup is enabled so local-path PV data is covered.
 
+The `velero` namespace intentionally uses Pod Security Admission `privileged`.
+This is scoped only to Velero because node-agent mounts kubelet host paths
+(`/var/lib/kubelet/pods`, `/var/lib/kubelet/plugins`) to back up local-path PV
+files. Do not relax service namespaces for this.
+
 | BSL | Where | Use |
 |-----|-------|-----|
 | `minio` (default) | in-cluster MinIO (local-path) | free, fast — routine pre-change snapshots |
