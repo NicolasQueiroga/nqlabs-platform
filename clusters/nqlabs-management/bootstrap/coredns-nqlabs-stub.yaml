@@ -57,6 +57,14 @@ data:
         log . {
             class error
         }
+        template IN AAAA demo.staging.nqlabs.network {
+            match ^demo\.staging\.nqlabs\.network\.$
+            rcode NOERROR
+        }
+        template IN AAAA demo.production.nqlabs.network {
+            match ^demo\.production\.nqlabs\.network\.$
+            rcode NOERROR
+        }
         template IN A demo.staging.nqlabs.network {
             match ^demo\.staging\.nqlabs\.network\.$
             answer "{{ .Name }} 60 IN A 192.168.15.32"
