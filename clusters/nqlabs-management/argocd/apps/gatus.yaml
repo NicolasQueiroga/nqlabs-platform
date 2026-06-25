@@ -4,6 +4,11 @@
 # Replaces Uptime Kuma — no proxy workaround needed.
 # HTTPRoute (uptime.platform.nqlabs.network) created by monitoring-config.
 # OIDC client secret sourced from 1Password via ExternalSecret.
+#
+# Important: Gatus performs OIDC discovery at process start and exits if the
+# Authentik provider endpoint is not ready yet. Keep it one wave after the
+# Authentik app so Authentik's blueprints/provider import has time to finish
+# during fresh bootstraps.
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -13,7 +18,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    argocd.argoproj.io/sync-wave: "5"
+    argocd.argoproj.io/sync-wave: "6"
 spec:
   project: platform
   source:
