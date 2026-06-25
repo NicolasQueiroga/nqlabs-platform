@@ -28,28 +28,41 @@ spec:
   egress: []
 ---
 # DNS egress for all pods in authentik namespace.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+# Use a CiliumNetworkPolicy here because DNS traffic goes to the kube-dns
+# ClusterIP service first; selecting the backend CoreDNS pods with a standard
+# Kubernetes NetworkPolicy proved insufficient under this Cilium datapath.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: authentik-allow-dns
   namespace: authentik
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector: {}
-  policyTypes:
-    - Egress
+  endpointSelector: {}
   egress:
-    - to:
-        - namespaceSelector: {}
-          podSelector:
-            matchLabels:
-              k8s-app: coredns
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": kube-system
+            "k8s:k8s-app": kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": dns
+            "k8s:k8s-app": coredns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
 ---
 # Allow authentik-server and authentik-worker to reach each other.
 apiVersion: networking.k8s.io/v1
@@ -224,28 +237,31 @@ spec:
           port: 8000
 ---
 # Allow CNPG instance manager (authentik-pg-*) to call the Kubernetes API
-# server. The instance manager needs this for Backup CRD status updates and
-# operator reconciliation. K8s API is always at 10.96.0.1:443 (kubernetes svc).
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+# server. In Cilium, egress to the kube-apiserver should use the
+# kube-apiserver entity instead of a Kubernetes NetworkPolicy ipBlock against
+# the kubernetes.default.svc ClusterIP, because service IP traffic to control
+# plane nodes may bypass/ignore CIDR-based policy matching in self-hosted
+# clusters.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: authentik-cnpg-egress-apiserver
   namespace: authentik
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       cnpg.io/cluster: authentik-pg
-  policyTypes:
-    - Egress
   egress:
-    - to:
-        - ipBlock:
-            cidr: 10.96.0.1/32
-      ports:
-        - protocol: TCP
-          port: 443
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "6443"
+              protocol: TCP
 ---
 # Allow authentik server/worker egress to Valkey and Postgres within namespace.
 apiVersion: networking.k8s.io/v1
