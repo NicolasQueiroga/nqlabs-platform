@@ -1,0 +1,42 @@
+# Management-cluster post-bootstrap Cilium config.
+#
+# Applies the cluster-specific LB IPAM / L2 announcement resources that cannot be
+# part of the initial manual Helm bootstrap, but must exist before any
+# LoadBalancer-backed management services (CoreDNS, Gateway) can become Healthy.
+#
+# Without this app the management stack stalls in Progressing because:
+# - dns/coredns-dns never receives its reserved LoadBalancer IP
+# - platform/platform-gateway never gets programmed by the Cilium gateway controller
+#
+# This mirrors the remote foundation apps, but is enabled for management during
+# the initial 0-to-100 bootstrap because the management cluster itself depends on
+# these IPs immediately.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cilium-config
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: clusters/nqlabs-management/cilium
+    directory:
+      include: "lb-ipam.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+    syncOptions:
+      - ServerSideApply=true
