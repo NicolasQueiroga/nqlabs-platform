@@ -200,11 +200,16 @@ helm upgrade --install cilium cilium/cilium \
   --namespace kube-system \
   --version 1.19.4 \
   -f infrastructure/networking/cilium/values.yaml \
-  -f clusters/<cluster>/cilium/values.yaml
+  -f clusters/<cluster>/cilium/values.yaml \
+  --set hubble.metrics.serviceMonitor.enabled=false
+
+# Wait for Cilium agent pods to be ready (label is k8s-app=cilium, not app.kubernetes.io/name)
+kubectl -n kube-system wait --for=condition=ready pod -l k8s-app=cilium --timeout=120s
 ```
 
-On current single-node VMs, `operator.replicas=1`. Raise to `2` only after the
-NUC/HA cluster has multiple schedulable nodes.
+`hubble.metrics.serviceMonitor.enabled=false` is required at bootstrap because
+the ServiceMonitor CRD may not be installed yet. Enable it later via GitOps once
+kube-prometheus-stack is synced.
 
 ## Adding new platform services
 
