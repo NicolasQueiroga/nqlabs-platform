@@ -132,7 +132,24 @@ spec:
           command: [sh, -c]
           args:
             - |
-              mc alias set m http://minio.minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" &&
+              set -e
+              # Wait for MinIO to be ready before creating buckets.
+              # Retries for up to ~5 minutes (30 × 10s) to survive a fresh
+              # bootstrap where MinIO may still be pulling its image.
+              echo "Waiting for MinIO to be ready..."
+              for i in $(seq 1 30); do
+                if mc alias set m http://minio.minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" 2>/dev/null; then
+                  echo "MinIO is reachable."
+                  break
+                fi
+                echo "Attempt $i/30: MinIO not ready yet, retrying in 10s..."
+                sleep 10
+              done
+              # Verify we actually connected; fail fast if not.
+              mc admin info m >/dev/null 2>&1 || {
+                echo "ERROR: Could not connect to MinIO after 30 attempts."
+                exit 1
+              }
               mc mb --ignore-existing m/velero &&
               mc mb --ignore-existing m/thanos &&
               mc mb --ignore-existing m/authentik-pg &&

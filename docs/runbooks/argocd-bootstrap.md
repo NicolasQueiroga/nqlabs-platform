@@ -16,6 +16,7 @@ including the `argocd` self-management Application. From that point forward,
 - Cilium installed and node `Ready`
 - `helm` CLI installed
 - `clusters/nqlabs-management/argocd/` committed and pushed to GitHub
+- 1Password service account token (see [secrets.md](secrets.md))
 
 ## Step 1 — Add Helm repo
 
@@ -62,6 +63,46 @@ Verify it synced:
 kubectl get applications -n argocd
 # Expected: root   Synced   Healthy
 ```
+
+## Step 3a — Create the 1Password service account token secret
+
+ESO needs a 1Password service account token to read secrets from the `NQLabs` vault.
+This is the trust root for all platform secrets and must be applied manually before
+the root Application can sync ESO-dependent apps (authentik, minio, velero, etc.).
+
+```bash
+# Create the bootstrap secret in the external-secrets namespace
+kubectl -n external-secrets create secret generic onepassword-service-account-token \
+    --from-literal=token=<your-1password-service-account-token>
+```
+
+See [secrets.md](secrets.md) for how to generate a new token and rotate it.
+
+## Step 4 — Wait for 0-to-100 bootstrap
+
+After applying the root Application and the 1Password token, ArgoCD will begin
+syncing all 60+ platform Applications automatically. The sync follows the
+`argocd.argoproj.io/sync-wave` annotations to order dependencies correctly.
+
+Watch the progress:
+
+```bash
+# Watch all applications sync
+kubectl get applications -n argocd -w
+
+# Check overall health
+argocd app list -o wide
+```
+
+Expected progression (sync waves):
+
+1. **Wave 0-1:** Cilium, cert-manager, external-secrets, local-path, tailscale
+2. **Wave 2:** Kyverno, gateway, CoreDNS, external-dns
+3. **Wave 3:** Kyverno policies, Authentik, monitoring stack
+4. **Wave 4+:** MinIO, Velero, Loki, Tempo, Pyroscope, Gatus, demo services
+
+All applications should reach `Synced` and `Healthy` within ~15-20 minutes on a
+fresh cluster. If any app is stuck, see the Troubleshooting section below.
 
 ## Step 4 — Access the UI during bootstrap
 
@@ -207,3 +248,31 @@ No `kubectl` or `helm install` needed for anything after bootstrap.
 **`argocd-server` not accessible via port-forward**
 - Ensure `server.insecure: "true"` is set in values (HTTP mode)
 - Try `kubectl port-forward svc/argocd-server -n argocd 8080:443` for HTTPS
+
+**cert-manager webhook not reachable (cert-manager pods CrashLoopBackOff)**
+- The `cert-manager-deny-ingress` NetworkPolicy blocks API server admission calls
+  to the webhook. A CiliumNetworkPolicy (`cert-manager-allow-kube-apiserver-webhook`)
+  allows `host`, `remote-node`, and `kube-apiserver` entities on port 10250.
+- Same pattern is used for external-secrets webhook.
+
+**Gatus CrashLoopBackOff (OIDC issuer unreachable)**
+- Gatus uses the internal Authentik service URL
+  (`http://authentik-server.authentik.svc.cluster.local:80/...`) for the OIDC
+  `issuer-url` because the Cilium gateway resets TLS connections from pods
+  (hairpin issue with LoadBalancer IP).
+- Browser-based OIDC login will redirect to the internal URL, which is a known
+  limitation until the Cilium gateway hairpin issue is resolved.
+
+**MinIO bucket creation Job fails**
+- The PostSync Job waits up to 5 minutes for MinIO to be ready before creating
+  buckets. If MinIO takes longer to start, increase the retry count in the job
+  command.
+- Ensure the `minio-auth` secret (from ESO) is available before the job runs.
+
+**Kyverno policies show `OutOfSync`**
+- Kyverno defaults several fields on ClusterPolicy at admission time
+  (`admission`, `emitWarning`, `validationFailureAction`, etc.). These are
+  listed in `ignoreDifferences` in the ArgoCD Application.
+- The `disallow-host-path` policy uses a `deny` condition (not `pattern` with
+  `X()`) because Kyverno transforms the `X(hostPath): null` pattern to `{}`,
+  which breaks the validation and causes perpetual OutOfSync.

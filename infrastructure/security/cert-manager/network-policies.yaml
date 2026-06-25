@@ -1,8 +1,9 @@
 # NetworkPolicies for cert-manager.
 #
 # Keep ingress narrow without blocking Kubernetes API server admission calls to
-# cert-manager-webhook. The API server originates from node/LAN IPs in this lab.
----
+# cert-manager-webhook. API-server admission traffic is allowed by a
+# CiliumNetworkPolicy below using Cilium node identities instead of broad LAN
+# CIDRs, matching the same pattern used for external-secrets.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -22,10 +23,28 @@ spec:
       ports:
         - port: 9402
           protocol: TCP
-    - from:
-        - ipBlock:
-            cidr: 192.168.15.0/24
-      ports:
-        - port: 10250
-          protocol: TCP
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: cert-manager-allow-kube-apiserver-webhook
+  namespace: cert-manager
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: cert-manager
+      app.kubernetes.io/name: webhook
+  ingress:
+    # Talos kube-apiserver admission calls can arrive through Cilium as host
+    # or remote-node identity when VXLAN/kube-proxy-replacement routes the
+    # ClusterIP webhook service across nodes. Do not allow the LAN/Tailscale
+    # CIDRs here; only trusted cluster node identities may reach the webhook.
+    - fromEntities:
+        - host
+        - remote-node
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "10250"
+              protocol: TCP
 

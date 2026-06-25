@@ -407,28 +407,166 @@ Legend:
 - [ ] automatic ArgoCD cluster registration
 - [ ] full rebuild drill
 
+## Hardware inventory (collected)
+
+- CPU: AMD Ryzen 9 7950X (16 cores / 32 threads)
+- RAM: 124 GB
+- Storage: 223 GB local-lvm SSD (only usable storage; 1.9 TB NVMe unmounted/reserved)
+- NIC: single 1 GbE (vmbr0, flat LAN 192.168.15.0/24)
+- No UPS
+- Proxmox host IP: 192.168.15.20 (LAN) / 100.105.35.84 (Tailscale)
+- Gateway: 192.168.15.1
+
+## First attempt lessons (2026-06-25)
+
+A first bootstrap attempt was made and cleaned up. Lessons learned:
+
+1. **Talos v1.13 HostnameConfig**: The base `talosctl gen config` output includes a
+   separate `HostnameConfig` document with `auto: stable`. Patching
+   `machine.network.hostname` causes "static hostname is already set" error. Must
+   patch the HostnameConfig document with `auto: off` + `hostname: <name>`.
+
+2. **Proxmox boot order**: VMs created with ISO on `ide2` must have boot order set
+   to `ide2` for initial boot, then changed to `scsi0` after Talos installs to disk.
+   If left as `ide2`, nodes boot from ISO forever and never use the installed disk.
+   Best approach: apply config with `--mode reboot`, let Talos install to disk via
+   `talosctl upgrade`, then change boot order to `scsi0`.
+
+3. **Talos install to disk**: `apply-config` in maintenance mode applies the config
+   but does NOT install Talos to disk. The node runs from ISO with the config
+   applied. Must run `talosctl upgrade --image ghcr.io/siderolabs/installer:v1.13.3`
+   to install to disk. The upgrade uses kexec to reboot from disk.
+
+4. **Stale iptables on Proxmox**: The old management cluster left iptables DROP
+   rules on the Proxmox host blocking ports 8006 (web UI) and 22 (SSH) from LAN.
+   Must clean these before starting: `iptables -D INPUT -p tcp --dport 8006 -j DROP`
+   and `iptables -D INPUT -p tcp --dport 22 -j DROP`.
+
+5. **Cilium ServiceMonitor**: Cilium values have `hubble.metrics.serviceMonitor.enabled: true`
+   which requires Prometheus CRDs (ServiceMonitor). Must disable with
+   `--set hubble.metrics.serviceMonitor.enabled=false` for bootstrap install.
+
+6. **ArgoCD ExternalSecret dependency**: ArgoCD values include `extraObjects` that
+   create an ExternalSecret (requires ESO CRDs). Must use a bootstrap values file
+   without `extraObjects` for initial install. After ESO is installed via GitOps,
+   ArgoCD can manage itself with the full values.
+
+7. **Proxmox resource pressure**: 3 VMs with 4 vCPU / 24 GB RAM each on a 16-core
+   host was fine after settling, but during simultaneous boot the Proxmox host was
+   unresponsive (SSH and web UI down). Consider 2 vCPU per VM, or stagger VM starts.
+
+8. **talosconfig endpoints**: Generated talosconfig has `endpoints: []`. Must be
+   populated with node IPs before using `talosctl` commands that require auth.
+
+## Correct bootstrap sequence (validated)
+
+```txt
+1. Clean Proxmox: remove stale iptables, verify free storage
+2. Create VMs with correct settings:
+   - 2 vCPU, 24 GB RAM (reduced from 4 vCPU to avoid host starvation)
+   - 32 GB system disk (scsi0) + 10 GB Ceph OSD disk (scsi1)
+   - Boot order: ide2 (ISO) for initial boot
+   - Talos ISO v1.13.3 on ide2
+   - onboot: 1 (auto-start with Proxmox)
+3. Wait for VMs to boot from ISO (DHCP IPs, Talos API on port 50000)
+4. Generate Talos configs:
+   - talosctl gen config nqlabs-management https://192.168.15.9:6443
+   - Patch with HostnameConfig (auto: off, hostname: mgmt-XX)
+   - Patch with static IPs, VIP, Cilium CNI (none), kube-proxy disabled
+5. Apply configs: talosctl apply-config --insecure --nodes <dhcp-ip> --file <config> --mode reboot
+6. Wait for nodes to come up on static IPs
+7. Bootstrap etcd: talosctl bootstrap --nodes <first-node>
+8. Wait for cluster health
+9. Install Talos to disk: talosctl upgrade --image ghcr.io/siderolabs/installer:v1.13.3
+10. Change Proxmox boot order to scsi0 for all VMs
+11. Get kubeconfig
+12. Install Gateway API CRDs
+13. Install Cilium (with --set hubble.metrics.serviceMonitor.enabled=false)
+14. Apply LB IPAM pool
+15. Install ArgoCD with bootstrap values (no ExternalSecret, admin enabled)
+16. Get ArgoCD admin password
+17. Apply root Application for GitOps
+```
+
+## VM topology (decided)
+
+```yaml
+mgmt-01:
+  vmid: 101
+  cpu: 2 vCPU
+  memory: 24 GB
+  disks:
+    - scsi0: 32 GB (system, local-lvm)
+    - scsi1: 10 GB (Ceph OSD, local-lvm)
+  network:
+    mac: BC:24:11:15:00:10
+    ip: 192.168.15.10/24
+    gateway: 192.168.15.1
+    vip: 192.168.15.9
+  hostname: mgmt-01
+
+mgmt-02:
+  vmid: 102
+  cpu: 2 vCPU
+  memory: 24 GB
+  disks:
+    - scsi0: 32 GB (system, local-lvm)
+    - scsi1: 10 GB (Ceph OSD, local-lvm)
+  network:
+    mac: BC:24:11:15:00:11
+    ip: 192.168.15.11/24
+    gateway: 192.168.15.1
+    vip: 192.168.15.9
+  hostname: mgmt-02
+
+mgmt-03:
+  vmid: 103
+  cpu: 2 vCPU
+  memory: 24 GB
+  disks:
+    - scsi0: 32 GB (system, local-lvm)
+    - scsi1: 10 GB (Ceph OSD, local-lvm)
+  network:
+    mac: BC:24:11:15:00:12
+    ip: 192.168.15.12/24
+    gateway: 192.168.15.1
+    vip: 192.168.15.9
+  hostname: mgmt-03
+```
+
+## Network plan
+
+```txt
+LAN: 192.168.15.0/24 (flat, vmbr0)
+Gateway: 192.168.15.1
+Proxmox: 192.168.15.20
+VIP: 192.168.15.9 (Kubernetes API, shared across control-plane)
+mgmt-01: 192.168.15.10
+mgmt-02: 192.168.15.11
+mgmt-03: 192.168.15.12
+LB pool: 192.168.15.194-195 (Cilium LB IPAM)
+Pod CIDR: 10.244.0.0/16
+Service CIDR: 10.96.0.0/12
+```
+
 ## Immediate next tasks
 
-1. Collect Proxmox desktop hardware inventory:
-   - CPU model / core count
-   - RAM
-   - disk layout and free capacity
-   - NIC count/speed
-   - UPS status
-2. Decide management VM topology from actual resources.
-3. Add `clusters/nqlabs-management/machines.yaml` for Proxmox VMs.
-4. Build Proxmox VM creation automation.
-5. Design Rook/Ceph disk layout for management VMs.
-6. Add OpenBao architecture decision and bootstrap procedure.
-7. Add supply-chain admission design.
-8. Add Cilium policy validation to CI.
+1. ~~Collect Proxmox desktop hardware inventory~~ (done)
+2. ~~Decide management VM topology from actual resources~~ (done: 3 VMs, 2 vCPU, 24 GB each)
+3. Add `clusters/nqlabs-management/machines.yaml` for Proxmox VMs
+4. Build Proxmox VM creation automation (script)
+5. Build Talos config render + apply automation (script)
+6. Design Rook/Ceph disk layout for management VMs
+7. Add OpenBao architecture decision and bootstrap procedure
+8. Add supply-chain admission design
+9. Add Cilium policy validation to CI
 
 ## Open questions
 
-- Exact desktop Proxmox hardware specs?
+- ~~Exact desktop Proxmox hardware specs?~~ (answered)
 - Use Terraform provider for Proxmox, OpenTofu, or shell/API first?
-- How many dedicated virtual disks can each Talos VM receive for Ceph OSDs?
-- Will the Proxmox desktop have multiple NICs/VLANs or one flat LAN initially?
+- How many dedicated virtual disks can each Talos VM receive for Ceph OSDs? (current: 1 x 10 GB)
+- ~~Will the Proxmox desktop have multiple NICs/VLANs or one flat LAN initially?~~ (flat LAN)
 - Should management run all workloads on control-plane nodes, or split worker/storage VMs if resources allow?
 - What is the external object storage target for disaster backups before Rook/Ceph exists?
 

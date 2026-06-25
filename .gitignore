@@ -19,6 +19,12 @@ secrets.yaml
 **/generated/talosconfig
 **/generated/kubeconfig
 
+# Generated machine configs with embedded secrets (outside generated/ dirs)
+**/bootstrap/talos/mgmt-*.yaml
+**/bootstrap/talos/worker-*.yaml
+# talosconfig at cluster root (not in generated/)
+clusters/*/talosconfig
+
 # -----------------------------------------------------------------------------
 # Kubernetes
 # -----------------------------------------------------------------------------

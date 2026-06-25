@@ -1,0 +1,26 @@
+machine:
+  network:
+    interfaces:
+      - interface: ens18
+        addresses:
+          - 192.168.15.12/24
+        routes:
+          - network: 0.0.0.0/0
+            gateway: 192.168.15.1
+        vip:
+          ip: 192.168.15.9
+  certSANs:
+    - 192.168.15.12
+    - 192.168.15.9
+cluster:
+  allowSchedulingOnControlPlanes: true
+  network:
+    cni:
+      name: none
+  proxy:
+    disabled: true
+---
+apiVersion: v1alpha1
+kind: HostnameConfig
+auto: off
+hostname: mgmt-03

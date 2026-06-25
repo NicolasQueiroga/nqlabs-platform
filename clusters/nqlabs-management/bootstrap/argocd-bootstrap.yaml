@@ -1,0 +1,77 @@
+# ArgoCD bootstrap values — point-zero minimal install
+# Used for initial bootstrap only. GitOps will manage ArgoCD config after.
+global:
+  networkPolicy:
+    create: false
+
+configs:
+  params:
+    server.insecure: "true"
+
+  cm:
+    # Enable admin user for bootstrap
+    accounts.admin.enabled: "true"
+    application.resourceTrackingMethod: annotation
+    url: https://argocd.platform.nqlabs.network
+
+  rbac:
+    policy.default: ""
+    policy.csv: |
+      g, platform-admins, role:admin
+      g, platform-viewers, role:readonly
+
+server:
+  replicas: 1
+  service:
+    type: LoadBalancer
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+controller:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 1Gi
+    limits:
+      memory: 4Gi
+
+repoServer:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+applicationSet:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+redis:
+  enabled: true
+  image:
+    repository: docker.io/library/redis
+    tag: 8.2.3-alpine
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false

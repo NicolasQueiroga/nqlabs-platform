@@ -1,8 +1,9 @@
 # NetworkPolicies for External Secrets Operator.
 #
-# Allows API-server admission traffic to the webhook, Prometheus scraping of
-# metrics, and intra-namespace control-plane traffic. Egress remains unrestricted
-# because ESO must reach 1Password APIs and Kubernetes APIs.
+# Allows Prometheus scraping of metrics and intra-namespace control-plane traffic.
+# API-server admission traffic to the webhook is allowed by a CiliumNetworkPolicy
+# below using Cilium node identities instead of broad LAN CIDRs. Egress remains
+# unrestricted because ESO must reach 1Password APIs and Kubernetes APIs.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -22,10 +23,28 @@ spec:
       ports:
         - port: 8080
           protocol: TCP
-    - from:
-        - ipBlock:
-            cidr: 192.168.15.0/24
-      ports:
-        - port: 10250
-          protocol: TCP
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: external-secrets-allow-kube-apiserver-webhook
+  namespace: external-secrets
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: external-secrets
+      app.kubernetes.io/name: external-secrets-webhook
+  ingress:
+    # Talos kube-apiserver admission calls can arrive through Cilium as host
+    # or remote-node identity when VXLAN/kube-proxy-replacement routes the
+    # ClusterIP webhook service across nodes. Do not allow the LAN/Tailscale
+    # CIDRs here; only trusted cluster node identities may reach the webhook.
+    - fromEntities:
+        - host
+        - remote-node
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "10250"
+              protocol: TCP
 
