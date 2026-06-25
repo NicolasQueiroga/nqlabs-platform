@@ -20,4 +20,9 @@ spec:
   enableDefaultDeny:
     ingress: true
     egress: false
-  ingress: []
+  # Cilium rejects an empty ingress list as "rule does not apply at ingress".
+  # An empty non-nil fromEndpoints list is valid and selects no sources, so it
+  # enables default-deny without granting traffic. Service-specific CNPs can
+  # still add positive allow rules because this is not an ingressDeny policy.
+  ingress:
+    - fromEndpoints: []
