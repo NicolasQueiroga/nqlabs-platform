@@ -194,7 +194,7 @@ Install Cilium with both value files so cluster identity stays declarative:
 helm template prometheus-operator-crds \
   prometheus-community/prometheus-operator-crds \
   --version 29.0.0 \
-  | kubectl apply -f -
+  | kubectl apply --server-side=true -f -
 
 helm upgrade --install cilium cilium/cilium \
   --namespace kube-system \
