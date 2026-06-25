@@ -8,6 +8,10 @@
 # Watches the management cluster's own ArgoCD Application directory:
 #   clusters/nqlabs-management/argocd/apps
 #
+# Initial bootstrap intentionally includes MANAGEMENT-ONLY apps. Multi-cluster
+# fan-out (staging/production foundation + service factory) is enabled later,
+# after management reaches a fully healthy Authentik-backed state.
+#
 # Shared platform app definitions may still be reused, but management should expose
 # them through cluster-local wrappers when cluster-specific overrides are required.
 #
@@ -29,6 +33,9 @@ spec:
     repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
     targetRevision: HEAD
     path: clusters/nqlabs-management/argocd/apps
+    directory:
+      # Deferred until the management cluster bootstrap is 100% healthy.
+      exclude: "{backup-remote.yaml,falco-remote.yaml,kyverno-remote.yaml,production-cloudflared.yaml,production-foundation.yaml,remote-cluster-dns-split-horizon.yaml,remote-prometheus-agent.yaml,service-factory.yaml,staging-foundation.yaml,tracing-profiling-remote.yaml}"
 
   destination:
     server: https://kubernetes.default.svc

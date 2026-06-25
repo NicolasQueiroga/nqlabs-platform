@@ -113,7 +113,8 @@ Verify:
 
 ```bash
 kubectl get appprojects -n argocd
-# Expected: platform, services-staging, services-production, services-preview
+# Minimum required for bootstrap: platform
+# Additional service projects may exist, but remote-cluster fan-out is enabled later.
 ```
 
 ## Step 6 — Apply the root Application (triggers 0-to-100 GitOps sync)
@@ -136,9 +137,16 @@ kubectl get applications -n argocd
 
 ## Step 7 — Wait for 0-to-100 bootstrap
 
-After applying the root Application, ArgoCD will begin syncing all 60+ platform
-Applications automatically. The sync follows the `argocd.argoproj.io/sync-wave`
-annotations to order dependencies correctly.
+After applying the root Application, ArgoCD will begin syncing the
+**management-cluster platform stack only**. The sync follows the
+`argocd.argoproj.io/sync-wave` annotations to order dependencies correctly.
+
+In practice, "0-to-100" means **all management-cluster apps** reach
+`Synced` + `Healthy` with no manual intervention after the steps above.
+Staging/production foundation apps and the service-factory fan-out are
+intentionally excluded from the initial root Application and are enabled later,
+after the management cluster is fully healthy and Authentik-backed access is in
+place.
 
 Watch the progress:
 
@@ -166,9 +174,8 @@ Expected progression (sync waves):
 3. **Wave 3:** Kyverno policies, Authentik, monitoring stack
 4. **Wave 4+:** MinIO, Velero, Loki, Tempo, Pyroscope, Gatus, demo services
 
-All applications should reach `Synced` and `Healthy` within ~15-20 minutes on a
-fresh cluster. The `staging-*` and `production-*` apps will show `Unknown`
-until those clusters are registered — that's expected.
+All management applications should reach `Synced` and `Healthy` within
+~15-20 minutes on a fresh cluster.
 
 If any app is stuck, see the Troubleshooting section below.
 
@@ -233,19 +240,23 @@ spec:
 ```
 
 The `platform` AppProject allows only the platform repo plus approved upstream Helm
-repositories, and only the platform namespaces used by this cluster. Future service
-Applications should use `services-staging` or `services-production` instead of
-`platform`.
+repositories, and only the platform namespaces used by this cluster. Remote-cluster
+service delivery (`services-staging` / `services-production`) is enabled in a later
+phase after management bootstrap is complete.
 
 ```
 clusters/nqlabs-management/argocd/apps/
 ├── root.yaml                       # Root app — applied once manually
-├── projects.yaml                   # AppProjects: platform, staging, production (apply BEFORE root)
+├── projects.yaml                   # AppProjects (platform required before root)
 ├── argocd.yaml                     # ArgoCD self-management
 ├── cert-manager.yaml               # cert-manager + issuers/certs
 ├── external-secrets-operator.yaml  # ESO + 1Password SDK config
 └── ...
 ```
+
+Remote-cluster manifests (staging foundation, production foundation,
+service-factory, etc.) stay in git but are explicitly excluded from the initial
+root Application until the later multi-cluster phase.
 
 No `kubectl` or `helm install` needed for anything after bootstrap.
 
@@ -260,6 +271,12 @@ No `kubectl` or `helm install` needed for anything after bootstrap.
 **Root app shows `OutOfSync` (after projects applied)**
 - Check if the commit on GitHub matches what ArgoCD shows
 - Click `Refresh` in the UI or: `kubectl annotate app root -n argocd argocd.argoproj.io/refresh=normal`
+
+**Staging / production / service-factory apps appear during bootstrap**
+- They are intentionally deferred from the management bootstrap.
+- Re-apply the updated root Application so its exclude list takes effect:
+  `kubectl apply -f clusters/nqlabs-management/argocd/root.yaml`
+- Then refresh root: `kubectl annotate app root -n argocd argocd.argoproj.io/refresh=hard --overwrite`
 
 **Pod stuck in `Pending`**
 - Check node resources: `kubectl describe pod <pod> -n <namespace>`
@@ -278,6 +295,9 @@ No `kubectl` or `helm install` needed for anything after bootstrap.
   `kubectl delete validatingwebhookconfiguration externalsecret-validate secretstore-validate`
   Then patch: `kubectl get externalsecrets.external-secrets.io -A -o name | xargs kubectl patch --type=json -p='[{"op":"remove","path":"/metadata/finalizers"}]'`
 - Then force-delete namespaces: `kubectl patch namespace <ns> --type=json -p='[{"op":"remove","path":"/metadata/finalizers"}]'`
+- Do **not** delete built-in ClusterRoles/ClusterRoleBindings such as
+  `cluster-admin`, `admin`, `edit`, or `view` during teardown. Velero and
+  other components rely on them before Authentik/SSO is fully established.
 
 **cert-manager webhook not reachable (cert-manager pods CrashLoopBackOff)**
 - The `cert-manager-deny-ingress` NetworkPolicy blocks API server admission calls
@@ -290,6 +310,13 @@ No `kubectl` or `helm install` needed for anything after bootstrap.
   (`http://authentik-server.authentik.svc.cluster.local:80/...`) for the OIDC
   `issuer-url` because the Cilium gateway resets TLS connections from pods
   (hairpin issue with LoadBalancer IP).
+- Authentik must also be reachable from the `monitoring` namespace:
+  - `authentik-allow-dns` must match the actual CoreDNS label (`k8s-app: coredns`,
+    not `k8s-app: kube-dns`).
+  - `authentik-server` needs an ingress allow from the `monitoring` namespace on
+    pod port `9000` (service port `80` targets container port `9000`).
+- If Gatus still crashes, confirm Authentik has endpoints:
+  `kubectl get endpoints -n authentik authentik-server`
 - Browser-based OIDC login will redirect to the internal URL, which is a known
   limitation until the Cilium gateway hairpin issue is resolved.
 

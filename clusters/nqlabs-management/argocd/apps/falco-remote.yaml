@@ -1,42 +1,11 @@
-# Backup/DR: MinIO (local default target) + Velero (engine -> minio/aws/azure).
+# Deferred remote-cluster Falco apps.
+# Applied later, after management bootstrap is 100% healthy and the
+# staging/production clusters are registered in ArgoCD.
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: management-minio
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
-spec:
-  project: platform
-  source:
-    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
-    targetRevision: HEAD
-    path: infrastructure/storage/minio
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: minio
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    managedNamespaceMetadata:
-      labels:
-        pod-security.kubernetes.io/enforce: baseline
-        pod-security.kubernetes.io/enforce-version: latest
-    retry:
-      limit: 5
-    syncOptions:
-      - CreateNamespace=true
-      - ServerSideApply=true
----
-# Velero on-demand backup to MinIO (default) + AWS S3 + Azure Blob.
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: management-velero
+  name: staging-falco
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -45,30 +14,25 @@ metadata:
 spec:
   project: platform
   sources:
-    - repoURL: https://vmware-tanzu.github.io/helm-charts
-      chart: velero
-      targetRevision: "12.0.3"
+    - repoURL: https://falcosecurity.github.io/charts
+      chart: falco
+      targetRevision: "9.1.0"
       helm:
-        releaseName: velero
+        releaseName: falco
         valueFiles:
-          - $values/infrastructure/backup/velero/values.yaml
+          - $values/infrastructure/security/falco/values.yaml
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
       ref: values
-    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
-      targetRevision: HEAD
-      path: infrastructure/backup/velero/manifests
   destination:
-    server: https://kubernetes.default.svc
-    namespace: velero
+    name: nqlabs-staging
+    namespace: falco
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     managedNamespaceMetadata:
       labels:
-        # Velero node-agent needs hostPath access to kubelet pod/plugin dirs for
-        # file-level PV backup. Scope privileged PSA to the velero namespace only.
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/enforce-version: latest
     retry:
@@ -76,3 +40,44 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: production-falco
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://falcosecurity.github.io/charts
+      chart: falco
+      targetRevision: "9.1.0"
+      helm:
+        releaseName: falco
+        valueFiles:
+          - $values/infrastructure/security/falco/values.yaml
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+  destination:
+    name: nqlabs-production
+    namespace: falco
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/enforce-version: latest
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
