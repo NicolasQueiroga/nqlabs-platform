@@ -1,21 +1,23 @@
 # Runbook: ArgoCD Bootstrap
 
-> **Status:** Live three-cluster service factory (management/staging/production). Current architecture: [../docs/architecture/service-factory.md](../docs/architecture/service-factory.md). Single-cluster/desktop-lab references below are historical.
-
+> **Status:** Point-zero platform template. Management cluster only (3-node Talos
+> on Proxmox). Staging and production clusters will be provisioned later by
+> management onto separate hardware.
 
 ## Overview
 
-This runbook covers the one-time manual bootstrap of ArgoCD on the lab cluster.
-After bootstrap, the root Application discovers all platform Applications from git,
-including the `argocd` self-management Application. From that point forward,
-`clusters/nqlabs-management/argocd/values.yaml` is authoritative for ArgoCD itself.
+This runbook covers the one-time manual bootstrap of ArgoCD on the management
+cluster. After bootstrap, the root Application discovers all platform
+Applications from git, including the `argocd` self-management Application.
+From that point forward, `platform/argocd/values.yaml` is authoritative for
+ArgoCD itself.
 
 ## Prerequisites
 
 - Talos cluster running and `kubectl` configured
-- Cilium installed and node `Ready`
+- Cilium installed and nodes `Ready`
 - `helm` CLI installed
-- `clusters/nqlabs-management/argocd/` committed and pushed to GitHub
+- `clusters/nqlabs-management/` committed and pushed to GitHub
 - 1Password service account token (see [secrets.md](secrets.md))
 
 ## Step 1 — Add Helm repo
@@ -25,13 +27,18 @@ helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update argo
 ```
 
-## Step 2 — Install ArgoCD
+## Step 2 — Install ArgoCD (bootstrap values)
+
+Use the bootstrap values file — it enables the admin user and omits
+`extraObjects` (which require ESO CRDs that don't exist yet). After GitOps
+installs ESO and the full ArgoCD app syncs, it switches to the production
+values at `platform/argocd/values.yaml` (SSO via Authentik, admin disabled).
 
 ```bash
 helm install argocd argo/argo-cd \
   --namespace argocd \
   --create-namespace \
-  -f clusters/nqlabs-management/argocd/values.yaml
+  -f clusters/nqlabs-management/bootstrap/argocd-bootstrap.yaml
 ```
 
 Watch pods come up (all should reach `Running` within ~60s):
@@ -47,14 +54,77 @@ Expected pods:
 - `argocd-repo-server-*`
 - `argocd-server-*`
 
-## Step 3 — Bootstrap the root Application
-
-This is the seed of the app-of-apps pattern. Applied once, manually.
-After this, all platform additions are git commits. The root app will also discover
-`clusters/nqlabs-management/argocd/apps/argocd.yaml`, which makes ArgoCD manage its own Helm release.
+## Step 3 — Get admin password and access the UI
 
 ```bash
-kubectl apply -f clusters/nqlabs-management/argocd/apps/root.yaml
+# Get the initial password
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath="{.data.password}" | base64 -d && echo
+```
+
+Port-forward to access the ArgoCD UI locally:
+
+```bash
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+```
+
+Open: https://localhost:8080 (accept the self-signed cert)
+
+Login: `admin` / `<password from above>`
+
+After the Gateway and DNS stack are synced, the durable URL is:
+
+```text
+https://argocd.platform.nqlabs.network
+```
+
+## Step 4 — Create the 1Password service account token secret
+
+ESO needs a 1Password service account token to read secrets from the `NQLabs`
+vault. This is the trust root for all platform secrets and must be applied
+manually before the root Application can sync ESO-dependent apps (authentik,
+minio, velero, etc.).
+
+```bash
+# Create the namespace first (ESO will be installed into it by GitOps)
+kubectl create namespace external-secrets
+
+# Create the bootstrap secret from 1Password CLI
+op item get "Service Account Auth Token: NQ Labs" \
+  --account my.1password.com --fields credential --format json \
+  | python3 -c "import json,sys; sys.stdout.write(json.load(sys.stdin)['value'])" \
+  | kubectl -n external-secrets create secret generic onepassword-service-account-token \
+      --from-file=token=/dev/stdin
+```
+
+See [secrets.md](secrets.md) for how to generate a new token and rotate it.
+
+## Step 5 — Apply AppProjects (BEFORE root Application)
+
+The root Application references `project: platform` but ArgoCD can't sync it
+until the AppProject exists. This is a chicken-and-egg problem — apply the
+AppProjects manually first.
+
+```bash
+kubectl apply -f clusters/nqlabs-management/argocd/apps/projects.yaml
+```
+
+Verify:
+
+```bash
+kubectl get appprojects -n argocd
+# Expected: platform, services-staging, services-production, services-preview
+```
+
+## Step 6 — Apply the root Application (triggers 0-to-100 GitOps sync)
+
+This is the seed of the app-of-apps pattern. Applied once, manually.
+After this, all platform additions are git commits. The root app will also
+discover `clusters/nqlabs-management/argocd/apps/argocd.yaml`, which makes
+ArgoCD manage its own Helm release.
+
+```bash
+kubectl apply -f clusters/nqlabs-management/argocd/root.yaml
 ```
 
 Verify it synced:
@@ -64,25 +134,11 @@ kubectl get applications -n argocd
 # Expected: root   Synced   Healthy
 ```
 
-## Step 3a — Create the 1Password service account token secret
+## Step 7 — Wait for 0-to-100 bootstrap
 
-ESO needs a 1Password service account token to read secrets from the `NQLabs` vault.
-This is the trust root for all platform secrets and must be applied manually before
-the root Application can sync ESO-dependent apps (authentik, minio, velero, etc.).
-
-```bash
-# Create the bootstrap secret in the external-secrets namespace
-kubectl -n external-secrets create secret generic onepassword-service-account-token \
-    --from-literal=token=<your-1password-service-account-token>
-```
-
-See [secrets.md](secrets.md) for how to generate a new token and rotate it.
-
-## Step 4 — Wait for 0-to-100 bootstrap
-
-After applying the root Application and the 1Password token, ArgoCD will begin
-syncing all 60+ platform Applications automatically. The sync follows the
-`argocd.argoproj.io/sync-wave` annotations to order dependencies correctly.
+After applying the root Application, ArgoCD will begin syncing all 60+ platform
+Applications automatically. The sync follows the `argocd.argoproj.io/sync-wave`
+annotations to order dependencies correctly.
 
 Watch the progress:
 
@@ -90,8 +146,17 @@ Watch the progress:
 # Watch all applications sync
 kubectl get applications -n argocd -w
 
-# Check overall health
-argocd app list -o wide
+# Check which apps are NOT yet Synced+Healthy
+kubectl get applications -n argocd -o json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for item in data['items']:
+    name = item['metadata']['name']
+    sync = item['status']['sync']['status']
+    health = item['status']['health']['status']
+    if sync != 'Synced' or health != 'Healthy':
+        print(f'{name:45s} {sync:12s} {health}')
+"
 ```
 
 Expected progression (sync waves):
@@ -102,93 +167,33 @@ Expected progression (sync waves):
 4. **Wave 4+:** MinIO, Velero, Loki, Tempo, Pyroscope, Gatus, demo services
 
 All applications should reach `Synced` and `Healthy` within ~15-20 minutes on a
-fresh cluster. If any app is stuck, see the Troubleshooting section below.
+fresh cluster. The `staging-*` and `production-*` apps will show `Unknown`
+until those clusters are registered — that's expected.
 
-## Step 4 — Access the UI during bootstrap
+If any app is stuck, see the Troubleshooting section below.
 
-Port-forward to access the ArgoCD UI locally:
+## Step 8 — Rotate the admin password
 
-```bash
-kubectl port-forward svc/argocd-server -n argocd 8080:80
-```
-
-Open: http://localhost:8080
-
-Login: `admin` / (see Step 5)
-
-After the Gateway and DNS stack are synced, the durable URL is:
-
-```text
-https://argocd.platform.nqlabs.network
-```
-
-## Step 5 — Retrieve and rotate the admin password
+After the bootstrap is complete and SSO via Authentik is working, rotate the
+admin password and delete the initial secret:
 
 ```bash
-# Get the initial password
-kubectl -n argocd get secret argocd-initial-admin-secret \
-  -o jsonpath="{.data.password}" | base64 -d && echo
-```
+# Login to the UI, then change the password:
+# Settings → Account → Update Password
 
-Login to the UI, then immediately change the password:
-**Settings → Account → Update Password**
-
-After rotating, delete the initial secret:
-
-```bash
+# After rotating, delete the initial secret
 kubectl -n argocd delete secret argocd-initial-admin-secret
 ```
 
-## Step 6 — Verify git sync
-
-In the ArgoCD UI:
-- `root` application should show `Synced` and `Healthy`
-- `argocd` application should show `Synced` and `Healthy` after self-management syncs
-- It should reference the latest commit on `main`
-
-Current expected core apps after Phase 0 bootstrap:
-
-```text
-argo-rollouts
-argocd
-cert-manager
-cert-manager-config
-coredns-dns
-etcd-dns
-external-dns
-external-secrets
-external-secrets-config
-gateway
-kube-prometheus-stack
-local-path-provisioner
-loki
-monitoring-config
-promtail
-root
-tailscale-operator
-```
-
-Current expected AppProjects:
-
-```text
-platform
-services-staging
-services-production
-```
-
-All current platform Applications should use `project: platform`. The built-in
-`default` project still exists because ArgoCD creates it automatically, but new
-Applications should not use it.
-
 ## Cluster-specific values
 
-| Cluster | Node IP | k8sServiceHost |
-|---------|---------|----------------|
-| nqlabs-management | 192.168.15.31 | 192.168.15.31 |
-| nqlabs-staging | 192.168.15.32 | 192.168.15.32 |
-| nqlabs-production | 192.168.15.33 | 192.168.15.33 |
+| Cluster | VIP | k8sServiceHost |
+|---------|-----|----------------|
+| nqlabs-management | 192.168.15.9 | 192.168.15.9 |
+| nqlabs-staging | (future) | (future) |
+| nqlabs-production | (future) | (future) |
 
-Install Cilium with both value files so cluster identity stays declarative:
+Install Prometheus CRDs and Cilium before ArgoCD:
 
 ```bash
 helm template prometheus-operator-crds \
@@ -211,6 +216,10 @@ kubectl -n kube-system wait --for=condition=ready pod -l k8s-app=cilium --timeou
 the ServiceMonitor CRD may not be installed yet. Enable it later via GitOps once
 kube-prometheus-stack is synced.
 
+`--server-side=true` is required for the Prometheus CRDs because the
+`kubectl.kubernetes.io/last-applied-configuration` annotation exceeds the 256KB
+metadata limit on the large CRDs (alertmanagers, prometheuses, etc.).
+
 ## Adding new platform services
 
 Once ArgoCD is running, add new Application manifests to `clusters/nqlabs-management/argocd/apps/`.
@@ -231,7 +240,7 @@ Applications should use `services-staging` or `services-production` instead of
 ```
 clusters/nqlabs-management/argocd/apps/
 ├── root.yaml                       # Root app — applied once manually
-├── projects.yaml                   # AppProjects: platform, staging, production
+├── projects.yaml                   # AppProjects: platform, staging, production (apply BEFORE root)
 ├── argocd.yaml                     # ArgoCD self-management
 ├── cert-manager.yaml               # cert-manager + issuers/certs
 ├── external-secrets-operator.yaml  # ESO + 1Password SDK config
@@ -242,17 +251,33 @@ No `kubectl` or `helm install` needed for anything after bootstrap.
 
 ## Troubleshooting
 
-**Root app shows `OutOfSync`**
+**Root app shows `OutOfSync` or "app is not allowed in project"**
+- The `platform` AppProject doesn't exist yet. Apply it first:
+  `kubectl apply -f clusters/nqlabs-management/argocd/apps/projects.yaml`
+- Then refresh the root app:
+  `kubectl annotate app root -n argocd argocd.argoproj.io/refresh=normal`
+
+**Root app shows `OutOfSync` (after projects applied)**
 - Check if the commit on GitHub matches what ArgoCD shows
 - Click `Refresh` in the UI or: `kubectl annotate app root -n argocd argocd.argoproj.io/refresh=normal`
 
 **Pod stuck in `Pending`**
-- Check node resources: `kubectl describe pod <pod> -n argocd`
-- Single-node lab: all pods schedule on `talos-z9w-4rg`
+- Check node resources: `kubectl describe pod <pod> -n <namespace>`
+- Check if nodes are cordoned: `kubectl get nodes`
+- Uncordon if needed: `kubectl uncordon mgmt-01 mgmt-02 mgmt-03`
 
 **`argocd-server` not accessible via port-forward**
-- Ensure `server.insecure: "true"` is set in values (HTTP mode)
 - Try `kubectl port-forward svc/argocd-server -n argocd 8080:443` for HTTPS
+- Accept the self-signed certificate in the browser
+
+**Namespaces stuck in `Terminating` after teardown**
+- ArgoCD Application finalizers block deletion when the controller is gone.
+- Remove finalizers from all Applications:
+  `kubectl get applications.argoproj.io -n argocd -o name | xargs kubectl patch --type=json -p='[{"op":"remove","path":"/metadata/finalizers"}]'`
+- ExternalSecret finalizers also block — delete ESO validating webhooks first:
+  `kubectl delete validatingwebhookconfiguration externalsecret-validate secretstore-validate`
+  Then patch: `kubectl get externalsecrets.external-secrets.io -A -o name | xargs kubectl patch --type=json -p='[{"op":"remove","path":"/metadata/finalizers"}]'`
+- Then force-delete namespaces: `kubectl patch namespace <ns> --type=json -p='[{"op":"remove","path":"/metadata/finalizers"}]'`
 
 **cert-manager webhook not reachable (cert-manager pods CrashLoopBackOff)**
 - The `cert-manager-deny-ingress` NetworkPolicy blocks API server admission calls
@@ -281,3 +306,8 @@ No `kubectl` or `helm install` needed for anything after bootstrap.
 - The `disallow-host-path` policy uses a `deny` condition (not `pattern` with
   `X()`) because Kyverno transforms the `X(hostPath): null` pattern to `{}`,
   which breaks the validation and causes perpetual OutOfSync.
+
+**Prometheus CRDs fail to apply (metadata.annotations too long)**
+- Use `kubectl apply --server-side=true` instead of `kubectl apply`.
+- The CRDs are too large for the `kubectl.kubernetes.io/last-applied-configuration`
+  annotation (256KB limit).
