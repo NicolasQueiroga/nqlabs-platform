@@ -39,11 +39,16 @@ Data layer: CloudNativePG (`authentik-pg`) + Valkey (`authentik-valkey`) in the
 | `grafana-oidc` | client_secret | Grafana auth.generic_oauth + Authentik blueprint (!Env) |
 | `gatus-oidc` | client_secret | Gatus OIDC config + Authentik blueprint (!Env) |
 
-The first admin user is `akadmin`; its password is `authentik/bootstrap_password`.
+The canonical day-0 platform admin user is `nicolas`; its password is
+`authentik/bootstrap_password`.
+
+`akadmin` is still created by Authentik's upstream bootstrap flow as a fallback
+instance admin, but platform access policies are designed around the declarative
+`nicolas` user in `platform-admins`.
 
 ## Onboarding a user
 
-1. Log into `https://auth.platform.nqlabs.network` as `akadmin`.
+1. Log into `https://auth.platform.nqlabs.network` as `nicolas`.
 2. **Directory → Users → Create** (or connect a federated source later).
 3. Add the user to a group:
    - `platform-admins` — full admin across all UIs.

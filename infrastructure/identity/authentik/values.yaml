@@ -36,7 +36,10 @@ global:
         secretKeyRef:
           name: authentik-secrets
           key: redis_password
-    # Bootstrap the initial akadmin user + API token on first install.
+    # Bootstrap Authentik's built-in fallback admin + API token on first install.
+    # The canonical NQLabs day-0 operator user (`nicolas`) is created
+    # declaratively from the same vault-backed bootstrap password via
+    # `blueprints/10-groups.yaml`.
     - name: AUTHENTIK_BOOTSTRAP_PASSWORD
       valueFrom:
         secretKeyRef:

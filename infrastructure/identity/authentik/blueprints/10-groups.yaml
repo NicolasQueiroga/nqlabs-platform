@@ -57,6 +57,23 @@ entries:
     attrs:
       is_superuser: false
 
+  # ── Bootstrap platform admin user ─────────────────────────────────────
+  # Create the canonical human operator account from the same vault-backed
+  # bootstrap password used during the very first Authentik startup. This user
+  # is the expected day-0 admin for platform SSO, rather than relying on the
+  # upstream built-in `akadmin` account.
+  - id: user-nicolas
+    model: authentik_core.user
+    identifiers:
+      username: nicolas
+    attrs:
+      name: Nicolas
+      email: nicolas@nqlabs.network
+      is_active: true
+      password: !Env [AUTHENTIK_BOOTSTRAP_PASSWORD, ""]
+      groups:
+        - !Find [authentik_core.group, [name, platform-admins]]
+
   # ── OIDC groups scope mapping ─────────────────────────────────────────
   # Adds a `groups` claim to OIDC tokens so ArgoCD/Grafana can map group
   # membership to roles.
@@ -67,4 +84,4 @@ entries:
       scope_name: groups
       description: "NQLabs group membership"
       expression: |
-        return [group.name for group in request.user.ak_groups.all()]
+        return [group.name for group in request.user.groups.all()]
