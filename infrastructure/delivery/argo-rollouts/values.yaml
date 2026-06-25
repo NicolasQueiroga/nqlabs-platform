@@ -37,6 +37,20 @@ dashboard:
 
   replicas: 1
 
+  # Keep the dashboard private behind the Authentik/Tailscale path while also
+  # satisfying the baseline Kyverno seccomp/capability requirements.
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
   resources:
     requests:
       cpu: 10m

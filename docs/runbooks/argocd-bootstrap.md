@@ -15,19 +15,64 @@ ArgoCD itself.
 ## Prerequisites
 
 - Talos cluster running and `kubectl` configured
-- Cilium installed and nodes `Ready`
 - `helm` CLI installed
 - `clusters/nqlabs-management/` committed and pushed to GitHub
 - 1Password service account token (see [secrets.md](secrets.md))
 
-## Step 1 — Add Helm repo
+## Step 1 — Add Helm repos
 
 ```bash
 helm repo add argo https://argoproj.github.io/argo-helm
-helm repo update argo
+helm repo add cilium https://helm.cilium.io
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
 ```
 
-## Step 2 — Install ArgoCD (bootstrap values)
+## Step 2 — Install Prometheus Operator CRDs
+
+```bash
+helm template prometheus-operator-crds \
+  prometheus-community/prometheus-operator-crds \
+  --version 29.0.0 \
+  | kubectl apply --server-side=true -f -
+```
+
+`--server-side=true` is required because the large Prometheus CRDs exceed the
+256KB `kubectl.kubernetes.io/last-applied-configuration` annotation limit.
+
+## Step 3 — Install Gateway API CRDs (required before Cilium gateway apps)
+
+Cilium is configured with `gatewayAPI.enabled=true`, but the upstream Gateway
+API CRDs are not installed by default. Install them before Cilium / ArgoCD so
+`gateway`, `authentik`, and `external-dns` can sync cleanly on the first run.
+
+```bash
+./scripts/install-gateway-api-crds.sh
+```
+
+This installs Gateway API `v1.2.1` plus the experimental CRDs and verifies that
+`TLSRoute v1alpha2` is served, which Cilium 1.19.x still requires.
+
+## Step 4 — Install Cilium
+
+```bash
+helm upgrade --install cilium cilium/cilium \
+  --namespace kube-system \
+  --create-namespace \
+  --version 1.19.4 \
+  -f infrastructure/networking/cilium/values.yaml \
+  -f clusters/nqlabs-management/cilium/values.yaml \
+  --set hubble.metrics.serviceMonitor.enabled=false
+
+# Wait for Cilium agent pods to be ready (label is k8s-app=cilium, not app.kubernetes.io/name)
+kubectl -n kube-system wait --for=condition=ready pod -l k8s-app=cilium --timeout=120s
+```
+
+`hubble.metrics.serviceMonitor.enabled=false` is required at bootstrap because
+the ServiceMonitor CRD may not be installed yet. Enable it later via GitOps once
+kube-prometheus-stack is synced.
+
+## Step 5 — Install ArgoCD (bootstrap values)
 
 Use the bootstrap values file — it enables the admin user and omits
 `extraObjects` (which require ESO CRDs that don't exist yet). After GitOps
@@ -54,7 +99,7 @@ Expected pods:
 - `argocd-repo-server-*`
 - `argocd-server-*`
 
-## Step 3 — Get admin password and access the UI
+## Step 6 — Get admin password and access the UI
 
 ```bash
 # Get the initial password
@@ -78,7 +123,7 @@ After the Gateway and DNS stack are synced, the durable URL is:
 https://argocd.platform.nqlabs.network
 ```
 
-## Step 4 — Create the 1Password service account token secret
+## Step 7 — Create the 1Password service account token secret
 
 ESO needs a 1Password service account token to read secrets from the `NQLabs`
 vault. This is the trust root for all platform secrets and must be applied
@@ -99,7 +144,7 @@ op item get "Service Account Auth Token: NQ Labs" \
 
 See [secrets.md](secrets.md) for how to generate a new token and rotate it.
 
-## Step 5 — Apply AppProjects (BEFORE root Application)
+## Step 8 — Apply AppProjects (BEFORE root Application)
 
 The root Application references `project: platform` but ArgoCD can't sync it
 until the AppProject exists. This is a chicken-and-egg problem — apply the
@@ -117,7 +162,7 @@ kubectl get appprojects -n argocd
 # Additional service projects may exist, but remote-cluster fan-out is enabled later.
 ```
 
-## Step 6 — Apply the root Application (triggers 0-to-100 GitOps sync)
+## Step 9 — Apply the root Application (triggers 0-to-100 GitOps sync)
 
 This is the seed of the app-of-apps pattern. Applied once, manually.
 After this, all platform additions are git commits. The root app will also
@@ -135,7 +180,7 @@ kubectl get applications -n argocd
 # Expected: root   Synced   Healthy
 ```
 
-## Step 7 — Wait for 0-to-100 bootstrap
+## Step 10 — Wait for 0-to-100 bootstrap
 
 After applying the root Application, ArgoCD will begin syncing the
 **management-cluster platform stack only**. The sync follows the
@@ -179,7 +224,7 @@ All management applications should reach `Synced` and `Healthy` within
 
 If any app is stuck, see the Troubleshooting section below.
 
-## Step 8 — Rotate the admin password
+## Step 11 — Rotate the admin password
 
 After the bootstrap is complete and SSO via Authentik is working, rotate the
 admin password and delete the initial secret:
@@ -200,32 +245,11 @@ kubectl -n argocd delete secret argocd-initial-admin-secret
 | nqlabs-staging | (future) | (future) |
 | nqlabs-production | (future) | (future) |
 
-Install Prometheus CRDs and Cilium before ArgoCD:
+Bootstrap prerequisite summary:
 
-```bash
-helm template prometheus-operator-crds \
-  prometheus-community/prometheus-operator-crds \
-  --version 29.0.0 \
-  | kubectl apply --server-side=true -f -
-
-helm upgrade --install cilium cilium/cilium \
-  --namespace kube-system \
-  --version 1.19.4 \
-  -f infrastructure/networking/cilium/values.yaml \
-  -f clusters/<cluster>/cilium/values.yaml \
-  --set hubble.metrics.serviceMonitor.enabled=false
-
-# Wait for Cilium agent pods to be ready (label is k8s-app=cilium, not app.kubernetes.io/name)
-kubectl -n kube-system wait --for=condition=ready pod -l k8s-app=cilium --timeout=120s
-```
-
-`hubble.metrics.serviceMonitor.enabled=false` is required at bootstrap because
-the ServiceMonitor CRD may not be installed yet. Enable it later via GitOps once
-kube-prometheus-stack is synced.
-
-`--server-side=true` is required for the Prometheus CRDs because the
-`kubectl.kubernetes.io/last-applied-configuration` annotation exceeds the 256KB
-metadata limit on the large CRDs (alertmanagers, prometheuses, etc.).
+- Install Prometheus Operator CRDs first (Step 2)
+- Install Gateway API CRDs before Cilium / ArgoCD (Step 3)
+- Install Cilium and wait for agents to be `Ready` before bootstrapping ArgoCD (Step 4)
 
 ## Adding new platform services
 
@@ -286,6 +310,12 @@ No `kubectl` or `helm install` needed for anything after bootstrap.
 **`argocd-server` not accessible via port-forward**
 - Try `kubectl port-forward svc/argocd-server -n argocd 8080:443` for HTTPS
 - Accept the self-signed certificate in the browser
+
+**`gateway`, `authentik`, or `external-dns` fail with missing `HTTPRoute` / `Gateway` / `ReferenceGrant`**
+- The Gateway API CRDs were not installed before bootstrap.
+- Install them with: `./scripts/install-gateway-api-crds.sh`
+- Then hard-refresh or manually sync the affected apps (`gateway` first, then `authentik` / `external-dns`).
+- This is a prerequisite for the management bootstrap when Cilium has `gatewayAPI.enabled=true`.
 
 **Namespaces stuck in `Terminating` after teardown**
 - ArgoCD Application finalizers block deletion when the controller is gone.

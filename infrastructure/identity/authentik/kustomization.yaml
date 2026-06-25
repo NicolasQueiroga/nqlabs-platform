@@ -8,6 +8,10 @@ kind: Kustomization
 namespace: authentik
 
 resources:
+  # Create the namespace as a first-class resource so the first bootstrap sync
+  # can create ExternalSecrets/data-layer objects deterministically without
+  # relying on ArgoCD's namespace auto-creation timing.
+  - manifests/namespace.yaml
   - manifests/externalsecrets.yaml
   - manifests/postgres-cluster.yaml
   - manifests/postgres-backup.yaml
