@@ -87,29 +87,31 @@ spec:
         - protocol: TCP
           port: 9000
 ---
-# Allow the platform gateway (platform namespace) to reach authentik-server.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+# Allow the Cilium Gateway to reach authentik-server.
+# cilium-envoy runs with hostNetwork=true so it has no pod IP and no
+# Kubernetes NetworkPolicy identity — a standard NetworkPolicy with a
+# podSelector or namespaceSelector cannot match it. Cilium classifies
+# traffic that passed through its Ingress/Gateway dataplane as the
+# reserved "ingress" entity; CiliumNetworkPolicy is required here.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: authentik-allow-gateway
   namespace: authentik
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/component: server
       app.kubernetes.io/instance: authentik
-  policyTypes:
-    - Ingress
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: platform
-      ports:
-        - protocol: TCP
-          port: 80
+    - fromEntities:
+        - ingress
+      toPorts:
+        - ports:
+            - port: "9000"
+              protocol: TCP
 ---
 # Allow Prometheus (monitoring namespace) to scrape authentik-server metrics.
 apiVersion: networking.k8s.io/v1
