@@ -27,22 +27,12 @@ data:
     # Native OIDC integration with Authentik — no proxy needed.
     # Gatus uses ${VAR_NAME} syntax for env var interpolation in config.
     #
-    # issuer-url uses the internal cluster service URL because the Cilium
-    # gateway resets TLS connections from pods (hairpin/hairpinned traffic
-    # through the LoadBalancer IP).  Gatus fetches the OIDC discovery document
-    # from this URL at startup; if it cannot reach the issuer the pod crashes.
-    # The internal URL lets Gatus start successfully and validate tokens.
-    #
-    # Browser-based OIDC login will redirect to the internal URL (returned in
-    # the discovery document), which the user's browser cannot reach.  This is
-    # a known limitation until the Cilium gateway hairpin issue is resolved.
-    # See: https://github.com/cilium/cilium/issues/??? (gateway TLS hairpin)
-    #
-    # The redirect-url remains the external URL so that Authentik sends the
-    # authorization code back to the browser-reachable Gatus callback.
+    # Use the public Authentik issuer so the browser-facing OIDC discovery
+    # document and authorization endpoint both resolve to browser-reachable
+    # URLs during the login flow.
     security:
       oidc:
-        issuer-url: "http://authentik-server.authentik.svc.cluster.local:80/application/o/gatus/"
+        issuer-url: "https://auth.platform.nqlabs.network/application/o/gatus/"
         client-id: "${OIDC_CLIENT_ID}"
         client-secret: "${OIDC_CLIENT_SECRET}"
         redirect-url: "https://uptime.platform.nqlabs.network/authorization-code/callback"
