@@ -1,0 +1,26 @@
+# ServiceMonitor for Rook/Ceph metrics.
+#
+# Rook operator exposes Prometheus metrics on port 9282 (mgr prometheus module).
+# The rook-ceph-mgr service is created by the operator when the Ceph cluster
+# is reconciled. This ServiceMonitor scrapes the mgr metrics endpoint.
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rook-ceph-mgr
+  namespace: rook-ceph
+  labels:
+    app.kubernetes.io/name: rook-ceph
+    app.kubernetes.io/part-of: nqlabs-platform
+spec:
+  selector:
+    matchLabels:
+      app: rook-ceph-mgr
+  namespaceSelector:
+    matchNames:
+      - rook-ceph
+  endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s

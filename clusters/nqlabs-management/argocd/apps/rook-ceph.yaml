@@ -55,6 +55,7 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/enforce-version: latest
+        gateway-access: "true"
     retry:
       limit: 5
     syncOptions:
@@ -89,6 +90,11 @@ spec:
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
       ref: values
+
+    # Integration manifests: HTTPRoute, ServiceMonitor
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/storage/rook-ceph/manifests
 
   destination:
     server: https://kubernetes.default.svc
