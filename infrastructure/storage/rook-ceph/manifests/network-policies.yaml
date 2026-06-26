@@ -89,6 +89,29 @@ spec:
           protocol: TCP
 
 ---
+# Allow Gatus/monitoring to check the internal Ceph RGW S3 endpoint.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rook-ceph-allow-monitoring-rgw
+  namespace: rook-ceph
+spec:
+  podSelector:
+    matchLabels:
+      app: rook-ceph-rgw
+      rook_object_store: platform-object-store
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 80
+          protocol: TCP
+
+---
 # Allow Prometheus to scrape Ceph metrics (mgr prometheus module on 9282).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
