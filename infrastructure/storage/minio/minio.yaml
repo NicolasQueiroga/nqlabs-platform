@@ -2,6 +2,7 @@
 # Single instance; this is a backup TARGET, not durable storage. Offsite (Cloudflare
 # R2) is the production DR upgrade — see docs/runbooks/backup-velero.md.
 # Root creds (= S3 access/secret) come from 1Password item `velero-backup`.
+# Console OIDC client secret comes from 1Password item `minio-oidc`.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
@@ -21,6 +22,8 @@ spec:
       remoteRef: { key: velero-minio/access-key }
     - secretKey: MINIO_ROOT_PASSWORD
       remoteRef: { key: velero-minio/secret-key }
+    - secretKey: MINIO_IDENTITY_OPENID_CLIENT_SECRET
+      remoteRef: { key: minio-oidc/client_secret }
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -58,6 +61,11 @@ spec:
           args: ["server", "/data", "--console-address", ":9001"]
           envFrom:
             - secretRef: { name: minio-auth }
+          env:
+            - name: MINIO_IDENTITY_OPENID_CONFIG_URL
+              value: "https://auth.platform.nqlabs.network/application/o/minio/.well-known/openid-configuration"
+            - name: MINIO_IDENTITY_OPENID_CLIENT_ID
+              value: "minio"
           ports:
             - { name: s3, containerPort: 9000 }
             - { name: console, containerPort: 9001 }
@@ -161,9 +169,10 @@ spec:
             requests: { cpu: 25m, memory: 32Mi }
             limits: { memory: 128Mi }
 ---
-# HTTPRoute for the MinIO console — proxied through Authentik.
+# HTTPRoute for the MinIO console — native OIDC via Authentik.
 # The S3 API (port 9000) stays internal-only; only the console (port 9001)
-# is exposed through the gateway via the Authentik proxy outpost.
+# is exposed through the gateway. MinIO handles OIDC login itself, redirecting
+# to Authentik for authentication and accepting the returned token.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -184,6 +193,5 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: authentik-server
-          namespace: authentik
-          port: 80
+        - name: minio
+          port: 9001
