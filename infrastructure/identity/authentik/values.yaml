@@ -134,36 +134,21 @@ worker:
   livenessProbe:
     exec:
       command:
-        - celery
-        - -A
-        - authentik.root.celery
-        - inspect
-        - ping
-        - --timeout
-        - "5"
-        - -j
+        - authentik-server
+        - healthcheck
+        - worker
   readinessProbe:
     exec:
       command:
-        - celery
-        - -A
-        - authentik.root.celery
-        - inspect
-        - ping
-        - --timeout
-        - "5"
-        - -j
+        - authentik-server
+        - healthcheck
+        - worker
   startupProbe:
     exec:
       command:
-        - celery
-        - -A
-        - authentik.root.celery
-        - inspect
-        - ping
-        - --timeout
-        - "5"
-        - -j
+        - authentik-server
+        - healthcheck
+        - worker
   resources:
     requests:
       cpu: 100m
