@@ -38,6 +38,7 @@ spec:
     - https://vmware-tanzu.github.io/helm-charts
     - https://cloudnative-pg.github.io/charts
     - https://charts.goauthentik.io
+    - https://charts.rook.io/release
 
   # Platform apps are trusted and may target any namespace on the management
   # cluster (in-cluster) or the registered environment clusters.
