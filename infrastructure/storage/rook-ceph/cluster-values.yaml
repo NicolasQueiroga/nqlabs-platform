@@ -115,8 +115,11 @@ cephFileSystems: []
 cephObjectStores: []
 
 # Volume snapshots
+# Disabled for now: the cluster does not install the external snapshotter CRDs/controller
+# yet, so creating a VolumeSnapshotClass fails ArgoCD sync. Re-enable once the
+# snapshot.storage.k8s.io CRDs are part of the platform bootstrap.
 cephBlockPoolsVolumeSnapshotClass:
-  enabled: true
+  enabled: false
   name: ceph-block-snapshot
   isDefault: true
   parameters:
