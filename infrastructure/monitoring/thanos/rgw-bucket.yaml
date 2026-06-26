@@ -1,13 +1,5 @@
-# Provision a dedicated Thanos bucket on the internal Ceph RGW object store
-# and bridge the OBC-generated credentials into the objstore.yml format that
-# Thanos expects.
-#
-# The OBC creates:
-#   - ConfigMap/thanos-rgw  → BUCKET_HOST, BUCKET_PORT, BUCKET_NAME
-#   - Secret/thanos-rgw     → AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-#
-# The bridge Job templates these into Secret/thanos-objstore with the key
-# objstore.yml, which is the secret the Thanos Helm chart already references.
+# Provision a dedicated Thanos bucket on the internal Ceph RGW object store.
+# The OBC generates credentials that are used in the objstore secret below.
 ---
 apiVersion: objectbucket.io/v1alpha1
 kind: ObjectBucketClaim
@@ -22,154 +14,25 @@ spec:
   bucketName: thanos
   storageClassName: ceph-bucket
 ---
+# Thanos object-store config pointing at the internal Ceph RGW endpoint.
+# Credentials are the OBC-generated S3 user for the thanos bucket.
+# If the OBC is reprovisioned (new user), update these values.
 apiVersion: v1
-kind: ServiceAccount
+kind: Secret
 metadata:
-  name: thanos-objstore-bridge
+  name: thanos-objstore
   namespace: monitoring
   labels:
     app.kubernetes.io/name: thanos
-    app.kubernetes.io/component: objstore-bridge
+    app.kubernetes.io/component: objstore
     app.kubernetes.io/part-of: nqlabs-platform
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: thanos-objstore-bridge
-  namespace: monitoring
-  labels:
-    app.kubernetes.io/name: thanos
-    app.kubernetes.io/component: objstore-bridge
-    app.kubernetes.io/part-of: nqlabs-platform
-rules:
-  - apiGroups: [""]
-    resources: [secrets]
-    verbs: [get, create, update, patch]
-    resourceNames: [thanos-objstore]
-  # create verb requires permission without resourceNames
-  - apiGroups: [""]
-    resources: [secrets]
-    verbs: [create]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: thanos-objstore-bridge
-  namespace: monitoring
-  labels:
-    app.kubernetes.io/name: thanos
-    app.kubernetes.io/component: objstore-bridge
-    app.kubernetes.io/part-of: nqlabs-platform
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: thanos-objstore-bridge
-subjects:
-  - kind: ServiceAccount
-    name: thanos-objstore-bridge
-    namespace: monitoring
----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: thanos-objstore-bridge
-  namespace: monitoring
-  labels:
-    app.kubernetes.io/name: thanos
-    app.kubernetes.io/component: objstore-bridge
-    app.kubernetes.io/part-of: nqlabs-platform
-  annotations:
-    argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
-    argocd.argoproj.io/sync-options: Replace=true
-spec:
-  backoffLimit: 5
-  ttlSecondsAfterFinished: 300
-  template:
-    spec:
-      serviceAccountName: thanos-objstore-bridge
-      restartPolicy: OnFailure
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        seccompProfile:
-          type: RuntimeDefault
-      containers:
-        - name: bridge
-          image: bitnami/kubectl:1.32
-          command: ["sh", "-c"]
-          args:
-            - |
-              set -eu
-
-              echo "Waiting for OBC artifacts..."
-              for i in $(seq 1 60); do
-                if [ -f /bucket/BUCKET_HOST ] && [ -f /bucket/BUCKET_NAME ] && \
-                   [ -f /creds/AWS_ACCESS_KEY_ID ] && [ -f /creds/AWS_SECRET_ACCESS_KEY ]; then
-                  break
-                fi
-                echo "  OBC not ready yet ($i/60)..."
-                sleep 5
-              done
-
-              HOST=$(cat /bucket/BUCKET_HOST)
-              PORT=$(cat /bucket/BUCKET_PORT)
-              NAME=$(cat /bucket/BUCKET_NAME)
-              AK=$(cat /creds/AWS_ACCESS_KEY_ID)
-              SK=$(cat /creds/AWS_SECRET_ACCESS_KEY)
-
-              echo "Templating objstore.yml for bucket=$NAME endpoint=$HOST:$PORT"
-              cat > /tmp/objstore.yml <<EOF
-              type: S3
-              config:
-                bucket: ${NAME}
-                endpoint: ${HOST}:${PORT}
-                access_key: ${AK}
-                secret_key: ${SK}
-                insecure: true
-                signature_version2: false
-              EOF
-
-              # Remove leading whitespace from heredoc
-              sed -i 's/^              //' /tmp/objstore.yml
-
-              echo "Applying Secret/thanos-objstore..."
-              kubectl create secret generic thanos-objstore \
-                --namespace=monitoring \
-                --from-file=objstore.yml=/tmp/objstore.yml \
-                --dry-run=client -o yaml | kubectl apply -f -
-
-              echo "Done — Thanos objstore secret updated for RGW"
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop:
-                - ALL
-          resources:
-            requests:
-              cpu: 25m
-              memory: 64Mi
-            limits:
-              memory: 128Mi
-          volumeMounts:
-            - name: bucket-config
-              mountPath: /bucket
-              readOnly: true
-            - name: bucket-credentials
-              mountPath: /creds
-              readOnly: true
-            - name: tmp
-              mountPath: /tmp
-      volumes:
-        - name: bucket-config
-          configMap:
-            name: thanos-rgw
-            optional: true
-        - name: bucket-credentials
-          secret:
-            secretName: thanos-rgw
-            optional: true
-        - name: tmp
-          emptyDir: {}
+stringData:
+  objstore.yml: |
+    type: S3
+    config:
+      bucket: thanos
+      endpoint: rook-ceph-rgw-platform-object-store.rook-ceph.svc:80
+      access_key: ZE5QAWLSEW3QOFX4AZ9X
+      secret_key: ZTqXJDSyAnihFY79Ni4voUOTQHYb4laBODhFKF1G
+      insecure: true
+      signature_version2: false
