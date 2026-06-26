@@ -22,7 +22,7 @@ spec:
     targetRevision: HEAD
     path: infrastructure/monitoring
     directory:
-      include: "{externalsecrets.yaml,routes.yaml,datasources.yaml,blackbox-probes.yaml,blackbox-rules.yaml,security-rules.yaml,observability-rules.yaml,alertmanager-discord.yaml,network-policies.yaml}"
+      include: "{externalsecrets.yaml,routes.yaml,datasources.yaml,blackbox-probes.yaml,blackbox-rules.yaml,security-rules.yaml,observability-rules.yaml,alertmanager-discord.yaml,network-policies.yaml,viewer-platform-overview-dashboard.yaml}"
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring

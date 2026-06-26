@@ -5,7 +5,10 @@
 #
 # Group hierarchy:
 #   platform-admins  → full admin everywhere (Authentik superuser + admin role in apps)
-#   platform-viewers → read-only on OIDC apps (ArgoCD, Grafana); no forward-auth access
+#   platform-viewers → read-only on OIDC apps plus safe observability/proxy UIs
+#                      (ArgoCD, Grafana, Gatus, Prometheus, Thanos, Pyroscope,
+#                      Hubble). Deliberately excluded from Alertmanager and
+#                      Rollouts until stricter read-only enforcement exists.
 #   sre              → access to all platform tools (not Authentik superuser)
 #   data             → Grafana + Prometheus only
 #   demo-app         → ArgoCD (own project) + Rollouts dashboard
@@ -57,6 +60,35 @@ entries:
     attrs:
       is_superuser: false
 
+  # ── Bootstrap platform admin user ─────────────────────────────────────
+  # Create the canonical human operator account from the same vault-backed
+  # bootstrap password used during the very first Authentik startup. This user
+  # is the expected day-0 admin for platform SSO, rather than relying on the
+  # upstream built-in `akadmin` account.
+  - id: user-nicolas
+    model: authentik_core.user
+    identifiers:
+      username: nicolas
+    attrs:
+      name: Nicolas
+      email: nicolas@nqlabs.io
+      is_active: true
+      password: !Env [AUTHENTIK_BOOTSTRAP_PASSWORD, ""]
+      groups:
+        - !Find [authentik_core.group, [name, platform-admins]]
+
+  - id: user-dummy
+    model: authentik_core.user
+    identifiers:
+      username: dummy
+    attrs:
+      name: Dummy
+      email: dummy@nqlabs.io
+      is_active: true
+      password: !Env [AUTHENTIK_BOOTSTRAP_PASSWORD, ""]
+      groups:
+        - !Find [authentik_core.group, [name, platform-viewers]]
+
   # ── OIDC groups scope mapping ─────────────────────────────────────────
   # Adds a `groups` claim to OIDC tokens so ArgoCD/Grafana can map group
   # membership to roles.
@@ -67,4 +99,4 @@ entries:
       scope_name: groups
       description: "NQLabs group membership"
       expression: |
-        return [group.name for group in request.user.ak_groups.all()]
+        return [group.name for group in request.user.groups.all()]

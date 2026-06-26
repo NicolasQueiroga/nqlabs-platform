@@ -200,7 +200,8 @@ entries:
       group: Platform
 
   # ── Gatus group bindings ───────────────────────────────────────────────
-  # platform-admins + sre only (monitoring config is sensitive)
+  # platform-admins + sre → full access
+  # platform-viewers → read-only status visibility
   - model: authentik_policies.policybinding
     identifiers:
       target: !KeyOf gatus-app
@@ -210,6 +211,12 @@ entries:
   - model: authentik_policies.policybinding
     identifiers:
       target: !KeyOf gatus-app
-      group: !Find [authentik_core.group, [name, sre]]
+      group: !Find [authentik_core.group, [name, platform-viewers]]
     attrs:
       order: 20
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf gatus-app
+      group: !Find [authentik_core.group, [name, sre]]
+    attrs:
+      order: 30

@@ -34,3 +34,5 @@ spec:
         - ports:
             - port: "3100"
               protocol: TCP
+            - port: "8090"
+              protocol: TCP

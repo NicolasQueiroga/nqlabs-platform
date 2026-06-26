@@ -383,7 +383,7 @@ Config: `infrastructure/security/falco/values.yaml`
 | Namespace | `authentik` |
 | Chart | `authentik/authentik` |
 | URL | `auth.platform.nqlabs.network` |
-| Admin user | `akadmin` (password in 1Password: `authentik/bootstrap_password`) |
+| Admin user | `nicolas` (password in 1Password: `authentik/bootstrap_password`; upstream `akadmin` remains break-glass only) |
 | API token | 1Password: `authentik/bootstrap_token` |
 | Database | CloudNativePG (`authentik-pg`) |
 | Cache | Valkey (`authentik-valkey`) |

@@ -36,7 +36,8 @@ entries:
 
   # ── Prometheus group bindings ─────────────────────────────────────────
   # platform-admins + sre → full access (no internal RBAC)
-  # data → query access (path-level restriction is Phase 2 OPA)
+  # platform-viewers + data → query visibility
+  # (path-level restriction is Phase 2 OPA)
   - model: authentik_policies.policybinding
     identifiers:
       target: !KeyOf prometheus-app
@@ -52,9 +53,15 @@ entries:
   - model: authentik_policies.policybinding
     identifiers:
       target: !KeyOf prometheus-app
-      group: !Find [authentik_core.group, [name, data]]
+      group: !Find [authentik_core.group, [name, platform-viewers]]
     attrs:
       order: 30
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf prometheus-app
+      group: !Find [authentik_core.group, [name, data]]
+    attrs:
+      order: 40
 
   # ── Alertmanager ────────────────────────────────────────────────────────
   - id: alertmanager-provider
@@ -166,7 +173,8 @@ entries:
       group: Platform
 
   # ── Hubble group bindings ─────────────────────────────────────────────
-  # platform-admins + sre only (network flow visibility is sensitive).
+  # platform-admins + sre → full observability access
+  # platform-viewers → read-only network visibility
   - model: authentik_policies.policybinding
     identifiers:
       target: !KeyOf hubble-app
@@ -179,6 +187,12 @@ entries:
       group: !Find [authentik_core.group, [name, sre]]
     attrs:
       order: 20
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf hubble-app
+      group: !Find [authentik_core.group, [name, platform-viewers]]
+    attrs:
+      order: 30
 
   # ── Thanos Query ───────────────────────────────────────────────────────
   - id: thanos-provider
@@ -216,6 +230,12 @@ entries:
       group: !Find [authentik_core.group, [name, sre]]
     attrs:
       order: 20
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf thanos-app
+      group: !Find [authentik_core.group, [name, platform-viewers]]
+    attrs:
+      order: 30
 
   # ── Pyroscope ──────────────────────────────────────────────────────────
   - id: pyroscope-provider
@@ -253,6 +273,12 @@ entries:
       group: !Find [authentik_core.group, [name, sre]]
     attrs:
       order: 20
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf pyroscope-app
+      group: !Find [authentik_core.group, [name, platform-viewers]]
+    attrs:
+      order: 30
 
   # ── Attach all proxy providers to the embedded outpost ────────────────────
   - model: authentik_outposts.outpost

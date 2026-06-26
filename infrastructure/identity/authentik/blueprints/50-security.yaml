@@ -18,7 +18,7 @@ entries:
   # Minimum 12 chars, at least 1 uppercase, 1 lowercase, 1 digit, 1 symbol.
   # No reuse of last 3 passwords. Passwords expire after 365 days.
   - id: nqlabs-password-policy
-    model: authentik_policies.password.passwordpolicy
+    model: authentik_policies_password.passwordpolicy
     identifiers:
       name: nqlabs-password-policy
     attrs:
@@ -45,6 +45,7 @@ entries:
       configure_flow:
         !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
       friendly_name: "Authenticator App"
+      digits: 6
 
   # ── Session timeout ────────────────────────────────────────────────────
   # Applied via the default authentication flow's session configuration.
