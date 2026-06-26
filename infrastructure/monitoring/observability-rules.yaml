@@ -110,14 +110,8 @@ spec:
           annotations:
             summary: "Thanos Receive is down"
             description: "Remote-write ingestion is unavailable."
-        - alert: NQLabsRemoteMetricsMissing
-          expr: absent(up{cluster="nqlabs-staging"}) or absent(up{cluster="nqlabs-production"})
-          for: 10m
-          labels:
-            severity: critical
-          annotations:
-            summary: "Remote cluster metrics missing"
-            description: "No metrics are arriving from staging or production."
+        # Deferred during management-only bootstrap. Re-enable when the root
+        # Application starts syncing remote Prometheus agents again.
         - alert: NQLabsOtelCollectorDown
           expr: up{job="otel-collector"} == 0
           for: 5m
@@ -146,21 +140,21 @@ spec:
     - name: nqlabs.identity.availability
       rules:
         - alert: NQLabsAuthentikServerDown
-          expr: up{job=~".*authentik.*server.*"} == 0 or absent(up{job=~".*authentik.*server.*"})
+          expr: kube_deployment_status_replicas_available{namespace="authentik",deployment="authentik-server"} < 1
           for: 5m
           labels:
             severity: critical
           annotations:
             summary: "Authentik server is down"
-            description: "Authentik server is not responding to Prometheus scrape. SSO and forward-auth are unavailable."
+            description: "Authentik server deployment has no available replicas. SSO and forward-auth are unavailable."
         - alert: NQLabsAuthentikWorkerDown
-          expr: up{job=~".*authentik.*worker.*"} == 0 or absent(up{job=~".*authentik.*worker.*"})
+          expr: kube_deployment_status_replicas_available{namespace="authentik",deployment="authentik-worker"} < 1
           for: 5m
           labels:
             severity: warning
           annotations:
             summary: "Authentik worker is down"
-            description: "Authentik worker is not responding. Blueprint reconciliation and background tasks are stalled."
+            description: "Authentik worker deployment has no available replicas. Blueprint reconciliation and background tasks are stalled."
         - alert: NQLabsAuthentikPostgresDown
           expr: cnpg_pg_status{cluster="authentik-pg"} == 0 or absent(cnpg_pg_status{cluster="authentik-pg"})
           for: 5m
@@ -170,13 +164,13 @@ spec:
             summary: "Authentik PostgreSQL is down"
             description: "CNPG cluster authentik-pg is not healthy. Authentik cannot persist sessions or users."
         - alert: NQLabsAuthentikValkeyDown
-          expr: up{job=~".*valkey.*"} == 0 or absent(up{job=~".*valkey.*"})
+          expr: kube_statefulset_status_replicas_ready{namespace="authentik",statefulset="authentik-valkey"} < 1
           for: 5m
           labels:
             severity: warning
           annotations:
             summary: "Authentik Valkey is down"
-            description: "Valkey cache/broker is down. Authentik performance degraded, Celery tasks stalled."
+            description: "Valkey cache/broker has no ready replicas. Authentik performance degraded, Celery tasks stalled."
         - alert: NQLabsAuthentikPostgresBackupFailing
           expr: cnpg_backup_last_failed_timestamp_seconds{cluster="authentik-pg"} > cnpg_backup_last_succeeded_timestamp_seconds{cluster="authentik-pg"}
           for: 1h

@@ -102,8 +102,6 @@ spec:
         - https://argocd.platform.nqlabs.network
         - https://grafana.platform.nqlabs.network
         - https://uptime.platform.nqlabs.network
-        - https://demo.staging.nqlabs.network:31132
-        - https://demo.production.nqlabs.network:32027
 
 ---
 apiVersion: monitoring.coreos.com/v1

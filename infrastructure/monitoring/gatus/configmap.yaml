@@ -114,20 +114,6 @@ data:
         conditions:
           - "[STATUS] == 301"
 
-      - name: Demo Staging
-        group: Services / Staging
-        url: https://demo.staging.nqlabs.network:31132
-        interval: 1m
-        conditions:
-          - "[STATUS] == 200"
-
-      - name: Demo Production
-        group: Services / Production
-        url: https://demo.production.nqlabs.network:32027
-        interval: 1m
-        conditions:
-          - "[STATUS] == 200"
-
       - name: Thanos Query
         group: Observability
         url: http://thanos-query-frontend.monitoring.svc.cluster.local:9090/-/healthy

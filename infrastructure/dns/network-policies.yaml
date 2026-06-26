@@ -59,3 +59,30 @@ spec:
       ports:
         - port: 2379
           protocol: TCP
+---
+# Allow Prometheus in monitoring namespace to scrape dns namespace metrics.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dns-allow-monitoring-metrics
+  namespace: dns
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          - coredns
+          - external-dns
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 9153
+          protocol: TCP
+        - port: 7979
+          protocol: TCP

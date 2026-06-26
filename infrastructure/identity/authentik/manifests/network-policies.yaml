@@ -235,6 +235,13 @@ spec:
       ports:
         - protocol: TCP
           port: 8000
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9187
 ---
 # Allow CNPG instance manager (authentik-pg-*) to call the Kubernetes API
 # server. In Cilium, egress to the kube-apiserver should use the

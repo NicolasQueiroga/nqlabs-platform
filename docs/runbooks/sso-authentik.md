@@ -33,14 +33,14 @@ Data layer: CloudNativePG (`authentik-pg`) + Valkey (`authentik-valkey`) in the
 
 | 1Password item | Fields | Used by |
 |----------------|--------|---------|
-| `authentik` | secret_key, bootstrap_password, bootstrap_token, redis_password | Authentik server/worker |
+| `authentik-login` | secret_key, bootstrap_password, bootstrap_token, redis_password | Authentik server/worker |
 | `authentik-postgres` | password | CNPG cluster + Authentik |
 | `argocd-oidc` | client_secret | ArgoCD oidc.config + Authentik blueprint (!Env) |
 | `grafana-oidc` | client_secret | Grafana auth.generic_oauth + Authentik blueprint (!Env) |
 | `gatus-oidc` | client_secret | Gatus OIDC config + Authentik blueprint (!Env) |
 
 The canonical day-0 platform admin user is `nicolas`; its password is
-`authentik/bootstrap_password`.
+`authentik-login/bootstrap_password`.
 
 `akadmin` is still created by Authentik's upstream bootstrap flow as a fallback
 instance admin, but platform access policies are designed around the declarative
@@ -81,7 +81,7 @@ there and map them to roles in the consuming app (ArgoCD `policy.csv`, Grafana
 - **Blueprints** reconcile automatically (mounted ConfigMap, discovered by the
   worker). After editing, sync the `authentik` app; the worker re-applies within
   ~minutes. Force: `kubectl exec -n authentik deploy/authentik-worker -- ak apply_blueprint /blueprints/mounted/cm-authentik-blueprints/<file>.yaml`.
-- **API token** for scripting: `authentik/bootstrap_token` (Bearer).
+- **API token** for scripting: `authentik-login/bootstrap_token` (Bearer).
 - **Outpost health:** `GET /api/v3/outposts/instances/` — the embedded outpost
   should list the proxy provider PKs and a recent `last_seen`.
 - **Gotcha:** Authentik blueprint `!Env` tags need a default — `!Env [VAR, ""]`,
