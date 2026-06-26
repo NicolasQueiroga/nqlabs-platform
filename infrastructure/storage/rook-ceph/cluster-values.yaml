@@ -27,13 +27,13 @@ cephClusterSpec:
       - name: pg_autoscaler
         enabled: true
 
-  # Dashboard enabled — served over HTTP internally because the public Cilium
-  # gateway terminates TLS. On this cluster version, Cilium 1.19 does not
-  # support BackendTLSPolicy, so HTTPS re-encryption to Ceph's self-signed
-  # backend is not a graceful option.
+  # Dashboard enabled — served with HTTPS by Ceph itself. The public Cilium
+  # gateway still terminates client TLS, but because Cilium 1.19 lacks
+  # BackendTLSPolicy support we bridge back to Ceph's self-signed HTTPS
+  # dashboard through an internal reverse proxy instead of direct re-encryption.
   dashboard:
     enabled: true
-    ssl: false
+    ssl: true
 
   # Use all 3 nodes, target sdb specifically
   storage:

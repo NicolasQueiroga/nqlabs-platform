@@ -1,13 +1,13 @@
 # Deprecated placeholder.
 #
-# Cilium 1.19 does not implement Gateway API BackendTLSPolicy, so a graceful
-# GitOps-managed HTTPS re-encryption path to Ceph's self-signed dashboard is not
-# available on this cluster version.
+# Cilium 1.19 does not implement Gateway API BackendTLSPolicy, so the gateway
+# cannot re-encrypt directly to Ceph's self-signed HTTPS dashboard.
 #
-# The Ceph dashboard is therefore served over HTTP inside the cluster (Ceph uses
-# plain HTTP on the existing dashboard port), while the public Cilium Gateway
-# listener terminates TLS for clients.
+# Instead, the public HTTPRoute targets an internal reverse proxy that accepts
+# the gateway's plain HTTP hop and then connects to Ceph over HTTPS upstream.
+# This preserves native SAML's HTTPS expectations without relying on
+# BackendTLSPolicy support in the gateway dataplane.
 #
 # Keep this file as documentation until the platform upgrades to a Cilium
 # release that fully supports BackendTLSPolicy. At that point we can revisit
-# whether end-to-end HTTPS to the Ceph dashboard is desirable.
+# whether the extra reverse proxy hop is still necessary.

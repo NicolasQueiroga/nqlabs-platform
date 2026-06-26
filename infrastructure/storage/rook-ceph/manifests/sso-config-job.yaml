@@ -3,7 +3,7 @@
 # This Job runs as an ArgoCD PostSync hook after the rook-ceph-cluster app
 # is synced. It:
 #   1. Waits for the Ceph cluster to be ready
-#   2. Forces the dashboard to plain HTTP and reloads the mgr dashboard module
+#   2. Forces the dashboard to HTTPS and reloads the mgr dashboard module
 #   3. Downloads the Authentik SAML IdP metadata (via internal service)
 #   4. Configures and enables SAML2 SSO on the Ceph dashboard
 #   5. Reconciles dashboard users matching Authentik email attributes
@@ -75,26 +75,27 @@ spec:
                 exit 1
               fi
 
-              # Force the dashboard to plain HTTP. On this cluster version,
-              # Cilium 1.19 cannot re-encrypt to Ceph's self-signed HTTPS backend
-              # because BackendTLSPolicy is not implemented yet.
-              echo "Switching Ceph dashboard to plain HTTP..."
-              $CEPH config set mgr mgr/dashboard/ssl false
+              # Keep the dashboard on HTTPS so native SAML sees the request
+              # as HTTPS during ACS validation. Cilium 1.19 cannot re-encrypt
+              # directly to Ceph with BackendTLSPolicy, so an internal reverse
+              # proxy bridges the gateway's HTTP hop back to this HTTPS backend.
+              echo "Switching Ceph dashboard to HTTPS..."
+              $CEPH config set mgr mgr/dashboard/ssl true
               $CEPH mgr module disable dashboard
               $CEPH mgr module enable dashboard
 
-              echo "Waiting for dashboard service to speak HTTP..."
+              echo "Waiting for dashboard service to speak HTTPS..."
               for i in $(seq 1 24); do
                 DASHBOARD_URL=$($CEPH mgr services 2>/dev/null | python3 -c 'import sys,json; print(json.load(sys.stdin).get("dashboard", ""))')
-                if echo "$DASHBOARD_URL" | grep -q '^http://'; then
+                if echo "$DASHBOARD_URL" | grep -q '^https://'; then
                   echo "Dashboard protocol switched: $DASHBOARD_URL"
                   break
                 fi
                 echo "  dashboard still not switched, retrying in 5s... ($i/24)"
                 sleep 5
               done
-              if ! $CEPH mgr services 2>/dev/null | python3 -c 'import sys,json; import re; sys.exit(0 if re.match(r"^http://", json.load(sys.stdin).get("dashboard", "")) else 1)'; then
-                echo "ERROR: Dashboard did not switch to HTTP in time"
+              if ! $CEPH mgr services 2>/dev/null | python3 -c 'import sys,json; import re; sys.exit(0 if re.match(r"^https://", json.load(sys.stdin).get("dashboard", "")) else 1)'; then
+                echo "ERROR: Dashboard did not switch to HTTPS in time"
                 exit 1
               fi
 

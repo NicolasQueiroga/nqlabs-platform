@@ -2,8 +2,8 @@
 #
 # Ceph pods (MON, MGR, OSD) communicate extensively with each other.
 # We allow intra-namespace traffic + specific external ingress:
-#   - Cilium gateway → MGR dashboard (7000) — SAML SSO handles auth
-#   - Monitoring/Gatus → MGR dashboard health endpoint (7000)
+#   - Cilium gateway → Ceph dashboard reverse proxy (8080)
+#   - Monitoring/Gatus → Ceph dashboard reverse proxy health endpoint (8080)
 #   - Prometheus → MGR metrics (9282)
 #
 # No deny-all policy: Ceph internal traffic uses many dynamic ports
@@ -47,8 +47,8 @@ spec:
         - cidr: 192.168.15.0/24
 
 ---
-# Allow Cilium Gateway API to reach the Ceph dashboard directly.
-# SAML SSO handles authentication — no proxy provider needed.
+# Allow Cilium Gateway API to reach the Ceph dashboard reverse proxy.
+# The proxy then bridges to Ceph's native HTTPS dashboard so SAML sees HTTPS.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -57,17 +57,17 @@ metadata:
 spec:
   endpointSelector:
     matchLabels:
-      app: rook-ceph-mgr
+      app: ceph-dashboard-proxy
   ingress:
     - fromEntities:
         - ingress
       toPorts:
         - ports:
-            - port: "7000"
+            - port: "8080"
               protocol: TCP
 
 ---
-# Allow Gatus/monitoring to check the Ceph dashboard backend health.
+# Allow Gatus/monitoring to check the Ceph dashboard proxy health.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -76,7 +76,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: rook-ceph-mgr
+      app: ceph-dashboard-proxy
   policyTypes:
     - Ingress
   ingress:
@@ -85,7 +85,7 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: monitoring
       ports:
-        - port: 7000
+        - port: 8080
           protocol: TCP
 
 ---
