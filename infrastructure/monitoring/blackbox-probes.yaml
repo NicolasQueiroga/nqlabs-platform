@@ -1,12 +1,15 @@
 # Blackbox endpoint probes — NQLabs Platform
 #
-# Split into two probe types after Authentik forward-auth rollout:
+# Probe types:
 # 1. Internal service health probes — hit service endpoints directly, expect 2xx
-# 2. Edge auth probes — hit public URLs through gateway, expect 302 to Authentik
+# 2. Internal redirect-aware probes — services that may return 200 or 302
+# 3. Edge auth probes — forward-auth protected public URLs, expect 302
+# 4. Edge SAML probes — native SSO public URLs, expect 302 into the SSO flow
+# 5. Edge OIDC probes — native OIDC apps that serve public login pages (2xx)
 #
-# OIDC services (ArgoCD, Grafana, Gatus) serve login pages at public URLs, so
-# they remain as edge probes expecting 2xx. Forward-auth services (Prometheus,
-# Alertmanager, Rollouts, Hubble) are split into internal + edge-auth probes.
+# Forward-auth services (Prometheus, Alertmanager, Rollouts, Hubble) are split
+# into internal + edge-auth probes. Ceph uses native SAML SSO, so it has its own
+# internal redirect-aware probe plus a dedicated edge SAML redirect probe.
 
 ---
 # Internal service health probes — verify backends are up (bypass gateway/auth)
@@ -45,20 +48,20 @@ spec:
         - http://gatus.monitoring.svc.cluster.local:8080/health
 
 ---
-# Internal health probe for self-signed HTTPS services (e.g. Ceph dashboard)
+# Internal redirect-aware probe for services that may return 302 when SSO is enabled.
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
 metadata:
-  name: nqlabs-internal-health-insecure
+  name: nqlabs-internal-health-redirects
   namespace: monitoring
   labels:
     app.kubernetes.io/name: blackbox-exporter
-    nqlabs.network/component: internal-health-probes-insecure
+    nqlabs.network/component: internal-health-probes-redirects
 spec:
-  jobName: nqlabs-internal-health-insecure
+  jobName: nqlabs-internal-health-redirects
   interval: 30s
   scrapeTimeout: 10s
-  module: http_2xx_internal_insecure
+  module: http_200_302_internal
   prober:
     url: blackbox-exporter.monitoring.svc.cluster.local:9115
     scheme: http
@@ -67,13 +70,13 @@ spec:
     staticConfig:
       labels:
         cluster: lab
-        probe_scope: internal-health
+        probe_scope: internal-health-redirects
       static:
-        # Ceph dashboard — mgr dashboard on port 8443 (HTTPS, self-signed)
-        - https://rook-ceph-mgr-dashboard.rook-ceph.svc.cluster.local:8443/
+        # Ceph dashboard — mgr dashboard speaks HTTP on port 8443 internally
+        - http://rook-ceph-mgr-dashboard.rook-ceph.svc.cluster.local:8443/
 
 ---
-# Edge auth probes — verify public URLs redirect to Authentik (forward-auth)
+# Edge auth probes — verify forward-auth protected public URLs redirect (302)
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
 metadata:
@@ -86,7 +89,7 @@ spec:
   jobName: nqlabs-edge-auth
   interval: 30s
   scrapeTimeout: 10s
-  module: http_302_auth
+  module: http_302_redirect
   prober:
     url: blackbox-exporter.monitoring.svc.cluster.local:9115
     scheme: http
@@ -101,6 +104,32 @@ spec:
         - https://alertmanager.platform.nqlabs.network
         - https://rollouts.platform.nqlabs.network
         - https://hubble.platform.nqlabs.network
+
+---
+# Edge SAML probes — verify native SSO public URLs redirect into the SAML flow.
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: nqlabs-edge-saml
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: blackbox-exporter
+    nqlabs.network/component: edge-saml-probes
+spec:
+  jobName: nqlabs-edge-saml
+  interval: 30s
+  scrapeTimeout: 10s
+  module: http_302_redirect
+  prober:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+    scheme: http
+    path: /probe
+  targets:
+    staticConfig:
+      labels:
+        cluster: lab
+        probe_scope: edge-saml
+      static:
         - https://ceph.platform.nqlabs.network
 
 ---

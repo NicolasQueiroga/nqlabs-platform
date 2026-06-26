@@ -21,7 +21,7 @@ config:
         tls_config:
           insecure_skip_verify: false
 
-    # Internal endpoint probing for services with self-signed TLS (e.g. Ceph dashboard).
+    # Internal endpoint probing for services with self-signed TLS.
     http_2xx_internal_insecure:
       prober: http
       timeout: 10s
@@ -32,9 +32,19 @@ config:
         tls_config:
           insecure_skip_verify: true
 
-    # Edge auth probe for forward-auth protected endpoints.
-    # Expects 302 redirect to Authentik login page. Does NOT follow redirects.
-    http_302_auth:
+    # Internal endpoints that may return either 200 or 302 when unauthenticated.
+    http_200_302_internal:
+      prober: http
+      timeout: 10s
+      http:
+        valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+        follow_redirects: false
+        preferred_ip_protocol: ip4
+        valid_status_codes: [200, 302]
+
+    # Edge redirect probe for SSO/forward-auth protected endpoints.
+    # Expects a 302 redirect and does NOT follow redirects.
+    http_302_redirect:
       prober: http
       timeout: 10s
       http:

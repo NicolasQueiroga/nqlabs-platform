@@ -181,6 +181,33 @@ spec:
         - protocol: TCP
           port: 9000
 ---
+# Allow rook-ceph namespace pods to reach authentik-server over HTTP.
+# Required for the Ceph SAML bootstrap Job to download IdP metadata.
+# Service port 80 targets container port 9000, so the NetworkPolicy must
+# allow the pod port (9000), not the Service port (80).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: authentik-allow-rook-ceph-http
+  namespace: authentik
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: server
+      app.kubernetes.io/instance: authentik
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: rook-ceph
+      ports:
+        - protocol: TCP
+          port: 9000
+---
 # Allow authentik server/worker to reach Valkey (cache + Celery broker).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -246,6 +273,7 @@ spec:
 ---
 # Allow the embedded proxy outpost in authentik-server to reach the protected
 # backend UIs it reverse-proxies after login.
+# Ceph Dashboard is no longer proxied here; it uses native SAML SSO instead.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -288,21 +316,6 @@ spec:
           port: 80
         - protocol: TCP
           port: 8081
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: rook-ceph
-      ports:
-        - protocol: TCP
-          port: 8443
-    # During Ceph daemon network transitions, the dashboard endpoint can be a
-    # hostNetwork node IP. Keep the proxy able to reach it.
-    - to:
-        - ipBlock:
-            cidr: 192.168.15.0/24
-      ports:
-        - protocol: TCP
-          port: 8443
 ---
 # Allow authentik server/worker egress to Valkey and Postgres within namespace.
 apiVersion: networking.k8s.io/v1

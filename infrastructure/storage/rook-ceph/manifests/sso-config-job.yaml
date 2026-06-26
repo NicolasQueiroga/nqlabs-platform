@@ -3,9 +3,10 @@
 # This Job runs as an ArgoCD PostSync hook after the rook-ceph-cluster app
 # is synced. It:
 #   1. Waits for the Ceph cluster to be ready
-#   2. Downloads the Authentik SAML IdP metadata (via internal service)
-#   3. Configures and enables SAML2 SSO on the Ceph dashboard
-#   4. Pre-creates dashboard users matching Authentik email attributes
+#   2. Forces the dashboard to plain HTTP and reloads the mgr dashboard module
+#   3. Downloads the Authentik SAML IdP metadata (via internal service)
+#   4. Configures and enables SAML2 SSO on the Ceph dashboard
+#   5. Reconciles dashboard users matching Authentik email attributes
 #
 # The Job is idempotent — re-running it reconfigures SSO (harmless) and
 # skips user creation if the user already exists.
@@ -25,15 +26,25 @@ metadata:
   namespace: rook-ceph
   annotations:
     argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
 spec:
+  backoffLimit: 3
   template:
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: ceph-sso-config
           image: quay.io/ceph/ceph:v20.2.1
           securityContext:
-            runAsUser: 0
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           command:
             - /bin/bash
             - -c
@@ -64,14 +75,38 @@ spec:
                 exit 1
               fi
 
-              # Download Authentik SAML IdP metadata via internal service
-              # (Gateway TLS hairpin issue prevents using the external URL
-              # from inside the cluster — see Cilium Gateway TLS hairpin lesson)
+              # Force the dashboard to plain HTTP. On this cluster version,
+              # Cilium 1.19 cannot re-encrypt to Ceph's self-signed HTTPS backend
+              # because BackendTLSPolicy is not implemented yet.
+              echo "Switching Ceph dashboard to plain HTTP..."
+              $CEPH config set mgr mgr/dashboard/ssl false
+              $CEPH mgr module disable dashboard
+              $CEPH mgr module enable dashboard
+
+              echo "Waiting for dashboard service to speak HTTP..."
+              for i in $(seq 1 24); do
+                DASHBOARD_URL=$($CEPH mgr services 2>/dev/null | python3 -c 'import sys,json; print(json.load(sys.stdin).get("dashboard", ""))')
+                if echo "$DASHBOARD_URL" | grep -q '^http://'; then
+                  echo "Dashboard protocol switched: $DASHBOARD_URL"
+                  break
+                fi
+                echo "  dashboard still not switched, retrying in 5s... ($i/24)"
+                sleep 5
+              done
+              if ! $CEPH mgr services 2>/dev/null | python3 -c 'import sys,json; import re; sys.exit(0 if re.match(r"^http://", json.load(sys.stdin).get("dashboard", "")) else 1)'; then
+                echo "ERROR: Dashboard did not switch to HTTP in time"
+                exit 1
+              fi
+
+              # Download Authentik SAML IdP metadata via the internal service.
+              # Follow redirects in-cluster so we never depend on gateway hairpin
+              # behavior or external DNS while bootstrapping SSO.
               echo "Downloading Authentik SAML IdP metadata..."
-              REDIRECT_URL=$(curl -s -o /dev/null -w '%{redirect_url}' \
-                http://authentik-server.authentik.svc.cluster.local:80/application/saml/ceph-dashboard-saml/metadata/)
-              METADATA_PATH=$(echo "$REDIRECT_URL" | sed 's|https://[^/]*||')
-              curl -sL "http://authentik-server.authentik.svc.cluster.local:80${METADATA_PATH}" > /tmp/idp-metadata.xml
+              curl -sL \
+                -H 'Host: auth.platform.nqlabs.network' \
+                -H 'X-Forwarded-Proto: https' \
+                http://authentik-server.authentik.svc.cluster.local:80/application/saml/ceph-dashboard-saml/metadata/ \
+                > /tmp/idp-metadata.xml
 
               if [ ! -s /tmp/idp-metadata.xml ] || ! grep -q 'EntityDescriptor' /tmp/idp-metadata.xml; then
                 echo "ERROR: Failed to download valid IdP metadata"
@@ -91,23 +126,29 @@ spec:
               echo "Enabling SAML SSO..."
               $CEPH dashboard sso enable saml2
 
-              # Pre-create dashboard users (idempotent — skip if already exists)
-              # SAML SSO requires users to exist locally with matching email
-              echo "Pre-creating Ceph dashboard users..."
+              # Reconcile dashboard users.
+              # SAML SSO requires users to exist locally with matching email.
+              echo "Reconciling Ceph dashboard users..."
               echo "saml-sso-placeholder" > /tmp/ceph-pwd
 
-              create_user() {
+              reconcile_user() {
                 local username="$1" role="$2" name="$3" email="$4"
-                if $CEPH dashboard ac-user-create -i /tmp/ceph-pwd \
-                  "$username" "$role" "$name" "$email" --force-password 2>&1; then
-                  echo "  Created user: $username (role: $role)"
+                if $CEPH dashboard ac-user-show "$username" >/dev/null 2>&1; then
+                  echo "  User exists: $username"
                 else
-                  echo "  User $username already exists, skipping"
+                  $CEPH dashboard ac-user-create -i /tmp/ceph-pwd \
+                    "$username" "$role" "$name" "$email" --force-password >/dev/null
+                  echo "  Created user: $username"
                 fi
+
+                $CEPH dashboard ac-user-enable "$username" >/dev/null || true
+                $CEPH dashboard ac-user-set-info "$username" "$name" "$email" >/dev/null
+                $CEPH dashboard ac-user-set-roles "$username" "$role" >/dev/null
+                echo "  Reconciled user: $username (role: $role)"
               }
 
-              create_user "nicolas@nqlabs.io" "administrator" "Nicolas Queiroga" "nicolas@nqlabs.io"
-              create_user "dummy@nqlabs.io"   "read-only"     "Dummy User"      "dummy@nqlabs.io"
+              reconcile_user "nicolas@nqlabs.io" "administrator" "Nicolas Queiroga" "nicolas@nqlabs.io"
+              reconcile_user "dummy@nqlabs.io"   "read-only"     "Dummy User"      "dummy@nqlabs.io"
 
               echo "=== SSO configuration complete ==="
               $CEPH dashboard sso status
