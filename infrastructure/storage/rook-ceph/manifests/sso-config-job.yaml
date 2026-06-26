@@ -1,0 +1,128 @@
+# Ceph Dashboard SAML SSO configuration Job.
+#
+# This Job runs as an ArgoCD PostSync hook after the rook-ceph-cluster app
+# is synced. It:
+#   1. Waits for the Ceph cluster to be ready
+#   2. Downloads the Authentik SAML IdP metadata (via internal service)
+#   3. Configures and enables SAML2 SSO on the Ceph dashboard
+#   4. Pre-creates dashboard users matching Authentik email attributes
+#
+# The Job is idempotent — re-running it reconfigures SSO (harmless) and
+# skips user creation if the user already exists.
+#
+# Ceph dashboard SAML requires users to exist locally before SSO login
+# works. The username attribute is the Authentik email claim, so users
+# are created with their email address as the username.
+#
+# The Job mounts two Secrets created by the Rook operator:
+#   - rook-ceph-config (mon_host key)
+#   - rook-ceph-admin-keyring (keyring key)
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ceph-sso-config
+  namespace: rook-ceph
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  template:
+    spec:
+      containers:
+        - name: ceph-sso-config
+          image: quay.io/ceph/ceph:v20.2.1
+          securityContext:
+            runAsUser: 0
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+
+              # Build ceph.conf from the mounted Secret
+              MON_HOST=$(cat /etc/rook/config/mon_host)
+              cat > /tmp/ceph.conf <<EOF
+              [global]
+              mon host = ${MON_HOST}
+              EOF
+
+              CEPH="ceph --conf /tmp/ceph.conf --keyring /etc/rook/keyring/keyring --connect-timeout 10"
+
+              # Wait for Ceph cluster to be ready (max 5 minutes)
+              echo "Waiting for Ceph cluster to be ready..."
+              for i in $(seq 1 60); do
+                if $CEPH status >/dev/null 2>&1; then
+                  echo "Ceph cluster is ready!"
+                  break
+                fi
+                echo "  not ready yet, retrying in 5s... ($i/60)"
+                sleep 5
+              done
+              if ! $CEPH status >/dev/null 2>&1; then
+                echo "ERROR: Ceph cluster not ready after 5 minutes"
+                exit 1
+              fi
+
+              # Download Authentik SAML IdP metadata via internal service
+              # (Gateway TLS hairpin issue prevents using the external URL
+              # from inside the cluster — see Cilium Gateway TLS hairpin lesson)
+              echo "Downloading Authentik SAML IdP metadata..."
+              REDIRECT_URL=$(curl -s -o /dev/null -w '%{redirect_url}' \
+                http://authentik-server.authentik.svc.cluster.local:80/application/saml/ceph-dashboard-saml/metadata/)
+              METADATA_PATH=$(echo "$REDIRECT_URL" | sed 's|https://[^/]*||')
+              curl -sL "http://authentik-server.authentik.svc.cluster.local:80${METADATA_PATH}" > /tmp/idp-metadata.xml
+
+              if [ ! -s /tmp/idp-metadata.xml ] || ! grep -q 'EntityDescriptor' /tmp/idp-metadata.xml; then
+                echo "ERROR: Failed to download valid IdP metadata"
+                exit 1
+              fi
+              echo "Downloaded IdP metadata ($(wc -c < /tmp/idp-metadata.xml) bytes)"
+
+              # Configure SAML SSO
+              # Username attribute = email claim (matches pre-created Ceph users)
+              echo "Configuring SAML SSO..."
+              $CEPH dashboard sso setup saml2 \
+                https://ceph.platform.nqlabs.network \
+                "$(cat /tmp/idp-metadata.xml)" \
+                "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+
+              # Enable SAML SSO
+              echo "Enabling SAML SSO..."
+              $CEPH dashboard sso enable saml2
+
+              # Pre-create dashboard users (idempotent — skip if already exists)
+              # SAML SSO requires users to exist locally with matching email
+              echo "Pre-creating Ceph dashboard users..."
+              echo "saml-sso-placeholder" > /tmp/ceph-pwd
+
+              create_user() {
+                local username="$1" role="$2" name="$3" email="$4"
+                if $CEPH dashboard ac-user-create -i /tmp/ceph-pwd \
+                  "$username" "$role" "$name" "$email" --force-password 2>&1; then
+                  echo "  Created user: $username (role: $role)"
+                else
+                  echo "  User $username already exists, skipping"
+                fi
+              }
+
+              create_user "nicolas@nqlabs.io" "administrator" "Nicolas Queiroga" "nicolas@nqlabs.io"
+              create_user "dummy@nqlabs.io"   "read-only"     "Dummy User"      "dummy@nqlabs.io"
+
+              echo "=== SSO configuration complete ==="
+              $CEPH dashboard sso status
+          volumeMounts:
+            - name: rook-ceph-config
+              mountPath: /etc/rook/config
+              readOnly: true
+            - name: rook-ceph-admin-keyring
+              mountPath: /etc/rook/keyring
+              readOnly: true
+      volumes:
+        - name: rook-ceph-config
+          secret:
+            secretName: rook-ceph-config
+        - name: rook-ceph-admin-keyring
+          secret:
+            secretName: rook-ceph-admin-keyring
+      restartPolicy: OnFailure

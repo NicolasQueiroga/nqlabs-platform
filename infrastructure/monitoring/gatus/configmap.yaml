@@ -169,4 +169,4 @@ data:
           ignore-redirect: true
           insecure: true
         conditions:
-          - "[STATUS] == 200"
+          - "[STATUS] in [200, 302]"
