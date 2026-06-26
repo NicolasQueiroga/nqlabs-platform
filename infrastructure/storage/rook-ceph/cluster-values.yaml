@@ -27,10 +27,20 @@ cephClusterSpec:
       - name: pg_autoscaler
         enabled: true
 
-  # Dashboard enabled (internal only, no ingress)
+  # Dashboard enabled (internal only, exposed separately via Authentik/Gateway)
   dashboard:
     enabled: true
     ssl: true
+
+  # Use host networking for Ceph daemons so mons/OSDs advertise node IPs
+  # instead of overlay pod IPs. This is important here because the RBD CSI
+  # nodeplugin runs with hostNetwork=true; when Ceph daemons stay on overlay
+  # IPs, cross-node OSD traffic from the nodeplugin can hang during map/mount.
+  network:
+    provider: host
+    addressRanges:
+      public:
+        - 192.168.15.0/24
 
   # Use all 3 nodes, target sdb specifically
   storage:

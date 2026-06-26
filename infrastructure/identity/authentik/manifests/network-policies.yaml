@@ -6,7 +6,7 @@
 #   - authentik-worker → authentik-valkey (6379) — Celery queue
 #   - authentik-server → authentik-pg-rw (5432) — database
 #   - authentik-worker → authentik-pg-rw (5432) — database
-#   - authentik-server → monitoring / argo-rollouts / hubble-ui — proxy backends
+#   - authentik-server → monitoring / argo-rollouts / hubble-ui / rook-ceph — proxy backends
 #   - monitoring namespace → authentik-server (metrics) — Prometheus scrape
 #
 # CNPG pods (authentik-pg-rw) are managed by the CNPG operator in the same
@@ -288,6 +288,13 @@ spec:
           port: 80
         - protocol: TCP
           port: 8081
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: rook-ceph
+      ports:
+        - protocol: TCP
+          port: 8443
 ---
 # Allow authentik server/worker egress to Valkey and Postgres within namespace.
 apiVersion: networking.k8s.io/v1
