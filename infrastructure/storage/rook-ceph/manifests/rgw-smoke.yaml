@@ -18,9 +18,13 @@ kind: Job
 metadata:
   name: rgw-smoke-test
   namespace: rook-ceph
+  labels:
+    app.kubernetes.io/name: rgw-smoke-test
+    app.kubernetes.io/part-of: nqlabs-platform
   annotations:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/sync-options: Replace=true
 spec:
   backoffLimit: 3
   ttlSecondsAfterFinished: 300
@@ -37,11 +41,6 @@ spec:
       containers:
         - name: smoke
           image: docker.io/minio/mc:RELEASE.2025-04-16T18-13-26Z
-          env:
-            - name: HOME
-              value: /tmp
-            - name: MC_CONFIG_DIR
-              value: /tmp/.mc
           command: ["sh", "-c"]
           args:
             - |
@@ -61,26 +60,27 @@ spec:
               BUCKET_NAME=$(cat /bucket/BUCKET_NAME)
               AWS_ACCESS_KEY_ID=$(cat /creds/AWS_ACCESS_KEY_ID)
               AWS_SECRET_ACCESS_KEY=$(cat /creds/AWS_SECRET_ACCESS_KEY)
-              export AWS_HOST PORT BUCKET_NAME AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+              MC_CONFIG_DIR=/tmp/.mc
+              mkdir -p "$MC_CONFIG_DIR"
 
               echo "Waiting for RGW S3 endpoint to accept the generated credentials..."
               for i in $(seq 1 30); do
-                if mc alias set rgw "http://${AWS_HOST}:${PORT}" "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" >/dev/null 2>&1; then
+                if mc --config-dir "$MC_CONFIG_DIR" alias set rgw "http://${AWS_HOST}:${PORT}" "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" >/dev/null 2>&1; then
                   break
                 fi
                 echo "  endpoint not ready yet, retrying in 5s... ($i/30)"
                 sleep 5
               done
 
-              mc ls "rgw/${BUCKET_NAME}" >/dev/null 2>&1 || {
+              mc --config-dir "$MC_CONFIG_DIR" ls "rgw/${BUCKET_NAME}" >/dev/null 2>&1 || {
                 echo "ERROR: RGW bucket did not become reachable with the generated credentials"
                 exit 1
               }
 
               printf 'rgw smoke %s\n' "$(date -u +%FT%TZ)" > /tmp/smoke.txt
-              mc cp /tmp/smoke.txt "rgw/${BUCKET_NAME}/smoke.txt" >/dev/null
-              mc cat "rgw/${BUCKET_NAME}/smoke.txt" | grep -q '^rgw smoke '
-              mc rm --force "rgw/${BUCKET_NAME}/smoke.txt" >/dev/null
+              mc --config-dir "$MC_CONFIG_DIR" cp /tmp/smoke.txt "rgw/${BUCKET_NAME}/smoke.txt" >/dev/null
+              mc --config-dir "$MC_CONFIG_DIR" cat "rgw/${BUCKET_NAME}/smoke.txt" | grep -q '^rgw smoke '
+              mc --config-dir "$MC_CONFIG_DIR" rm --force "rgw/${BUCKET_NAME}/smoke.txt" >/dev/null
               echo "RGW smoke test passed"
           securityContext:
             allowPrivilegeEscalation: false
