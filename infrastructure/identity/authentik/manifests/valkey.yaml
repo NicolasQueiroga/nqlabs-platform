@@ -79,6 +79,16 @@ spec:
                 secretKeyRef:
                   name: authentik-valkey-auth
                   key: password
+            - name: REDISCLI_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: authentik-valkey-auth
+                  key: password
+            - name: VALKEYCLI_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: authentik-valkey-auth
+                  key: password
           ports:
             - name: valkey
               containerPort: 6379
@@ -98,12 +108,12 @@ spec:
               memory: 256Mi
           livenessProbe:
             exec:
-              command: ["sh", "-c", "valkey-cli -a \"$VALKEY_PASSWORD\" ping | grep PONG"]
+              command: ["valkey-cli", "ping"]
             initialDelaySeconds: 10
             periodSeconds: 15
           readinessProbe:
             exec:
-              command: ["sh", "-c", "valkey-cli -a \"$VALKEY_PASSWORD\" ping | grep PONG"]
+              command: ["valkey-cli", "ping"]
             initialDelaySeconds: 5
             periodSeconds: 10
           volumeMounts:
