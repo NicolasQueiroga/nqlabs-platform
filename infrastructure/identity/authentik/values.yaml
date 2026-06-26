@@ -131,6 +131,39 @@ worker:
         - ALL
     seccompProfile:
       type: RuntimeDefault
+  livenessProbe:
+    exec:
+      command:
+        - celery
+        - -A
+        - authentik.root.celery
+        - inspect
+        - ping
+        - --timeout
+        - "5"
+        - -j
+  readinessProbe:
+    exec:
+      command:
+        - celery
+        - -A
+        - authentik.root.celery
+        - inspect
+        - ping
+        - --timeout
+        - "5"
+        - -j
+  startupProbe:
+    exec:
+      command:
+        - celery
+        - -A
+        - authentik.root.celery
+        - inspect
+        - ping
+        - --timeout
+        - "5"
+        - -j
   resources:
     requests:
       cpu: 100m
