@@ -295,6 +295,14 @@ spec:
       ports:
         - protocol: TCP
           port: 8443
+    # During Ceph daemon network transitions, the dashboard endpoint can be a
+    # hostNetwork node IP. Keep the proxy able to reach it.
+    - to:
+        - ipBlock:
+            cidr: 192.168.15.0/24
+      ports:
+        - protocol: TCP
+          port: 8443
 ---
 # Allow authentik server/worker egress to Valkey and Postgres within namespace.
 apiVersion: networking.k8s.io/v1
