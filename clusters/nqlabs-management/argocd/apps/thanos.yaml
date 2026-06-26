@@ -16,7 +16,7 @@ spec:
     targetRevision: HEAD
     path: infrastructure/monitoring/thanos
     directory:
-      include: "{externalsecret.yaml,routes.yaml}"
+      include: "{rgw-bucket.yaml,routes.yaml}"
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
@@ -38,7 +38,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    # wave 5: after thanos-config (wave 4) so ExternalSecret + routes exist
+    # wave 5: after thanos-config (wave 4) so OBC + routes exist
     argocd.argoproj.io/sync-wave: "5"
 spec:
   project: platform
