@@ -1,7 +1,7 @@
-# HTTPRoute for Ceph dashboard — routed through Authentik proxy outpost.
+# HTTPRoute for Ceph dashboard — direct to MGR dashboard (SAML SSO handles auth).
 #
 # Hostname: ceph.platform.nqlabs.network
-# Backend: authentik-server (forward-auth proxy → rook-ceph-mgr-dashboard:8443)
+# Backend: rook-ceph-mgr-dashboard:8443 (self-signed cert, TLS terminated at gateway)
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -22,11 +22,10 @@ spec:
         - path:
             type: PathPrefix
             value: /
-      # Routed through the Authentik embedded outpost (forward-auth).
       backendRefs:
-        - name: authentik-server
-          namespace: authentik
-          port: 80
+        - name: rook-ceph-mgr-dashboard
+          namespace: rook-ceph
+          port: 8443
       timeouts:
         request: 300s
         backendRequest: 300s

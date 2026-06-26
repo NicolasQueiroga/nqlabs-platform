@@ -2,10 +2,9 @@
 #
 # Ceph pods (MON, MGR, OSD) communicate extensively with each other.
 # We allow intra-namespace traffic + specific external ingress:
-#   - Authentik proxy outpost → MGR dashboard (8443)
+#   - Cilium gateway → MGR dashboard (8443) — SAML SSO handles auth
 #   - Monitoring/Gatus → MGR dashboard health endpoint (8443)
 #   - Prometheus → MGR metrics (9282)
-#   - Cilium gateway proxy → MGR dashboard (8443)
 #
 # No deny-all policy: Ceph internal traffic uses many dynamic ports
 # (6789, 3300, 6800-7300). A deny-all would require enumerating all
@@ -48,30 +47,8 @@ spec:
         - cidr: 192.168.15.0/24
 
 ---
-# Allow Authentik embedded outpost to reach the Ceph dashboard (forward-auth).
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: rook-ceph-allow-authentik-proxy
-  namespace: rook-ceph
-spec:
-  podSelector:
-    matchLabels:
-      app: rook-ceph-mgr
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: authentik
-      ports:
-        - port: 8443
-          protocol: TCP
-
----
-# Allow Cilium Gateway API proxy to reach the Ceph dashboard directly
-# (when not going through Authentik proxy, e.g. for health probes).
+# Allow Cilium Gateway API to reach the Ceph dashboard directly.
+# SAML SSO handles authentication — no proxy provider needed.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
