@@ -87,7 +87,8 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    argocd.argoproj.io/sync-wave: "5"
+    # wave 6: after tempo (5) and pyroscope (5) so endpoints exist
+    argocd.argoproj.io/sync-wave: "6"
 spec:
   project: platform
   source:

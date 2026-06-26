@@ -25,6 +25,7 @@ ArgoCD itself.
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo add cilium https://helm.cilium.io
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add rook-release https://charts.rook.io/release
 helm repo update
 ```
 
@@ -214,10 +215,13 @@ for item in data['items']:
 
 Expected progression (sync waves):
 
-1. **Wave 0-1:** Cilium, cert-manager, external-secrets, local-path, tailscale
-2. **Wave 2:** Kyverno, gateway, CoreDNS, external-dns
-3. **Wave 3:** Kyverno policies, Authentik, monitoring stack
-4. **Wave 4+:** MinIO, Velero, Loki, Tempo, Pyroscope, Gatus, demo services
+1. **Wave 0:** Cilium config, cert-manager, external-secrets, local-path, rook-ceph operator
+2. **Wave 1:** CloudNativePG, DNS, external-secrets config, rook-ceph cluster
+3. **Wave 2:** cert-manager config, CoreDNS, Kyverno, Tailscale operator, cluster DNS
+4. **Wave 3:** MinIO, Prometheus stack, Kyverno policies, Tailscale config
+5. **Wave 4:** Argo Rollouts, Velero, Blackbox, Falco, Gateway, Loki, Thanos config, monitoring config
+6. **Wave 5:** Authentik, Promtail, Tempo, Pyroscope, Thanos
+7. **Wave 6:** Gatus, OTEL collector
 
 All management applications should reach `Synced` and `Healthy` within
 ~15-20 minutes on a fresh cluster.

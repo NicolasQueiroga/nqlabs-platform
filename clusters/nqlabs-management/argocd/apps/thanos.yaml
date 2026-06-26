@@ -7,7 +7,8 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    argocd.argoproj.io/sync-wave: "3"
+    # wave 4: after kube-prometheus-stack (wave 3) so monitoring namespace exists
+    argocd.argoproj.io/sync-wave: "4"
 spec:
   project: platform
   source:
@@ -37,7 +38,8 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    argocd.argoproj.io/sync-wave: "4"
+    # wave 5: after thanos-config (wave 4) so ExternalSecret + routes exist
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   project: platform
   sources:
