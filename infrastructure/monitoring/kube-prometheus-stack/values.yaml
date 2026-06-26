@@ -78,8 +78,13 @@ grafana:
     dashboards:
       enabled: true
       searchNamespace: ALL
+      # Grafana polls dashboard files every 30s via the file provider, so skip
+      # the admin API reload path. This avoids bootstrap drift when the
+      # generated local admin secret no longer matches the persisted DB user.
+      skipReload: true
     datasources:
       enabled: true
+      skipReload: true
     # Resource requests for ALL sidecars (Kyverno require-resource-requests)
     # The Grafana chart uses a single resources block for all sidecar containers
     resources:
