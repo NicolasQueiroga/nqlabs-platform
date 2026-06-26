@@ -6,6 +6,7 @@
 #   - authentik-worker → authentik-valkey (6379) — Celery queue
 #   - authentik-server → authentik-pg-rw (5432) — database
 #   - authentik-worker → authentik-pg-rw (5432) — database
+#   - authentik-server → monitoring / argo-rollouts / hubble-ui — proxy backends
 #   - monitoring namespace → authentik-server (metrics) — Prometheus scrape
 #
 # CNPG pods (authentik-pg-rw) are managed by the CNPG operator in the same
@@ -243,32 +244,50 @@ spec:
         - protocol: TCP
           port: 9187
 ---
-# Allow CNPG instance manager (authentik-pg-*) to call the Kubernetes API
-# server. In Cilium, egress to the kube-apiserver should use the
-# kube-apiserver entity instead of a Kubernetes NetworkPolicy ipBlock against
-# the kubernetes.default.svc ClusterIP, because service IP traffic to control
-# plane nodes may bypass/ignore CIDR-based policy matching in self-hosted
-# clusters.
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
+# Allow the embedded proxy outpost in authentik-server to reach the protected
+# backend UIs it reverse-proxies after login.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
 metadata:
-  name: authentik-cnpg-egress-apiserver
+  name: authentik-egress-proxy-backends
   namespace: authentik
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  endpointSelector:
+  podSelector:
     matchLabels:
-      cnpg.io/cluster: authentik-pg
+      app.kubernetes.io/component: server
+      app.kubernetes.io/instance: authentik
+  policyTypes:
+    - Egress
   egress:
-    - toEntities:
-        - kube-apiserver
-      toPorts:
-        - ports:
-            - port: "443"
-              protocol: TCP
-            - port: "6443"
-              protocol: TCP
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 4040
+        - protocol: TCP
+          port: 9090
+        - protocol: TCP
+          port: 9093
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: argo-rollouts
+      ports:
+        - protocol: TCP
+          port: 3100
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 8081
 ---
 # Allow authentik server/worker egress to Valkey and Postgres within namespace.
 apiVersion: networking.k8s.io/v1
@@ -300,3 +319,53 @@ spec:
       ports:
         - protocol: TCP
           port: 5432
+---
+# Allow authentik app pods to query the Kubernetes API when outpost service
+# health monitoring checks ClusterIP-backed dependencies.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: authentik-app-egress-apiserver
+  namespace: authentik
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: authentik
+  egress:
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "6443"
+              protocol: TCP
+---
+# Allow CNPG instance manager (authentik-pg-*) to call the Kubernetes API
+# server. In Cilium, egress to the kube-apiserver should use the
+# kube-apiserver entity instead of a Kubernetes NetworkPolicy ipBlock against
+# the kubernetes.default.svc ClusterIP, because service IP traffic to control
+# plane nodes may bypass/ignore CIDR-based policy matching in self-hosted
+# clusters.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: authentik-cnpg-egress-apiserver
+  namespace: authentik
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  endpointSelector:
+    matchLabels:
+      cnpg.io/cluster: authentik-pg
+  egress:
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "6443"
+              protocol: TCP

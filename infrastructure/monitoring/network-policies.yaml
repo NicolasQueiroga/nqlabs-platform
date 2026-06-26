@@ -110,6 +110,31 @@ spec:
         - port: 9093
           protocol: TCP
 ---
+# Allow the embedded Authentik proxy outpost to reach protected monitoring UIs
+# after login. Prometheus/Alertmanager/Thanos already share gateway-allowed
+# ports; Pyroscope needs 4040 explicitly.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: monitoring-allow-authentik-proxy
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: authentik
+      ports:
+        - port: 4040
+          protocol: TCP
+        - port: 9090
+          protocol: TCP
+        - port: 9093
+          protocol: TCP
+---
 # Allow Prometheus to scrape all pods in all namespaces (egress)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
