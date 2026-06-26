@@ -28,6 +28,8 @@ spec:
     type: Recreate
   template:
     metadata:
+      annotations:
+        nqlabs.io/config-revision: "2026-06-26-oidc-public-issuer"
       labels:
         app.kubernetes.io/name: gatus
         app.kubernetes.io/component: monitoring
