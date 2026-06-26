@@ -3,6 +3,7 @@
 # Ceph pods (MON, MGR, OSD) communicate extensively with each other.
 # We allow intra-namespace traffic + specific external ingress:
 #   - Authentik proxy outpost → MGR dashboard (8443)
+#   - Monitoring/Gatus → MGR dashboard health endpoint (8443)
 #   - Prometheus → MGR metrics (9282)
 #   - Cilium gateway proxy → MGR dashboard (8443)
 #
@@ -87,6 +88,28 @@ spec:
         - ports:
             - port: "8443"
               protocol: TCP
+
+---
+# Allow Gatus/monitoring to check the Ceph dashboard backend health.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rook-ceph-allow-monitoring-dashboard
+  namespace: rook-ceph
+spec:
+  podSelector:
+    matchLabels:
+      app: rook-ceph-mgr
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 8443
+          protocol: TCP
 
 ---
 # Allow Prometheus to scrape Ceph metrics (mgr prometheus module on 9282).
