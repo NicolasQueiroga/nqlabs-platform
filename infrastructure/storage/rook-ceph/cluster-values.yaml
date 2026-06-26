@@ -1,0 +1,123 @@
+# Rook Ceph Cluster values
+# https://github.com/rook/rook/blob/master/deploy/charts/rook-ceph-cluster/values.yaml
+#
+# Creates CephCluster CR + CephBlockPool + StorageClass.
+# Operator must be installed first (rook-ceph chart).
+
+operatorNamespace: rook-ceph
+
+cephClusterSpec:
+  # Ceph version — matched to rook-ceph 1.20.x
+  cephVersion:
+    image: quay.io/ceph/ceph:v20.2.1
+    allowUnsupported: false
+
+  # Talos dataDirHostPath (default)
+  dataDirHostPath: /var/lib/rook
+
+  # 3 MONs — one per node (3 nodes = quorum)
+  mon:
+    count: 3
+    allowMultiplePerNode: false
+
+  # 1 MGR (active/standby not needed for 3-node lab)
+  mgr:
+    count: 1
+    modules:
+      - name: pg_autoscaler
+        enabled: true
+
+  # Dashboard enabled (internal only, no ingress)
+  dashboard:
+    enabled: true
+    ssl: true
+
+  # Use all 3 nodes, target sdb specifically
+  storage:
+    useAllNodes: true
+    useAllDevices: false
+    devices:
+      - name: "sdb"
+    config:
+      osdsPerDevice: "1"
+
+  # Tolerate control-plane taints
+  placement:
+    all:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+
+  # Resource requests for Ceph daemons
+  resources:
+    mon:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        memory: 1Gi
+    mgr:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        memory: 1Gi
+    osd:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        memory: 2Gi
+
+  # Health checks
+  healthCheck:
+    daemonHealth:
+      mon:
+        interval: 45s
+      osd:
+        interval: 60s
+      status:
+        interval: 60s
+
+# Block storage pool (RBD) — replaces local-path for new PVCs
+cephBlockPools:
+  - name: ceph-blockpool
+    spec:
+      name: .mgr
+      replicated:
+        size: 3
+        targetSizeRatio: "0.5"
+      application: rbd
+    storageClass:
+      enabled: true
+      name: ceph-block
+      isDefault: false
+      reclaimPolicy: Delete
+      allowVolumeExpansion: true
+      volumeBindingMode: WaitForFirstConsumer
+      parameters:
+        pool: ceph-blockpool
+        imageFormat: "2"
+        imageFeatures: layering
+        csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
+        csi.storage.k8s.io/provisioner-secret-namespace: rook-ceph
+        csi.storage.k8s.io/controller-expand-secret-name: rook-csi-rbd-node
+        csi.storage.k8s.io/controller-expand-secret-namespace: rook-ceph
+        csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
+        csi.storage.k8s.io/node-stage-secret-namespace: rook-ceph
+        csi.storage.k8s.io/fstype: ext4
+
+# No filesystem (not needed yet)
+cephFileSystems: []
+
+# No object store (MinIO handles S3)
+cephObjectStores: []
+
+# Volume snapshots
+cephBlockPoolsVolumeSnapshotClass:
+  enabled: true
+  name: ceph-block-snapshot
+  isDefault: true
+  parameters:
+    pool: ceph-blockpool

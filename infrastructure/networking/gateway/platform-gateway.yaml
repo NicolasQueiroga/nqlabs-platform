@@ -51,6 +51,14 @@ metadata:
     gateway-access: "true"
 
 ---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rook-ceph
+  labels:
+    gateway-access: "true"
+
+---
 # Wildcard cert for the platform Gateway.
 # Issued by Let's Encrypt via Cloudflare DNS-01 so tailnet devices trust HTTPS
 # without installing the NQLabs internal CA.

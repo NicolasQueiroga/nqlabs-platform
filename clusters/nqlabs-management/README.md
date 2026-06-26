@@ -54,6 +54,7 @@ Completed on desktop Proxmox:
 - ArgoCD server responds HTTP 200 inside the cluster.
 - Cluster-aware management root app-of-apps applied and Healthy; it watches `clusters/nqlabs-management/argocd/apps`.
 - `local-path-provisioner` installed and `local-path` is the default StorageClass.
+- Rook/Ceph operator + cluster installed; `ceph-block` StorageClass available (non-default) for distributed block storage on `sdb` (11GB per node, 3 OSDs).
 - External Secrets Operator installed; `nqlabs-1password` ClusterSecretStore is Ready/Valid.
 - cert-manager installed; Cloudflare ExternalSecret and ClusterIssuers are Ready.
 - DNS stack installed through management-specific ArgoCD wrappers:

@@ -1,0 +1,91 @@
+# NetworkPolicies for the rook-ceph namespace.
+#
+# Ceph pods (MON, MGR, OSD) communicate extensively with each other.
+# We allow intra-namespace traffic + specific external ingress:
+#   - Authentik proxy outpost → MGR dashboard (8443)
+#   - Prometheus → MGR metrics (9282)
+#   - Cilium gateway proxy → MGR dashboard (8443)
+#
+# No deny-all policy: Ceph internal traffic uses many dynamic ports
+# (6789, 3300, 6800-7300). A deny-all would require enumerating all
+# of them. Intra-namespace allow is sufficient for pod-to-pod traffic.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rook-ceph-allow-intra-namespace
+  namespace: rook-ceph
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+
+---
+# Allow Authentik embedded outpost to reach the Ceph dashboard (forward-auth).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rook-ceph-allow-authentik-proxy
+  namespace: rook-ceph
+spec:
+  podSelector:
+    matchLabels:
+      app: rook-ceph-mgr
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: authentik
+      ports:
+        - port: 8443
+          protocol: TCP
+
+---
+# Allow Cilium Gateway API proxy to reach the Ceph dashboard directly
+# (when not going through Authentik proxy, e.g. for health probes).
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: rook-ceph-allow-cilium-gateway
+  namespace: rook-ceph
+spec:
+  endpointSelector:
+    matchLabels:
+      app: rook-ceph-mgr
+  ingress:
+    - fromEntities:
+        - ingress
+      toPorts:
+        - ports:
+            - port: "8443"
+              protocol: TCP
+
+---
+# Allow Prometheus to scrape Ceph metrics (mgr prometheus module on 9282).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rook-ceph-allow-prometheus
+  namespace: rook-ceph
+spec:
+  podSelector:
+    matchLabels:
+      app: rook-ceph-mgr
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - port: 9282
+          protocol: TCP

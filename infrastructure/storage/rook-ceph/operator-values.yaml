@@ -1,0 +1,33 @@
+# Rook Ceph Operator values
+# https://github.com/rook/rook/blob/master/deploy/charts/rook-ceph/values.yaml
+#
+# Operator installs CRDs + watches for CephCluster CRs.
+# The cluster config is in cluster-values.yaml (separate Helm chart).
+
+# Disable monitoring (we have our own Prometheus stack)
+monitoring:
+  enabled: false
+
+# Don't create default CephCluster — we manage it via rook-ceph-cluster chart
+crds:
+  enabled: true
+
+# Resource limits for the operator pod
+resources:
+  limits:
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Tolerate control-plane taints (our nodes are all control-plane)
+tolerances:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+
+nodeSelector: {}
+
+# Ceph-CSI operator subchart (included by default in rook-ceph 1.20+)
+cephCSI:
+  enabled: true

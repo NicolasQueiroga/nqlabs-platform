@@ -45,6 +45,34 @@ spec:
         - http://gatus.monitoring.svc.cluster.local:8080/health
 
 ---
+# Internal health probe for self-signed HTTPS services (e.g. Ceph dashboard)
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: nqlabs-internal-health-insecure
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: blackbox-exporter
+    nqlabs.network/component: internal-health-probes-insecure
+spec:
+  jobName: nqlabs-internal-health-insecure
+  interval: 30s
+  scrapeTimeout: 10s
+  module: http_2xx_internal_insecure
+  prober:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+    scheme: http
+    path: /probe
+  targets:
+    staticConfig:
+      labels:
+        cluster: lab
+        probe_scope: internal-health
+      static:
+        # Ceph dashboard — mgr dashboard on port 8443 (HTTPS, self-signed)
+        - https://rook-ceph-mgr-dashboard.rook-ceph.svc.cluster.local:8443/
+
+---
 # Edge auth probes — verify public URLs redirect to Authentik (forward-auth)
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
@@ -73,6 +101,7 @@ spec:
         - https://alertmanager.platform.nqlabs.network
         - https://rollouts.platform.nqlabs.network
         - https://hubble.platform.nqlabs.network
+        - https://ceph.platform.nqlabs.network
 
 ---
 # Edge probes for OIDC services — verify login pages are served (2xx)

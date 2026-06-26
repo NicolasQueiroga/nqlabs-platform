@@ -160,3 +160,13 @@ data:
         interval: 1m
         conditions:
           - "[STATUS] == 200"
+
+      - name: Ceph Dashboard
+        group: Storage
+        url: https://rook-ceph-mgr-dashboard.rook-ceph.svc.cluster.local:8443/
+        interval: 1m
+        client:
+          ignore-redirect: true
+          insecure: true
+        conditions:
+          - "[STATUS] == 200"

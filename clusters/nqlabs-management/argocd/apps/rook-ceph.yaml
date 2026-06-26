@@ -1,0 +1,111 @@
+# Rook/Ceph — distributed block storage for the management cluster.
+#
+# Two-phase install (same pattern as external-secrets / cert-manager):
+#   wave 0 — rook-ceph operator (CRDs + controller)
+#   wave 1 — rook-ceph-cluster (CephCluster CR + CephBlockPool + StorageClass)
+#
+# The operator chart installs CRDs and the rook-ceph-operator deployment.
+# The cluster chart creates CephCluster/CephBlockPool CRs that the operator
+# reconciles into a running Ceph cluster.
+#
+# Disk layout: each node has sdb (11GB) as a raw, unpartitioned disk.
+# Talos OS lives on sda. Ceph uses sdb exclusively.
+#
+# Talos requires privileged namespace for Ceph pods:
+#   pod-security.kubernetes.io/enforce=privileged
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rook-ceph
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # wave 0: operator + CRDs must exist before cluster CRs (wave 1)
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: platform
+
+  sources:
+    # Helm chart from upstream
+    - repoURL: https://charts.rook.io/release
+      chart: rook-ceph
+      targetRevision: "1.20.0"
+      helm:
+        releaseName: rook-ceph
+        valueFiles:
+          - $values/infrastructure/storage/rook-ceph/operator-values.yaml
+
+    # Our values file — referenced as $values above
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rook-ceph
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    # Ceph pods require privileged namespace (hostPath, raw block devices)
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/enforce-version: latest
+        gateway-access: "true"
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rook-ceph-cluster
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # wave 1: cluster CRs after operator CRDs are installed (wave 0)
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+
+  sources:
+    # Helm chart from upstream
+    - repoURL: https://charts.rook.io/release
+      chart: rook-ceph-cluster
+      targetRevision: "1.20.1"
+      helm:
+        releaseName: rook-ceph-cluster
+        valueFiles:
+          - $values/infrastructure/storage/rook-ceph/cluster-values.yaml
+
+    # Our values file — referenced as $values above
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+
+    # Integration manifests: HTTPRoute, ServiceMonitor
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/storage/rook-ceph/manifests
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rook-ceph
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
