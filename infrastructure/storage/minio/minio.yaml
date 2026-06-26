@@ -66,6 +66,8 @@ spec:
               value: "https://auth.platform.nqlabs.network/application/o/minio/.well-known/openid-configuration"
             - name: MINIO_IDENTITY_OPENID_CLIENT_ID
               value: "minio"
+            - name: MINIO_IDENTITY_OPENID_REDIRECT_URI
+              value: "https://minio.platform.nqlabs.network/oauth_callback"
           ports:
             - { name: s3, containerPort: 9000 }
             - { name: console, containerPort: 9001 }
