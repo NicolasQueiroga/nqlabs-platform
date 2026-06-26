@@ -90,6 +90,8 @@ spec:
 
 ---
 # Allow Gatus/monitoring to check the internal Ceph RGW S3 endpoint.
+# The RGW Service exposes port 80, but targets the RGW pod's http port 8080;
+# NetworkPolicy is evaluated against the translated destination pod port.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -108,7 +110,7 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: monitoring
       ports:
-        - port: 80
+        - port: 8080
           protocol: TCP
 
 ---
