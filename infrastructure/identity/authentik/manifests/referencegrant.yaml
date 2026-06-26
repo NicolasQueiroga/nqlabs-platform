@@ -1,6 +1,7 @@
-# Allow HTTPRoutes in the monitoring and argo-rollouts namespaces to reference
-# the authentik-server Service as a backend (forward-auth via the embedded
-# outpost). Gateway API requires a ReferenceGrant for cross-namespace backendRefs.
+# Allow HTTPRoutes in the monitoring, argo-rollouts, and minio namespaces to
+# reference the authentik-server Service as a backend (forward-auth via the
+# embedded outpost). Gateway API requires a ReferenceGrant for cross-namespace
+# backendRefs.
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
@@ -14,6 +15,9 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       namespace: argo-rollouts
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: minio
   to:
     - group: ""
       kind: Service
