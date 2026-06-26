@@ -156,13 +156,13 @@ spec:
             summary: "Authentik worker is down"
             description: "Authentik worker deployment has no available replicas. Blueprint reconciliation and background tasks are stalled."
         - alert: NQLabsAuthentikPostgresDown
-          expr: cnpg_pg_status{cluster="authentik-pg"} == 0 or absent(cnpg_pg_status{cluster="authentik-pg"})
+          expr: sum(kube_pod_status_ready{namespace="authentik",condition="true",pod=~"authentik-pg-.*"}) < 1
           for: 5m
           labels:
             severity: critical
           annotations:
             summary: "Authentik PostgreSQL is down"
-            description: "CNPG cluster authentik-pg is not healthy. Authentik cannot persist sessions or users."
+            description: "Authentik PostgreSQL has no ready instance pods. Authentik cannot persist sessions or users."
         - alert: NQLabsAuthentikValkeyDown
           expr: kube_statefulset_status_replicas_ready{namespace="authentik",statefulset="authentik-valkey"} < 1
           for: 5m
