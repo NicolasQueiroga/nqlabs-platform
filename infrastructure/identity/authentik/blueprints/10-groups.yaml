@@ -113,4 +113,5 @@ entries:
       description: "MinIO console policy claim"
       expression: |
         groups = [group.name for group in request.user.groups.all()]
-        return "consoleAdmin" if "platform-admins" in groups else "readonly"
+        policy = "consoleAdmin" if "platform-admins" in groups else "readonly"
+        return {"policy": policy}
