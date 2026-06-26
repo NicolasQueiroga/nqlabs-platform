@@ -169,3 +169,10 @@ data:
           ignore-redirect: true
         conditions:
           - "[STATUS] == 200"
+
+      - name: Ceph RGW S3
+        group: Storage
+        url: http://rook-ceph-rgw-platform-object-store.rook-ceph.svc.cluster.local/
+        interval: 1m
+        conditions:
+          - "[STATUS] == 403"

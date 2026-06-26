@@ -113,8 +113,39 @@ cephBlockPools:
 # No filesystem (not needed yet)
 cephFileSystems: []
 
-# No object store (MinIO handles S3)
-cephObjectStores: []
+# Object storage (RGW) — internal-only S3 endpoint for platform services.
+# Phase 1 keeps RGW private to the cluster; later migration phases will move
+# Thanos, CNPG backup/WAL, and Velero onto this store one consumer at a time.
+# Buckets are provisioned via the generated `ceph-bucket` StorageClass.
+cephObjectStores:
+  - name: platform-object-store
+    spec:
+      metadataPool:
+        failureDomain: host
+        replicated:
+          size: 3
+      dataPool:
+        failureDomain: host
+        replicated:
+          size: 3
+      preservePoolsOnDelete: true
+      gateway:
+        port: 80
+        instances: 2
+        priorityClassName: system-cluster-critical
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            memory: 1Gi
+    storageClass:
+      enabled: true
+      name: ceph-bucket
+      reclaimPolicy: Delete
+      volumeBindingMode: Immediate
+      parameters:
+        region: us-east-1
 
 # Volume snapshots
 # Disabled for now: the cluster does not install the external snapshotter CRDs/controller
