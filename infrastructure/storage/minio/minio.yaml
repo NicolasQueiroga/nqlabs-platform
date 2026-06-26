@@ -160,3 +160,30 @@ spec:
           resources:
             requests: { cpu: 25m, memory: 32Mi }
             limits: { memory: 128Mi }
+---
+# HTTPRoute for the MinIO console — proxied through Authentik.
+# The S3 API (port 9000) stays internal-only; only the console (port 9001)
+# is exposed through the gateway via the Authentik proxy outpost.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: minio-console
+  namespace: minio
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: minio.platform.nqlabs.network
+spec:
+  parentRefs:
+    - name: platform-gateway
+      namespace: platform
+      sectionName: https
+  hostnames:
+    - minio.platform.nqlabs.network
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: authentik-server
+          namespace: authentik
+          port: 80

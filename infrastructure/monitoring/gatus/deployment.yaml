@@ -29,7 +29,7 @@ spec:
   template:
     metadata:
       annotations:
-        nqlabs.io/config-revision: "2026-06-26-uptime-coverage-gateway-fix"
+        nqlabs.io/config-revision: "2026-06-26-minio-console-route"
       labels:
         app.kubernetes.io/name: gatus
         app.kubernetes.io/component: monitoring

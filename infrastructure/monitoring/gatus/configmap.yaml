@@ -152,3 +152,11 @@ data:
         interval: 1m
         conditions:
           - "[STATUS] == 200"
+
+      # ── Storage ───────────────────────────────────────────────────────────
+      - name: MinIO Console
+        group: Storage
+        url: http://minio.minio.svc.cluster.local:9001/
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
