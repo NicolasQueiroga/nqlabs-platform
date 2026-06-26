@@ -38,6 +38,7 @@ spec:
                 - velero
                 - monitoring
                 - dns
+                - rook-ceph
       validate:
         failureAction: Enforce
         message: "An explicit image tag is required (no :latest, no untagged)."
@@ -74,6 +75,7 @@ spec:
                 - velero
                 - monitoring
                 - dns
+                - rook-ceph
       validate:
         failureAction: Enforce
         message: "CPU and memory requests are required."
@@ -117,6 +119,7 @@ spec:
                 - velero
                 - monitoring
                 - dns
+                - rook-ceph
       validate:
         failureAction: Enforce
         message: "Images must come from an approved registry."
@@ -155,6 +158,7 @@ spec:
                 - velero
                 - monitoring
                 - dns
+                - rook-ceph
       validate:
         failureAction: Enforce
         message: "Containers must run as non-root. Set runAsNonRoot: true in pod or container securityContext."
@@ -195,6 +199,7 @@ spec:
                 - velero
                 - monitoring
                 - dns
+                - rook-ceph
       validate:
         failureAction: Enforce
         message: "Privileged containers are not allowed."
@@ -233,6 +238,7 @@ spec:
                 - velero
                 - monitoring
                 - dns
+                - rook-ceph
       validate:
         failureAction: Enforce
         message: "Seccomp profile must be set (RuntimeDefault or Localhost) at pod or container level."
@@ -284,6 +290,7 @@ spec:
                 - velero
                 - monitoring
                 - dns
+                - rook-ceph
       validate:
         failureAction: Enforce
         message: "Host PID and IPC namespaces are not allowed."
@@ -321,6 +328,7 @@ spec:
                 - velero
                 - monitoring
                 - dns
+                - rook-ceph
       validate:
         failureAction: Enforce
         message: "Containers must drop ALL capabilities."
@@ -360,6 +368,7 @@ spec:
                 - velero
                 - monitoring
                 - dns
+                - rook-ceph
       context:
         - name: hostpathvols
           variable:
