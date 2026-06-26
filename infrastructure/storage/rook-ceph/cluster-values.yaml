@@ -84,10 +84,9 @@ cephClusterSpec:
 cephBlockPools:
   - name: ceph-blockpool
     spec:
-      name: .mgr
+      failureDomain: host
       replicated:
         size: 3
-        targetSizeRatio: "0.5"
       application: rbd
     storageClass:
       enabled: true
