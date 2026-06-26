@@ -1,10 +1,13 @@
 # Rook/Ceph — distributed block storage for the management cluster.
 #
-# Two-phase install (same pattern as external-secrets / cert-manager):
+# Three-phase install:
 #   wave 0 — rook-ceph operator (CRDs + controller)
-#   wave 1 — rook-ceph-cluster (CephCluster CR + CephBlockPool + StorageClass)
+#   wave 1 — ceph-csi-drivers (Driver CR + RBAC/SAs for RBD CSI)
+#   wave 2 — rook-ceph-cluster (CephCluster CR + CephBlockPool + StorageClass)
 #
 # The operator chart installs CRDs and the rook-ceph-operator deployment.
+# The ceph-csi-drivers chart provides the Driver CR plus the RBAC/service
+# accounts required by Rook 1.20's new Ceph CSI operator model.
 # The cluster chart creates CephCluster/CephBlockPool CRs that the operator
 # reconciles into a running Ceph cluster.
 #
@@ -72,13 +75,53 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
+  name: ceph-csi-drivers
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # wave 1: CSI driver CR + RBAC/SAs after operator CRDs exist (wave 0)
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+
+  sources:
+    - repoURL: https://ceph.github.io/ceph-csi-operator
+      chart: ceph-csi-drivers
+      targetRevision: "1.0.1"
+      helm:
+        releaseName: ceph-csi-drivers
+        valueFiles:
+          - $values/infrastructure/storage/rook-ceph/csi-drivers-values.yaml
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rook-ceph
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
   name: rook-ceph-cluster
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    # wave 1: cluster CRs after operator CRDs are installed (wave 0)
-    argocd.argoproj.io/sync-wave: "1"
+    # wave 2: cluster CRs after operator and CSI driver resources exist
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   project: platform
 

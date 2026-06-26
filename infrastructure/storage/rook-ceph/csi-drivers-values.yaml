@@ -1,0 +1,61 @@
+# Ceph CSI driver configuration for Rook 1.20+.
+#
+# Rook now installs the ceph-csi-operator, but the actual Driver CRs and the
+# driver service-account/RBAC bundle are managed separately via the
+# ceph-csi-drivers chart. We keep Rook's historical driver name prefix
+# (`rook-ceph.*.csi.ceph.com`) so the generated StorageClass provisioner and
+# secrets continue to match.
+#
+# The rook operator already creates and updates the CephConnection and
+# ClientProfile resources for the cluster, so this chart only manages:
+#   - OperatorConfig (default CSI runtime settings)
+#   - Driver CR/RBAC/SAs for the RBD plugin
+#
+# CephFS/NFS/NVMe-oF are intentionally disabled for now.
+
+cephConnections: []
+clientProfiles: []
+
+operatorConfig:
+  name: ceph-csi-operator-config
+  namespace: rook-ceph
+  create: true
+  driverSpecDefaults:
+    clusterName: rook-ceph
+    snapshotPolicy: none
+    nodePlugin:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+    controllerPlugin:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+
+# Only RBD is needed right now (ceph-block StorageClass).
+drivers:
+  rbd:
+    enabled: true
+    name: rook-ceph.rbd.csi.ceph.com
+    clusterName: rook-ceph
+    nodePlugin:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+    controllerPlugin:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+
+  cephfs:
+    enabled: false
+
+  nfs:
+    enabled: false
+
+  nvmeof:
+    enabled: false
