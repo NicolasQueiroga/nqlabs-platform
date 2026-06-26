@@ -42,6 +42,12 @@ spec:
       targetRevision: HEAD
       ref: values
 
+    # Explicit namespace manifest so Pod Security labels are applied even when
+    # the namespace already exists (managedNamespaceMetadata only helps at create time)
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/storage/rook-ceph/bootstrap
+
   destination:
     server: https://kubernetes.default.svc
     namespace: rook-ceph
