@@ -9,7 +9,7 @@ metadata:
   name: minio-auth
   namespace: minio
 spec:
-  refreshPolicy: CreatedOnce
+  refreshPolicy: Periodic
   refreshInterval: 1h
   secretStoreRef:
     kind: ClusterSecretStore
