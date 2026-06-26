@@ -28,22 +28,23 @@ spec:
         - podSelector: {}
 
 ---
-# Allow hostNetwork clients on the management LAN (notably Ceph CSI nodeplugins)
-# to reach Ceph daemons. Without this, nodeplugin traffic from 192.168.15.x is
-# not matched by the intra-namespace podSelector policy.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+# Allow hostNetwork clients on Kubernetes nodes (notably Ceph CSI nodeplugins)
+# to reach Ceph daemons. With Cilium, hostNetwork pod traffic is classified as
+# host/remote-node identity, so a Kubernetes NetworkPolicy ipBlock does not
+# reliably match it.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
-  name: rook-ceph-allow-management-lan
+  name: rook-ceph-allow-hostnetwork-clients
   namespace: rook-ceph
 spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
+  endpointSelector: {}
   ingress:
-    - from:
-        - ipBlock:
-            cidr: 192.168.15.0/24
+    - fromEntities:
+        - host
+        - remote-node
+    - fromCIDRSet:
+        - cidr: 192.168.15.0/24
 
 ---
 # Allow Authentik embedded outpost to reach the Ceph dashboard (forward-auth).
