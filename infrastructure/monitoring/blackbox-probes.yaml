@@ -72,8 +72,8 @@ spec:
         cluster: lab
         probe_scope: internal-health-redirects
       static:
-        # Ceph dashboard — mgr dashboard speaks HTTP on port 8443 internally
-        - http://rook-ceph-mgr-dashboard.rook-ceph.svc.cluster.local:8443/
+        # Ceph dashboard — mgr dashboard speaks HTTP on port 7000 internally
+        - http://rook-ceph-mgr-dashboard.rook-ceph.svc.cluster.local:7000/
 
 ---
 # Edge auth probes — verify forward-auth protected public URLs redirect (302)

@@ -2,8 +2,8 @@
 #
 # Ceph pods (MON, MGR, OSD) communicate extensively with each other.
 # We allow intra-namespace traffic + specific external ingress:
-#   - Cilium gateway → MGR dashboard (8443) — SAML SSO handles auth
-#   - Monitoring/Gatus → MGR dashboard health endpoint (8443)
+#   - Cilium gateway → MGR dashboard (7000) — SAML SSO handles auth
+#   - Monitoring/Gatus → MGR dashboard health endpoint (7000)
 #   - Prometheus → MGR metrics (9282)
 #
 # No deny-all policy: Ceph internal traffic uses many dynamic ports
@@ -63,7 +63,7 @@ spec:
         - ingress
       toPorts:
         - ports:
-            - port: "8443"
+            - port: "7000"
               protocol: TCP
 
 ---
@@ -85,7 +85,7 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: monitoring
       ports:
-        - port: 8443
+        - port: 7000
           protocol: TCP
 
 ---

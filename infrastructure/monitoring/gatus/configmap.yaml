@@ -163,7 +163,7 @@ data:
 
       - name: Ceph Dashboard
         group: Storage
-        url: http://rook-ceph-mgr-dashboard.rook-ceph.svc.cluster.local:8443/
+        url: http://rook-ceph-mgr-dashboard.rook-ceph.svc.cluster.local:7000/
         interval: 1m
         client:
           ignore-redirect: true

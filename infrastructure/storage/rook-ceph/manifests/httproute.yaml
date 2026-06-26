@@ -1,7 +1,7 @@
 # HTTPRoute for Ceph dashboard — direct to MGR dashboard (SAML SSO handles auth).
 #
 # Hostname: ceph.platform.nqlabs.network
-# Backend: rook-ceph-mgr-dashboard:8443 (HTTP inside cluster, TLS at gateway)
+# Backend: rook-ceph-mgr-dashboard:7000 (HTTP inside cluster, TLS at gateway)
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -25,7 +25,7 @@ spec:
       backendRefs:
         - name: rook-ceph-mgr-dashboard
           namespace: rook-ceph
-          port: 8443
+          port: 7000
       timeouts:
         request: 300s
         backendRequest: 300s
