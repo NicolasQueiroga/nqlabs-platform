@@ -332,6 +332,8 @@ entries:
       issuer_override: https://ceph.platform.nqlabs.network/auth/saml2/metadata
       audience: https://ceph.platform.nqlabs.network/auth/saml2/metadata
       sp_binding: post
+      sign_assertion: true
+      sign_response: true
       authorization_flow:
         !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
       invalidation_flow:
