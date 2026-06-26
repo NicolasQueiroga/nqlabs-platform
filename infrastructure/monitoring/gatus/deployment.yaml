@@ -29,7 +29,7 @@ spec:
   template:
     metadata:
       annotations:
-        nqlabs.io/config-revision: "2026-06-26-oidc-public-issuer"
+        nqlabs.io/config-revision: "2026-06-26-uptime-coverage-gateway-fix"
       labels:
         app.kubernetes.io/name: gatus
         app.kubernetes.io/component: monitoring

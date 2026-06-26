@@ -76,6 +76,13 @@ data:
         conditions:
           - "[STATUS] == 200"
 
+      - name: Gatus
+        group: Monitoring
+        url: http://gatus.monitoring.svc.cluster.local:8080/health
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
       - name: Prometheus
         group: Monitoring
         url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/-/healthy
@@ -100,9 +107,23 @@ data:
         url: http://cilium-gateway-platform-gateway.platform.svc.cluster.local:80
         interval: 2m
         client:
-          follow-redirects: false
+          ignore-redirect: true
         conditions:
           - "[STATUS] == 301"
+
+      - name: Hubble
+        group: Observability
+        url: http://hubble-ui.kube-system.svc.cluster.local:80/
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: OTel Collector
+        group: Observability
+        url: http://otel-collector.monitoring.svc.cluster.local:13133/
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
 
       - name: Thanos Query
         group: Observability
@@ -121,6 +142,13 @@ data:
       - name: Pyroscope
         group: Observability
         url: http://pyroscope.monitoring.svc.cluster.local:4040/ready
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Thanos Receive
+        group: Observability
+        url: http://thanos-receive.monitoring.svc.cluster.local:10902/-/healthy
         interval: 1m
         conditions:
           - "[STATUS] == 200"
