@@ -129,7 +129,7 @@ https://argocd.platform.nqlabs.network
 ESO needs a 1Password service account token to read secrets from the `NQLabs`
 vault. This is the trust root for all platform secrets and must be applied
 manually before the root Application can sync ESO-dependent apps (authentik,
-minio, velero, etc.).
+velero, etc.).
 
 ```bash
 # Create the namespace first (ESO will be installed into it by GitOps)
@@ -218,7 +218,7 @@ Expected progression (sync waves):
 1. **Wave 0:** Cilium config, cert-manager, external-secrets, local-path, rook-ceph operator
 2. **Wave 1:** CloudNativePG, DNS, external-secrets config, rook-ceph cluster
 3. **Wave 2:** cert-manager config, CoreDNS, Kyverno, Tailscale operator, cluster DNS
-4. **Wave 3:** MinIO, Prometheus stack, Kyverno policies, Tailscale config
+4. **Wave 3:** Prometheus stack, Kyverno policies, Tailscale config
 5. **Wave 4:** Argo Rollouts, Velero, Blackbox, Falco, Gateway, Loki, Thanos config, monitoring config
 6. **Wave 5:** Authentik, Promtail, Tempo, Pyroscope, Thanos
 7. **Wave 6:** Gatus, OTEL collector
@@ -353,12 +353,6 @@ No `kubectl` or `helm install` needed for anything after bootstrap.
   `kubectl get endpoints -n authentik authentik-server`
 - Browser-based OIDC login will redirect to the internal URL, which is a known
   limitation until the Cilium gateway hairpin issue is resolved.
-
-**MinIO bucket creation Job fails**
-- The PostSync Job waits up to 5 minutes for MinIO to be ready before creating
-  buckets. If MinIO takes longer to start, increase the retry count in the job
-  command.
-- Ensure the `minio-auth` secret (from ESO) is available before the job runs.
 
 **Kyverno policies show `OutOfSync`**
 - Kyverno defaults several fields on ClusterPolicy at admission time

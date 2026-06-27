@@ -305,7 +305,6 @@ ESO fetches the value from 1Password and materializes a Kubernetes Secret.
 - `grafana-oidc` — OIDC client secret for Grafana
 - `grafana-admin-credentials` — Grafana local admin (break-glass only)
 - `velero-credentials` — AWS S3 + Azure Blob backup credentials
-- `minio-auth` — MinIO root credentials
 - `tailscale-oauth` — Tailscale OAuth client ID + secret
 - `cloudflared-tunnel` — Cloudflare tunnel token
 
@@ -748,22 +747,6 @@ available.
 
 Config: `infrastructure/storage/local-path/values.yaml`
 
-### MinIO (S3-Compatible Object Storage)
-
-| Property | Value |
-|----------|-------|
-| Namespace | `minio` |
-| Kind | Deployment (manifest) |
-| Storage | local-path PVC (20Gi) |
-| Credentials | ESO-managed (1Password: `velero-minio`) |
-| Ports | 9000 (S3 API), 9001 (console) |
-
-MinIO provides S3-compatible object storage as the local backup target for
-Velero. It is a backup target, not durable storage — offsite backups (AWS
-S3, Azure Blob) provide real DR.
-
-Config: `infrastructure/storage/minio/minio.yaml`
-
 ---
 
 ## 9. Backup & Disaster Recovery
@@ -775,7 +758,7 @@ Config: `infrastructure/storage/minio/minio.yaml`
 | Namespace | `velero` |
 | Kind | Deployment (1 replica) |
 | Mode | scheduled + on-demand; node-agent file backup enabled |
-| Backup targets | management: MinIO/AWS/Azure; staging/production: AWS/Azure |
+| Backup targets | management: Ceph RGW/AWS/Azure; staging/production: AWS/Azure |
 
 Velero provides Kubernetes backup and disaster recovery. It runs on all three
 clusters. Scheduled backups provide baseline coverage; operators can still
@@ -785,13 +768,13 @@ trigger pre-change backups manually.
 
 | Location | Provider | Bucket | Purpose |
 |----------|----------|--------|---------|
-| `minio` (default) | AWS (S3 API) | `velero` on MinIO | Local, fast, free |
+| `local` (default) | Ceph RGW (S3 API) | `velero` on Ceph RGW | Local, fast, free |
 | `aws` | AWS S3 | `nqlabs-velero-backup` (us-east-1) | Offsite DR |
 | `azure` | Azure Blob | `velero` (Cool tier) | Cheapest offsite |
 
 Usage:
 ```bash
-velero backup create pre-change-snapshot --storage-location minio
+velero backup create pre-change-snapshot --storage-location local
 velero backup create dr-snapshot --storage-location aws
 ```
 
@@ -921,8 +904,7 @@ External Secrets Operator. No secrets exist in the Git repository.
 | `argocd-oidc` | client_secret | ArgoCD OIDC + Authentik blueprint |
 | `grafana-oidc` | client_secret | Grafana OIDC + Authentik blueprint |
 | `grafana-admin-credentials` | admin-user, admin-password | Grafana (break-glass only) |
-| `velero-credentials` | aws, azure | Velero backup targets |
-| `velero-minio` | access-key, secret-key | MinIO + Velero |
+| `velero-credentials` | aws, azure | Velero offsite backup targets |
 | `tailscale-key` | username (client_id), credential (client_secret) | Tailscale operator OAuth |
 | `cloudflared-tunnel` | tunnel-token | Cloudflare tunnel |
 | `Service Account Auth Token: NQ Labs` | credential (ops_...) | ESO bootstrap (one-time) |
@@ -959,7 +941,6 @@ Runbook: [secrets.md](../runbooks/secrets.md)
 | `management-kyverno-policies` | kyverno | ClusterPolicies |
 | `management-falco` | falco | Runtime security |
 | `management-velero` | velero | Backup/DR |
-| `management-minio` | minio | S3-compatible backup target |
 | `local-path-provisioner` | local-path-storage | Storage provisioner |
 | `coredns-dns` | dns | Authoritative DNS for nqlabs.network |
 | `etcd-dns` | dns | DNS record backend |
@@ -1020,7 +1001,6 @@ Runbook: [secrets.md](../runbooks/secrets.md)
 | `kube-system` | — | Kubernetes system + Cilium |
 | `kyverno` | baseline | Policy engine |
 | `local-path-storage` | privileged | Storage provisioner |
-| `minio` | baseline | S3-compatible object storage |
 | `monitoring` | — | Prometheus, Grafana, Loki, etc. |
 | `platform` | baseline | Gateway API gateway |
 | `tailscale` | privileged | Tailscale operator |

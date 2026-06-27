@@ -69,11 +69,6 @@ global:
         secretKeyRef:
           name: authentik-secrets
           key: gatus_oidc_client_secret
-    - name: AUTHENTIK_MINIO_OIDC_SECRET
-      valueFrom:
-        secretKeyRef:
-          name: authentik-secrets
-          key: minio_oidc_client_secret
     # Session timeout — 8h max session, 30m idle timeout.
     - name: AUTHENTIK_SESSION__MAX_AGE
       value: "28800"

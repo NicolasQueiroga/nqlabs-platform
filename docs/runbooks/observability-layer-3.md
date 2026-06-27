@@ -34,7 +34,7 @@ http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive
   - Store Gateway
   - Compactor
   - Bucket Web
-- Object storage: management MinIO bucket `thanos`.
+- Object storage: Ceph RGW bucket `thanos`.
 - Retention:
   - Prometheus local: 7d fast operational window
   - Thanos raw: 30d

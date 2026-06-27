@@ -152,7 +152,7 @@ kubectl get secret grafana-admin-credentials -n monitoring -o jsonpath='{.data.a
 ## CNPG backup & restore
 
 Authentik PostgreSQL is backed up via CloudNativePG's native backup mechanism.
-WAL files are archived continuously to MinIO (`s3://authentik-pg/wal`), and a
+WAL files are archived continuously to Ceph RGW (`s3://authentik-pg/wal`), and a
 scheduled full backup runs daily at 02:00 UTC (`ScheduledBackup` CR).
 
 ### Check backup status

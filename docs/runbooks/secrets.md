@@ -173,7 +173,8 @@ kubectl get secret <name> -n <namespace> -o jsonpath='{.data}' | python3 -m json
 | `tailscale-operator-oauth` | `tailscale` | `operator-oauth` | Tailscale Operator OAuth credentials |
 | `grafana-oidc` | `monitoring` | `grafana-oidc` | Grafana Authentik OIDC client secret |
 | `alertmanager-discord-webhook` | `monitoring` | `alertmanager-discord-webhook` | Alertmanager Discord receiver webhook |
-| `velero-credentials` | `velero` | `velero-credentials` | MinIO/AWS/Azure backup credentials |
+| `velero-credentials` | `velero` | `velero-credentials` | AWS/Azure backup credentials (offsite) |
+| `velero-rgw-credentials` | `velero` | `velero-rgw-credentials` | Ceph RGW backup credentials (local) |
 
 ## Common failure modes
 

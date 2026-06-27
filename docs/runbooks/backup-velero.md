@@ -1,6 +1,6 @@
 # Runbook — Backup & DR (Velero)
 
-Velero runs on **management, staging, and production**. Management has local MinIO
+Velero runs on **management, staging, and production**. Management has local Ceph RGW
 plus offsite AWS/Azure. Staging/production use offsite AWS/Azure. Node-agent file
 backup is enabled so local-path PV data is covered.
 
@@ -11,18 +11,18 @@ files. Do not relax service namespaces for this.
 
 | BSL | Where | Use |
 |-----|-------|-----|
-| `minio` (default) | in-cluster MinIO (local-path) | free, fast — routine pre-change snapshots |
+| `local` (default) | in-cluster Ceph RGW | free, fast — routine pre-change snapshots |
 | `aws` | AWS S3 `nqlabs-velero-backup` (us-east-1) | offsite DR |
 | `azure` | Azure Blob `nqlabsvelero24612/velero` (Cool, LRS) | offsite DR |
 
-Credentials live in 1Password (`velero-minio`, `velero-aws`, `velero-azure`) and are
-assembled into the `velero-credentials` secret by External Secrets.
+Credentials: local RGW creds in `velero-rgw-credentials` (OBC-managed), offsite
+creds in 1Password (`velero-aws`, `velero-azure`) assembled into `velero-credentials`.
 
 ## Schedules
 
 | Cluster | Schedule | Target | TTL | Purpose |
 |---|---|---|---|---|
-| management | `management-daily-local` daily 05:00 | MinIO | 7d | cheap local rollback |
+| management | `management-daily-local` daily 05:00 | Ceph RGW | 7d | cheap local rollback |
 | management | `management-weekly-offsite-aws` Sundays 05:30 | AWS | 30d | offsite DR |
 | staging/production | `cluster-daily-aws` daily 06:00 | AWS | 7d | workload DR |
 | staging/production | `cluster-weekly-azure` Sundays 06:30 | Azure | 30d | second offsite copy |
@@ -30,7 +30,7 @@ assembled into the `velero-credentials` secret by External Secrets.
 ## Take a backup (before risky changes)
 ```bash
 kubectl -n velero exec deploy/velero -- \
-  velero backup create pre-change-$(date +%F-%H%M) --wait            # -> minio (default)
+  velero backup create pre-change-$(date +%F-%H%M) --wait            # -> local (default)
 
 # offsite copy:
 ... velero backup create dr-$(date +%F) --storage-location aws  --wait

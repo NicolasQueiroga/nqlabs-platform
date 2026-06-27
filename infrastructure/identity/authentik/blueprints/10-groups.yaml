@@ -100,18 +100,3 @@ entries:
       description: "NQLabs group membership"
       expression: |
         return [group.name for group in request.user.groups.all()]
-
-  # ── MinIO policy scope mapping ─────────────────────────────────────────
-  # MinIO OIDC requires a `policy` claim in the JWT token containing the name
-  # of a MinIO built-in policy.  platform-admins → consoleAdmin, everyone
-  # else → readonly.
-  - model: authentik_providers_oauth2.scopemapping
-    identifiers:
-      name: "MinIO OIDC policy"
-    attrs:
-      scope_name: policy
-      description: "MinIO console policy claim"
-      expression: |
-        groups = [group.name for group in request.user.groups.all()]
-        policy = "consoleAdmin" if "platform-admins" in groups else "readonly"
-        return {"policy": policy}
