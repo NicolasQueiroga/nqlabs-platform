@@ -1,0 +1,33 @@
+# Provision a dedicated Velero bucket on the internal Ceph RGW object store.
+# The OBC generates credentials used by the local BSL in values.yaml.
+---
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: velero-rgw
+  namespace: velero
+  labels:
+    app.kubernetes.io/name: velero
+    app.kubernetes.io/component: backup
+    app.kubernetes.io/part-of: nqlabs-platform
+spec:
+  bucketName: velero
+  storageClassName: ceph-bucket
+---
+# S3 credentials for the local (RGW) Velero BSL.
+# If the OBC is reprovisioned (new user), update these values.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: velero-rgw-credentials
+  namespace: velero
+  labels:
+    app.kubernetes.io/name: velero
+    app.kubernetes.io/component: backup
+    app.kubernetes.io/part-of: nqlabs-platform
+type: Opaque
+stringData:
+  cloud: |
+    [default]
+    aws_access_key_id=ALXE7L23SN8PNHEFTFF2
+    aws_secret_access_key=hVAKjAJcDaqWHxYyUGJszzN7x9z5D70vkfaUcLwR

@@ -41,13 +41,13 @@ spec:
   monitoring:
     enablePodMonitor: true
 
-  # WAL archiving to MinIO (S3-compatible) for point-in-time recovery.
-  # The authentik-pg bucket is created by the MinIO make-bucket Job.
-  # Credentials come from the authentik-pg-backup-s3 secret (ESO-managed).
+  # WAL archiving to Ceph RGW (S3-compatible) for point-in-time recovery.
+  # The authentik-pg bucket is provisioned by the OBC in postgres-backup.yaml.
+  # Credentials come from the authentik-pg-backup-s3 secret (OBC-generated).
   backup:
     barmanObjectStore:
       destinationPath: s3://authentik-pg/wal
-      endpointURL: http://minio.minio:9000
+      endpointURL: http://rook-ceph-rgw-platform-object-store.rook-ceph.svc:80
       s3Credentials:
         accessKeyId:
           name: authentik-pg-backup-s3

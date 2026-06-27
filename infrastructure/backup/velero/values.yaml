@@ -1,5 +1,5 @@
 # Velero — scheduled + on-demand backup/DR with node-agent file backup. Three targets:
-#   minio (default) — local, free, fast; for routine pre-change snapshots
+#   local (default) — Ceph RGW, in-cluster, fast; for routine pre-change snapshots
 #   aws            — offsite S3 (us-east-1)        | real DR, on demand:
 #   azure          — offsite Blob (Cool, cheapest) |   velero backup create X --storage-location aws
 initContainers:
@@ -27,13 +27,16 @@ credentials:
 configuration:
   defaultVolumesToFsBackup: true
   backupStorageLocation:
-    - name: minio
+    - name: local
       provider: aws
       default: true
       bucket: velero
+      credential:
+        name: velero-rgw-credentials
+        key: cloud
       config:
-        region: minio
-        s3Url: http://minio.minio:9000
+        region: us-east-1
+        s3Url: http://rook-ceph-rgw-platform-object-store.rook-ceph.svc:80
         s3ForcePathStyle: "true"
     - name: aws
       provider: aws
@@ -97,7 +100,7 @@ schedules:
     schedule: "0 5 * * *"
     template:
       ttl: 168h
-      storageLocation: minio
+      storageLocation: local
       defaultVolumesToFsBackup: true
       includedNamespaces:
         - argocd
