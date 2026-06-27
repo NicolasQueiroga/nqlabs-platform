@@ -397,3 +397,29 @@ spec:
               protocol: TCP
             - port: "6443"
               protocol: TCP
+---
+# Allow CNPG instance manager (authentik-pg-*) to archive WAL files and
+# run backups to the Ceph RGW object store in the rook-ceph namespace.
+# The RGW Service exposes port 80, but targets the RGW pod's http port 8080;
+# NetworkPolicy is evaluated against the translated destination pod port.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: authentik-cnpg-egress-rgw
+  namespace: authentik
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  endpointSelector:
+    matchLabels:
+      cnpg.io/cluster: authentik-pg
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": rook-ceph
+            app: rook-ceph-rgw
+            rook_object_store: platform-object-store
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
