@@ -39,7 +39,7 @@ spec:
       key: ca.crt
     auth:
       kubernetes:
-        mountPath: v1/auth/kubernetes-management
+        mountPath: /v1/auth/kubernetes-management
         role: cert-manager
         serviceAccountRef:
           name: cert-manager
