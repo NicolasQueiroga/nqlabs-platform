@@ -207,6 +207,32 @@ spec:
         - protocol: TCP
           port: 8200
 ---
+# Allow Authentik embedded outpost to reach OpenBao API (proxy mode).
+# The outpost runs in the authentik namespace and proxies requests from
+# the gateway to openbao:8200 after SSO authentication.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: openbao-allow-authentik-outpost
+  namespace: openbao
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: openbao
+      component: server
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: authentik
+      ports:
+        - protocol: TCP
+          port: 8200
+---
 # Bootstrap pod egress to OpenBao server API.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
