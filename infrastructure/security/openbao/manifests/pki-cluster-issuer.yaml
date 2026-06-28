@@ -39,4 +39,3 @@ spec:
         role: cert-manager
         serviceAccountRef:
           name: cert-manager
-          namespace: cert-manager
