@@ -84,7 +84,7 @@ spec:
       path: /metrics
       interval: 30s
 ---
-# Tunnel token from OpenBao via External Secrets.
+# Tunnel token from 1Password via External Secrets.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
@@ -95,7 +95,7 @@ spec:
   refreshInterval: 1h
   secretStoreRef:
     kind: ClusterSecretStore
-    name: nqlabs-openbao
+    name: nqlabs-1password
   target:
     name: cloudflared-tunnel
     creationPolicy: Owner

@@ -2,7 +2,7 @@
 #
 # Requires:
 #   - External Secrets Operator installed
-#   - nqlabs-openbao ClusterSecretStore Ready
+#   - nqlabs-1password ClusterSecretStore Ready
 #   - cert-manager CRDs installed
 
 apiVersion: argoproj.io/v1alpha1
