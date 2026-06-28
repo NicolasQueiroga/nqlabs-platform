@@ -56,6 +56,9 @@ server:
             auto_join = "provider=k8s label_selector=\"app.kubernetes.io/name=openbao,component=server\" namespace=\"openbao\""
             auto_join_scheme = "https"
             leader_tls_servername = "openbao.openbao.svc"
+            leader_ca_cert_file = "/openbao/tls/openbao-server-tls/ca.crt"
+            leader_client_cert_file = "/openbao/tls/openbao-server-tls/tls.crt"
+            leader_client_key_file = "/openbao/tls/openbao-server-tls/tls.key"
           }
         }
 
