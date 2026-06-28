@@ -1,0 +1,42 @@
+# cert-manager ClusterIssuer — OpenBao PKI backend.
+#
+# Replaces nqlabs-internal-ca (self-signed CA) for internal certificates.
+# Uses OpenBao's PKI secret engine to sign certificates.
+#
+# Auth: Kubernetes auth (cert-manager's service account → OpenBao role)
+# Path: pki/sign/cert-manager (OpenBao PKI role)
+# CA:   openbao-pki-ca secret (materialized by ExternalSecret from kv/openbao-pki/ca)
+#
+# During initial bootstrap, OpenBao's own server cert is signed by
+# nqlabs-internal-ca. cert-manager needs to trust that CA to connect
+# to OpenBao. The caBundleSecretRef points to openbao-pki-ca, which
+# contains the OpenBao PKI root CA. This works after the OpenBao TLS
+# cert is reissued by this issuer (chicken-and-egg resolved by keeping
+# nqlabs-internal-ca until the first cert is issued).
+#
+# Migration steps (manual, after bootstrap):
+#   1. Verify nqlabs-openbao-pki issuer is Ready
+#   2. Update openbao-server-tls Certificate issuerRef to nqlabs-openbao-pki
+#   3. Wait for cert renewal
+#   4. Remove selfsigned-bootstrap + nqlabs-internal-ca issuers
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: nqlabs-openbao-pki
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  vault:
+    server: "https://openbao.openbao.svc.cluster.local:8200"
+    path: pki/sign/cert-manager
+    caBundleSecretRef:
+      name: openbao-pki-ca
+      key: ca.crt
+    auth:
+      kubernetes:
+        mountPath: kubernetes-management
+        role: cert-manager
+        serviceAccountRef:
+          name: cert-manager
+          namespace: cert-manager

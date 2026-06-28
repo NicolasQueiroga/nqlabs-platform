@@ -1,0 +1,245 @@
+# Idempotent OpenBao bootstrap configuration Job.
+#
+# Runs after OpenBao is initialized and unsealed (manual operator step).
+# Uses the root token from the bootstrap ExternalSecret to configure:
+#   - kv-v2 secret engine at path kv/
+#   - kubernetes auth at mount kubernetes-management
+#   - policy: eso-policy (read kv/ for ESO)
+#   - role: eso (bound to external-secrets SA in external-secrets namespace)
+#   - pki secret engine at path pki/ (internal CA replacing nqlabs-internal-ca)
+#   - policy: cert-manager-pki (sign certs via pki/)
+#   - role: cert-manager (bound to cert-manager SA in cert-manager namespace)
+#   - approle auth at mount approle (for remote clusters)
+#   - roles: staging, production (for remote-cluster ESO via AppRole)
+#   - audit to stdout
+#
+# The Job is idempotent: it checks if each resource already exists before
+# creating it. Safe to re-run.
+#
+# Prerequisites:
+#   1. OpenBao deployed and pods Running
+#   2. OpenBao initialized (`bao operator init`) and unsealed
+#   3. Root token stored in 1Password item "openbao-bootstrap"
+#   4. bootstrap-token-externalsecret synced
+#
+# After successful bootstrap:
+#   - Revoke the root token (optional, after all config is verified)
+#   - Remove or rotate the 1Password bootstrap item
+#   - Remove this Job and the bootstrap ExternalSecret
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: openbao-bootstrap-config
+  namespace: openbao
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-options: "Replace=true"
+spec:
+  backoffLimit: 4
+  template:
+    metadata:
+      name: openbao-bootstrap-config
+      labels:
+        app.kubernetes.io/name: openbao
+        app.kubernetes.io/component: bootstrap
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: openbao
+      containers:
+        - name: bootstrap
+          image: quay.io/openbao/openbao:2.5.2
+          env:
+            - name: BAO_ADDR
+              value: "https://openbao.openbao.svc.cluster.local:8200"
+            - name: BAO_CACERT
+              value: "/openbao/tls/ca.crt"
+            - name: BAO_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: openbao-bootstrap-token
+                  key: token
+          volumeMounts:
+            - name: tls
+              mountPath: /openbao/tls
+              readOnly: true
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              echo "=== OpenBao Bootstrap Configuration ==="
+
+              # Wait for OpenBao to be unsealed and reachable
+              echo "Waiting for OpenBao to be reachable..."
+              until bao status 2>/dev/null | grep -q "Initialized"; do
+                echo "  OpenBao not ready yet, retrying..."
+                sleep 5
+              done
+              echo "OpenBao is initialized and reachable."
+
+              # --- Enable kv-v2 secret engine ---
+              echo "Checking kv-v2 mount at kv/..."
+              if ! bao secrets list -format=json 2>/dev/null | grep -q '"kv/"'; then
+                echo "  Enabling kv-v2 at kv/..."
+                bao secrets enable -path=kv -version=2 kv
+              else
+                echo "  kv/ already enabled."
+              fi
+
+              # --- Enable Kubernetes auth ---
+              echo "Checking kubernetes auth at kubernetes-management..."
+              if ! bao auth list -format=json 2>/dev/null | grep -q '"kubernetes-management/"'; then
+                echo "  Enabling kubernetes auth at kubernetes-management/..."
+                bao auth enable -path=kubernetes-management kubernetes
+              else
+                echo "  kubernetes-management/ already enabled."
+              fi
+
+              # --- Configure Kubernetes auth backend ---
+              echo "Configuring kubernetes auth backend..."
+              bao write auth/kubernetes-management/config \
+                kubernetes_host="https://kubernetes.default.svc:443" \
+                kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+              # --- Create ESO policy ---
+              echo "Creating eso-policy..."
+              bao policy write eso-policy - <<'EOF'
+              path "kv/data/*" {
+                capabilities = ["read", "list"]
+              }
+              path "kv/metadata/*" {
+                capabilities = ["read", "list"]
+              }
+              EOF
+
+              # --- Create ESO role ---
+              echo "Creating eso role..."
+              bao write auth/kubernetes-management/role/eso \
+                bound_service_account_names=external-secrets \
+                bound_service_account_namespaces=external-secrets \
+                policies=eso-policy \
+                ttl=1h
+
+              # --- Enable audit to stdout ---
+              echo "Checking audit devices..."
+              if ! bao audit list -format=json 2>/dev/null | grep -q '"stdout/"'; then
+                echo "  Enabling stdout audit device..."
+                bao audit enable stdout
+              else
+                echo "  stdout audit already enabled."
+              fi
+
+              # --- Enable PKI secret engine ---
+              echo "Checking pki mount at pki/..."
+              if ! bao secrets list -format=json 2>/dev/null | grep -q '"pki/"'; then
+                echo "  Enabling pki at pki/..."
+                bao secrets enable -path=pki pki
+                bao secrets tune -max-lease-ttl=87600h pki
+              else
+                echo "  pki/ already enabled."
+              fi
+
+              # --- Generate root CA (idempotent: only if no CA exists) ---
+              echo "Checking for existing root CA..."
+              if ! bao read pki/cert/ca 2>/dev/null; then
+                echo "  Generating root CA..."
+                bao write pki/root/generate/internal \
+                  common_name="NQLabs Internal CA" \
+                  ttl=87600h
+              else
+                echo "  Root CA already exists."
+              fi
+
+              # --- Configure PKI URLs ---
+              echo "Configuring PKI URLs..."
+              bao write pki/config/urls \
+                issuing_certificates="https://openbao.openbao.svc.cluster.local:8200/v1/pki/ca" \
+                crl_distribution_points="https://openbao.openbao.svc.cluster.local:8200/v1/pki/crl"
+
+              # --- Create cert-manager PKI role ---
+              echo "Creating cert-manager PKI role..."
+              bao write pki/roles/cert-manager \
+                allowed_domains="svc.cluster.local,nqlabs.network,nqlabs.io" \
+                allow_subdomains=true \
+                allow_bare_domains=true \
+                max_ttl=720h
+
+              # --- Store PKI CA cert in KV for cert-manager caBundle ---
+              echo "Storing PKI CA cert in kv/openbao-pki/ca..."
+              CA_PEM=$(bao read -field=certificate pki/cert/ca)
+              bao kv put kv/openbao-pki/ca certificate="$CA_PEM"
+
+              # --- Create cert-manager PKI policy ---
+              echo "Creating cert-manager-pki policy..."
+              bao policy write cert-manager-pki - <<'EOF'
+              path "pki/sign/cert-manager" {
+                capabilities = ["update"]
+              }
+              path "pki/ca/pem" {
+                capabilities = ["read"]
+              }
+              EOF
+
+              # --- Create cert-manager Kubernetes auth role ---
+              echo "Creating cert-manager auth role..."
+              bao write auth/kubernetes-management/role/cert-manager \
+                bound_service_account_names=cert-manager \
+                bound_service_account_namespaces=cert-manager \
+                policies=cert-manager-pki \
+                ttl=1h
+
+              # --- Enable AppRole auth (for remote clusters) ---
+              echo "Checking approle auth..."
+              if ! bao auth list -format=json 2>/dev/null | grep -q '"approle/"'; then
+                echo "  Enabling approle auth..."
+                bao auth enable -path=approle approle
+              else
+                echo "  approle/ already enabled."
+              fi
+
+              # --- Create AppRole roles for remote clusters ---
+              # ESO on staging/production uses AppRole to authenticate to OpenBao
+              # via the gateway URL. AppRole credentials are bootstrapped manually
+              # on each remote cluster (see cluster-secret-store-openbao.yaml).
+              for CLUSTER in staging production; do
+                echo "Creating approle role: ${CLUSTER}..."
+                bao write auth/approle/role/${CLUSTER} \
+                  token_policies=eso-policy \
+                  token_ttl=1h \
+                  token_max_ttl=4h \
+                  secret_id_ttl=0 \
+                  secret_id_num_uses=0
+              done
+
+              # --- Output AppRole credentials for operator ---
+              echo ""
+              echo "=== AppRole credentials (bootstrap remote clusters) ==="
+              for CLUSTER in staging production; do
+                ROLE_ID=$(bao read -field=role_id auth/approle/role/${CLUSTER}/role-id)
+                SECRET_ID=$(bao write -field=secret_id -f auth/approle/role/${CLUSTER}/secret-id)
+                echo ""
+                echo "Cluster: ${CLUSTER}"
+                echo "  Role ID:   ${ROLE_ID}"
+                echo "  Secret ID: ${SECRET_ID}"
+                echo ""
+                echo "  kubectl create secret generic openbao-approle \\"
+                echo "    -n external-secrets --from-literal=role-id=${ROLE_ID} \\"
+                echo "    --from-literal=secret-id=${SECRET_ID}"
+              done
+
+              echo "=== Bootstrap configuration complete ==="
+              echo ""
+              echo "Verify with:"
+              echo "  bao auth list"
+              echo "  bao secrets list"
+              echo "  bao policy read eso-policy"
+              echo "  bao policy read cert-manager-pki"
+              echo "  bao read auth/kubernetes-management/role/eso"
+              echo "  bao read auth/kubernetes-management/role/cert-manager"
+              echo "  bao read pki/roles/cert-manager"
+              echo "  bao read auth/approle/role/staging"
+              echo "  bao read auth/approle/role/production"
+      volumes:
+        - name: tls
+          secret:
+            secretName: openbao-server-tls

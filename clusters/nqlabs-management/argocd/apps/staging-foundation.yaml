@@ -4,7 +4,7 @@
 # - Cilium LB IPAM/L2 policy (post-bootstrap config only)
 # - Prometheus Operator CRDs (ServiceMonitor/PodMonitor for app metrics objects)
 # - local-path-provisioner
-# - External Secrets Operator + ClusterSecretStore
+# - External Secrets Operator + ClusterSecretStore (1Password + OpenBao)
 # - cert-manager + Cloudflare/issuer config
 # - platform-gateway (certificate + Gateway only; no argocd route)
 
@@ -162,6 +162,34 @@ spec:
     path: infrastructure/security/external-secrets
     directory:
       include: "{cluster-secret-store.yaml,network-policies.yaml}"
+  destination:
+    name: nqlabs-staging
+    namespace: external-secrets
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: staging-openbao-config
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: clusters/nqlabs-staging/external-secrets
   destination:
     name: nqlabs-staging
     namespace: external-secrets

@@ -1,6 +1,11 @@
 # Runbook: Secrets Management
 
 > **Status:** Live three-cluster service factory (management/staging/production). Current architecture: [../docs/architecture/service-factory.md](../docs/architecture/service-factory.md). Single-cluster/desktop-lab references below are historical.
+>
+> **OpenBao migration:** OpenBao is now the runtime secrets backend. See
+> [openbao.md](openbao.md) for OpenBao operations, bootstrap, DR, and
+> cleanup procedures. This runbook covers the legacy 1Password backend
+> and will be retired after full cutover.
 
 
 ## Overview
