@@ -4,7 +4,7 @@
 #          Grafana datasources, blackbox probe rules, Discord ExternalSecret.
 #
 # Depends on: kube-prometheus-stack (AlertmanagerConfig CRD must exist).
-# Depends on: external-secrets (nqlabs-1password ClusterSecretStore for webhook).
+# Depends on: external-secrets (nqlabs-openbao ClusterSecretStore for webhook).
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application

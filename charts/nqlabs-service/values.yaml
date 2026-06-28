@@ -101,7 +101,7 @@ metrics:
 # platform secret store. Defaults to the NQLabs 1Password-backed ClusterSecretStore.
 externalSecrets:
   enabled: false
-  store: nqlabs-1password
+  store: nqlabs-openbao
   storeKind: ClusterSecretStore
   refreshInterval: 1h
   targetName: ""
