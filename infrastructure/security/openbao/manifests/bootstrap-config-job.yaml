@@ -120,14 +120,10 @@ spec:
                 policies=eso-policy \
                 ttl=1h
 
-              # --- Enable audit to stdout ---
-              echo "Checking audit devices..."
-              if ! bao audit list -format=json 2>/dev/null | grep -q '"stdout/"'; then
-                echo "  Enabling stdout audit device..."
-                bao audit enable stdout
-              else
-                echo "  stdout audit already enabled."
-              fi
+              # --- Audit device ---
+              # OpenBao 2.5+ manages audit devices declaratively via HCL config,
+              # not via API. Audit is configured in the server HCL under audit{}.
+              echo "Skipping audit device API call (managed via HCL config in OpenBao 2.5+)."
 
               # --- Enable PKI secret engine ---
               echo "Checking pki mount at pki/..."

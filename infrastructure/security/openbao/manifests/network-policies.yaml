@@ -181,6 +181,63 @@ spec:
             - port: "6443"
               protocol: TCP
 ---
+# Allow bootstrap Job pod to reach OpenBao server API (8200).
+# Bootstrap pod label: app.kubernetes.io/component=bootstrap
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: openbao-allow-bootstrap
+  namespace: openbao
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: openbao
+      component: server
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: openbao
+              app.kubernetes.io/component: bootstrap
+      ports:
+        - protocol: TCP
+          port: 8200
+---
+# Bootstrap pod egress to OpenBao server API.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: openbao-bootstrap-egress
+  namespace: openbao
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: openbao
+      app.kubernetes.io/component: bootstrap
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: openbao
+            component: server
+      toPorts:
+        - ports:
+            - port: "8200"
+              protocol: TCP
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "6443"
+              protocol: TCP
+---
 # Allow OpenBao pods to reach each other on Raft cluster port (8201).
 # Required for Raft leader election and peer communication.
 apiVersion: networking.k8s.io/v1
