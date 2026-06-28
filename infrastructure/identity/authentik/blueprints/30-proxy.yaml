@@ -386,5 +386,4 @@ entries:
         - !KeyOf hubble-provider
         - !KeyOf thanos-provider
         - !KeyOf pyroscope-provider
-        - !KeyOf ceph-provider
         - !KeyOf openbao-provider
