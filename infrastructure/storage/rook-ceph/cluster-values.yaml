@@ -92,12 +92,14 @@ cephClusterSpec:
         interval: 60s
 
 # Block storage pool (RBD) — replaces local-path for new PVCs
+# size 2: on a 3-node cluster this still tolerates 1 node failure while
+# halving the raw-space overhead vs size 3 (50% vs 200%).
 cephBlockPools:
   - name: ceph-blockpool
     spec:
       failureDomain: host
       replicated:
-        size: 3
+        size: 2
       application: rbd
     storageClass:
       enabled: true
@@ -131,11 +133,12 @@ cephObjectStores:
       metadataPool:
         failureDomain: host
         replicated:
-          size: 3
+          size: 2
       dataPool:
         failureDomain: host
-        replicated:
-          size: 3
+        erasureCoded:
+          dataChunks: 2
+          codingChunks: 1
       preservePoolsOnDelete: true
       gateway:
         port: 80
