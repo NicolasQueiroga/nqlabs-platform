@@ -264,6 +264,31 @@ spec:
             - port: "6443"
               protocol: TCP
 ---
+# Allow OpenBao server pods to reach Authentik's OIDC discovery endpoint.
+# Required for the auth/oidc method to fetch Authentik's OIDC configuration
+# (https://auth.platform.nqlabs.network/application/o/openbao-oidc/.well-known/openid-configuration)
+# and validate JWT signatures. Uses FQDN egress so Cilium tracks the DNS
+# resolution and only allows the resolved IPs.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: openbao-egress-authentik-oidc
+  namespace: openbao
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: openbao
+      component: server
+  egress:
+    - toFQDNs:
+        - matchName: auth.platform.nqlabs.network
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+---
 # Allow OpenBao pods to reach each other on Raft cluster port (8201).
 # Required for Raft leader election and peer communication.
 apiVersion: networking.k8s.io/v1
