@@ -308,28 +308,67 @@ service:
 
 | Cloud | Database | Connection pooling |
 |---|---|---|
-| Local | CloudNativePG Cluster in K8s | PgBouncer (optional, in K8s) |
+| Local | CloudNativePG Cluster in K8s | CNPG Pooler (PgBouncer, managed by CNPG) |
 | GCP | CloudSQL (HA, regional) | PgBouncer (in K8s) |
 | AWS | RDS (Multi-AZ) | RDS Proxy |
 | Azure | Azure Database for PostgreSQL (Flexible Server) | PgBouncer (in K8s) |
 
-**Local implementation:**
+**Implementation:**
 
-For local, the Terraform module generates CloudNativePG `Cluster` + `Database`
-manifests and writes them to the service's directory in the platform repo:
+The `cloud-database` Terraform module generates the manifests and writes them
+to the service's directory in the platform repo:
 
 ```
-terraform/services/<service>/
+terraform/teams/<team>/<service>/
   main.tf                           # Calls cloud-database module
   generated/
     database.yaml                   # CloudNativePG Cluster manifest
+    pooler.yaml                     # CNPG Pooler (PgBouncer) manifest
 ```
 
-Or, alternatively, a K8s operator watches for new services and provisions
-databases automatically. This is more complex but more GitOps-native.
+CloudNativePG has a built-in `Pooler` CRD that manages PgBouncer instances —
+no separate PgBouncer deployment needed. The module generates both the
+`Cluster` (primary + replicas) and `Pooler` (connection pooling) manifests.
 
-**Effort:** Medium. The CloudNativePG manifests are straightforward; the
-automation around it is the main work.
+### Gap 4b: Redis / Caching
+
+**Current state:** No Redis/Valkey provisioning per service.
+
+**Target state:**
+
+| Cloud | Redis |
+|---|---|
+| Local | Valkey StatefulSet in K8s (open-source Redis fork) |
+| GCP | Memorystore |
+| AWS | ElastiCache |
+| Azure | Azure Cache for Redis |
+
+The `cloud-redis` Terraform module generates the appropriate resource per cloud.
+For local, this is a Valkey StatefulSet with persistent storage.
+
+### Gap 4c: Kafka / Event Streaming
+
+**Current state:** No Kafka/event streaming infrastructure.
+
+**Target state:**
+
+| Cloud | Kafka | CDC |
+|---|---|---|
+| Local | Redpanda in K8s (Kafka-compatible, no ZooKeeper) | Debezium + Redpanda |
+| GCP | Confluent Cloud | Debezium + Confluent |
+| AWS | MSK | Debezium + MSK |
+| Azure | Event Hubs (Kafka-compatible) | Debezium + Event Hubs |
+
+The `cloud-kafka` Terraform module provisions:
+- Kafka topics for async messaging/queues between services
+- Optional Debezium CDC source (captures DB changes → Kafka topics)
+- Optional sink connectors (e.g., BigQuery sink for analytics)
+
+For local, Redpanda is preferred over Strimzi+Kafka because it's a single
+binary with no ZooKeeper dependency, simpler to operate, and Kafka-compatible.
+
+**Effort:** Medium-High. Database + PgBouncer is straightforward with CNPG.
+Redis and Kafka require deploying and operating the infrastructure first.
 
 ### Gap 5: Identity Provider Abstraction
 
@@ -634,20 +673,22 @@ terraform/
 ├── modules/
 │   ├── nqlabs-service/              # Existing: generates env YAML
 │   ├── cloud-iam/                   # NEW: IAM per cloud
-│   ├── cloud-database/              # NEW: Database per cloud
+│   ├── cloud-database/              # NEW: Database + PgBouncer per cloud
 │   ├── cloud-secrets/               # NEW: Secret store entry per cloud
-│   └── cloud-redis/                 # NEW: Redis per cloud
-└── services/
-    └── <service>/
-        ├── main.tf                  # Orchestrates all modules
-        ├── variables.tf
-        └── terraform.tfvars         # Cloud-specific config
+│   ├── cloud-redis/                 # NEW: Redis per cloud
+│   └── cloud-kafka/                 # NEW: Kafka/event streaming per cloud
+└── teams/
+    └── <team>/
+        └── <service>/
+            ├── main.tf              # Orchestrates all modules
+            ├── variables.tf
+            └── terraform.tfvars     # Cloud-specific config
 ```
 
 ### Per-service Terraform
 
 ```hcl
-# terraform/services/payments-api/main.tf
+# terraform/teams/payments/payments-api/main.tf
 
 locals {
   cloud = {
@@ -693,7 +734,23 @@ module "redis" {
   size_gb = 4
 }
 
-# 5. Generate env YAML (existing module)
+# 5. Kafka / event streaming (if needed)
+module "kafka" {
+  source = "../../modules/cloud-kafka"
+  name   = "payments-api"
+  cloud  = local.cloud
+  topics = ["payments-api.events", "payments-api.payments", "payments-api.transactions"]
+  # CDC source (Debezium) — captures DB changes → Kafka topics
+  cdc = {
+    enabled    = true
+    pg_host    = module.database.host
+    pg_port    = 5432
+    pg_database = "payments_api"
+    tables     = ["payments", "transactions", "refunds"]
+  }
+}
+
+# 6. Generate env YAML (existing module)
 module "service_descriptors" {
   source = "../../modules/nqlabs-service"
   name   = "payments-api"
@@ -773,6 +830,30 @@ resource "azurerm_user_assigned_identity" "service" {
 
 ## 9. Implementation Phases
 
+### Phase 0: Team Creation
+
+**Goal:** Introduce teams as a first-class concept — the prerequisite
+organizational unit for service creation.
+
+**Steps:**
+1. Create `team-create.yaml` workflow (manual trigger with team name + leads)
+2. Workflow creates:
+   - Authentik group via blueprint
+   - ArgoCD AppProjects: `<team>-staging`, `<team>-production`, `<team>-preview`
+   - Infisical project scoped to team
+   - ArgoCD RBAC: team group → manage apps in `<team>-*` projects
+   - Infisical RBAC: team group → access team project
+   - `terraform/teams/<team>/` directory
+3. Update `app-create.yaml` to accept a `team` parameter
+4. Update ApplicationSet to use team-scoped AppProjects
+
+**Deliverables:**
+- `team-create.yaml` workflow
+- Team-scoped AppProjects and RBAC
+- `app-create.yaml` accepts team parameter
+
+**Estimated effort:** 1 session
+
 ### Phase 1: Secrets Provider Abstraction + Infisical Migration
 
 **Goal:** Replace OpenBao with Infisical as the local secrets backend and make
@@ -830,33 +911,64 @@ that updates GitOps state and triggers ArgoCD sync.
 
 **Estimated effort:** 1 session
 
-### Phase 4: Database Provisioning Per Service
+### Phase 4: Data Layer (Database + PgBouncer + Redis)
 
-**Goal:** Automated CloudNativePG database provisioning per service.
+**Goal:** Automated per-service database, connection pooling, and Redis
+provisioning. Needed when staging/production clusters run real services.
 
 **Steps:**
-1. Create `cloud-database` Terraform module with `local` provider
-2. Module generates CloudNativePG `Cluster` + `Database` manifests
-3. Add database provisioning to the service creation flow
-4. Test with a service that needs a database
+1. Create `cloud-database` Terraform module:
+   - Generates CloudNativePG `Cluster` + `Database` manifests
+   - Generates CNPG `Pooler` manifest (PgBouncer, managed by CNPG)
+   - Supports tiers: small (1 replica) / standard (HA, 1 primary + 1 replica) / large
+2. Create `cloud-redis` Terraform module:
+   - Generates Valkey StatefulSet with persistent storage
+   - Supports single-node (staging) and HA (production) configs
+3. Add database + Redis provisioning to the service creation flow
+4. Test with a service that needs both
 
 **Deliverables:**
-- `terraform/modules/cloud-database/` module
-- Per-service database provisioning via Terraform
+- `terraform/modules/cloud-database/` module (CNPG Cluster + Pooler)
+- `terraform/modules/cloud-redis/` module (Valkey StatefulSet)
+- Per-service database + Redis provisioning via Terraform
 - Documentation
 
-**Estimated effort:** 1-2 sessions
+**Estimated effort:** 2-3 sessions
 
-### Phase 5: Cloud IaC Modules
+### Phase 5: Event Streaming (Kafka / Redpanda)
 
-**Goal:** Terraform modules for GCP, AWS, Azure infrastructure.
+**Goal:** Kafka-compatible event streaming infrastructure for async messaging
+and CDC between services.
+
+**Steps:**
+1. Deploy Redpanda in K8s (Helm chart, no ZooKeeper)
+2. Create `cloud-kafka` Terraform module:
+   - Provisions Kafka topics for async messaging/queues
+   - Optional Debezium CDC source (captures DB changes → topics)
+   - Optional sink connectors (e.g., object storage for analytics)
+3. Add Kafka topic provisioning to the service creation flow
+4. Test with a service that needs event streaming
+
+**Deliverables:**
+- Redpanda running in staging/production clusters
+- `terraform/modules/cloud-kafka/` module
+- Per-service topic + CDC provisioning via Terraform
+- Documentation
+
+**Estimated effort:** 2-3 sessions
+
+### Phase 6: Cloud IaC Modules
+
+**Goal:** Terraform modules for GCP, AWS, Azure infrastructure. Only needed
+when deploying to a cloud.
 
 **Steps:**
 1. Create `cloud-iam` module (GCP first, then AWS, then Azure)
 2. Create `cloud-secrets` module (GCP SM, AWS SM, Azure KV)
-3. Create `cloud-redis` module (Memorystore, ElastiCache, Azure Cache)
-4. Expand `cloud-database` module (CloudSQL, RDS, Azure DB)
-5. Test with a cloud deployment (when ready)
+3. Expand `cloud-database` module (CloudSQL, RDS, Azure DB + PgBouncer/RDS Proxy)
+4. Expand `cloud-redis` module (Memorystore, ElastiCache, Azure Cache)
+5. Expand `cloud-kafka` module (Confluent Cloud, MSK, Event Hubs)
+6. Test with a cloud deployment (when ready)
 
 **Deliverables:**
 - Multi-cloud Terraform modules
@@ -976,11 +1088,11 @@ configuration (PKI engine only, no KV, no auth methods) just for cert signing.
     AWS    → AWS Secrets Manager (managed)
     Azure  → Azure Key Vault (managed)
 
-  CLOUD IaC (Terraform, per service):
-    Local  → No-op (K8s handles everything)
-    GCP    → GKE + CloudSQL + Memorystore + WIF + Secret Manager
-    AWS    → EKS + RDS + ElastiCache + IRSA + Secrets Manager
-    Azure  → AKS + Azure DB + Azure Cache + MI + Key Vault
+  CLOUD IaC (Terraform, per team/service):
+    Local  → CNPG + PgBouncer + Valkey + Redpanda (all in K8s)
+    GCP    → GKE + CloudSQL + Memorystore + Confluent + WIF + Secret Manager
+    AWS    → EKS + RDS + ElastiCache + MSK + IRSA + Secrets Manager
+    Azure  → AKS + Azure DB + Azure Cache + Event Hubs + MI + Key Vault
 
   CI/CD:
     App repo → build → push to registry → call deploy-reusable
@@ -988,8 +1100,10 @@ configuration (PKI engine only, no KV, no auth methods) just for cert signing.
 ```
 
 The platform is ~80% built. The remaining work is:
-1. **Phase 1:** Switch to Infisical (1-2 sessions)
-2. **Phase 2:** CI/CD deploy automation (1-2 sessions)
-3. **Phase 3:** Identity provider abstraction (1 session)
-4. **Phase 4:** Database provisioning (1-2 sessions)
-5. **Phase 5:** Cloud IaC modules (3-5 sessions, only when deploying to cloud)
+1. **Phase 0:** Team creation workflow (1 session)
+2. **Phase 1:** Switch to Infisical (1-2 sessions)
+3. **Phase 2:** CI/CD deploy automation (1-2 sessions)
+4. **Phase 3:** Identity provider abstraction (1 session)
+5. **Phase 4:** Data layer — Database + PgBouncer + Redis (2-3 sessions)
+6. **Phase 5:** Event streaming — Kafka/Redpanda (2-3 sessions)
+7. **Phase 6:** Cloud IaC modules (3-5 sessions, only when deploying to cloud)
