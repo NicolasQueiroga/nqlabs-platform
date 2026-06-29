@@ -911,6 +911,39 @@ that updates GitOps state and triggers ArgoCD sync.
 
 **Estimated effort:** 1 session
 
+### Phase 3.5: Observability Automation
+
+**Goal:** Make every new service automatically appear in uptime checks,
+alerts, dashboards, and traces — with zero manual configuration.
+
+**Steps:**
+1. Add `gatus.yaml` template to the chart:
+   - Generates a ConfigMap with a Gatus endpoint entry
+   - A controller or kustomize component merges per-service ConfigMaps
+     into the central Gatus config (or Gatus watches labeled ConfigMaps)
+2. Add `prometheusrule.yaml` template to the chart:
+   - Default alert rules: high 5xx rate, high latency (p99), pod restarts,
+     OOMKilled, HPA maxed out
+   - Parameterized by service name and severity
+3. Add `grafanadashboard.yaml` template to the chart:
+   - Generates a ConfigMap with `grafana_dashboard` label
+   - Default dashboard: request rate, error rate, latency p50/p95/p99,
+     pod CPU/memory, restart count
+   - Grafana sidecar provisioner auto-imports ConfigMaps with this label
+4. Add `otel.yaml` template to the chart:
+   - Injects OTel environment variables into the pod spec
+   - `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`
+   - Services using OTel SDKs automatically send traces to OTel Collector → Tempo
+5. Ensure data layer services (CNPG, Valkey, Redpanda) also get
+   ServiceMonitors, PrometheusRules, and Gatus checks via their Terraform modules
+
+**Deliverables:**
+- Chart generates Gatus, PrometheusRule, Grafana dashboard, OTel templates
+- New service appears in Gatus, Alertmanager, Grafana, and Tempo automatically
+- Data layer services have their own observability resources
+
+**Estimated effort:** 1-2 sessions
+
 ### Phase 4: Data Layer (Database + PgBouncer + Redis)
 
 **Goal:** Automated per-service database, connection pooling, and Redis
@@ -1054,7 +1087,131 @@ configuration (PKI engine only, no KV, no auth methods) just for cert signing.
 
 ---
 
-## 11. Summary
+## 11. Platform Integration Requirements
+
+Every new piece of infrastructure and every new service must be a first-class
+citizen of the existing platform stack. "Runs in Kubernetes" is not enough.
+
+### Existing platform services
+
+| Platform service | What it provides | How new infra/services integrate |
+|---|---|---|
+| **Authentik** | OIDC/SAML SSO, forward-auth proxy, group RBAC | Infisical: OIDC SSO (native). Redpanda admin UI: Authentik proxy outpost. Any web-accessible service: OIDC or proxy. Team groups control access. |
+| **Rook/Ceph** | Block (RBD), Object (RGW/S3), Filesystem (CephFS) | All persistent data services use Ceph RBD StorageClass for PVCs: CloudNativePG (WAL + data), Valkey (persistence), Redpanda (data). Backups target Ceph RGW (S3) or Cloudflare R2. |
+| **cert-manager** | TLS certificates (OpenBao PKI + Let's Encrypt) | Every HTTPS endpoint gets a cert-manager certificate via the existing ClusterIssuer. Infisical, Redpanda admin UI, per-service HTTPRoutes. |
+| **Cilium** | CNI, network policies, Gateway API, Hubble | Every service gets a CiliumNetworkPolicy (default-deny ingress, allow owning service). Data services (CNPG, Valkey, Redpanda) are isolated — only the owning service namespace can reach them. HTTPRoutes via the platform Gateway. |
+| **External Secrets Operator** | Secret sync from backend → K8s Secret | Infisical becomes an ESO backend (ClusterSecretStore `nqlabs-infisical`). Per-service ExternalSecrets reference the store. |
+| **Kyverno** | Policy enforcement (image allowlist, pod security) | All new images must be in the Kyverno image allowlist (or namespace excluded with justification). Pod security policies (non-root, read-only fs, seccomp) enforced. |
+| **Falco** | Runtime security | Applies to all pods automatically. Alert rules for suspicious activity in data services (e.g., unexpected file access in CNPG pods). |
+| **Velero** | Backup/restore | Data services backed up via Velero with appropriate schedules. CNPG: Velero + CNPG barman backups. Valkey: Velero snapshot of PVC. Redpanda: Velero snapshot of PVC. Backups target Ceph RGW + Cloudflare R2. |
+| **ArgoCD** | GitOps deployment | All new infrastructure deployed and managed via ArgoCD. No manual kubectl. Manifests in `infrastructure/` directory. |
+| **OpenBao PKI** | Certificate signing for cert-manager | Unchanged. cert-manager ClusterIssuer `nqlabs-openbao-pki` continues signing all internal TLS certs. |
+
+### Observability stack — automatic integration
+
+This is the critical requirement: **when a service is created, it must
+automatically appear in logs, metrics, traces, uptime, alerts, and
+dashboards — with zero manual configuration.**
+
+#### What the chart already generates (✅)
+
+| Capability | How | Template |
+|---|---|---|
+| **Metrics** | ServiceMonitor → Prometheus scrapes `/metrics` | `servicemonitor.yaml` |
+| **Logs** | Promtail collects all pod logs by default → Loki | (no template needed — Promtail is cluster-wide) |
+| **Network isolation** | CiliumNetworkPolicy (default-deny ingress) | `ciliumnetworkpolicy.yaml` |
+| **Canary analysis** | AnalysisTemplate (HTTP 2xx rate during rollout) | `analysistemplate.yaml` |
+
+#### What's missing — needs to be added to the chart (❌)
+
+| Capability | How | What needs to be built |
+|---|---|---|
+| **Uptime** | Gatus endpoint check | New template `gatus.yaml` — generates a ConfigMap with a Gatus endpoint entry. A controller or kustomize component merges per-service ConfigMaps into the central Gatus config. Alternatively, Gatus watches a ConfigMap with a specific label and auto-discovers endpoints. |
+| **Alerts** | PrometheusRule per service | New template `prometheusrule.yaml` — generates default alert rules: high 5xx rate, high latency (p99 > threshold), pod restarts, OOMKilled, HPA maxed out. Rules are parameterized by service name and severity. |
+| **Dashboards** | Grafana dashboard ConfigMap | New template `grafanadashboard.yaml` — generates a ConfigMap with `grafana_dashboard` label containing a default dashboard (request rate, error rate, latency p50/p95/p99, pod CPU/memory, restart count). Grafana sidecar provisioner auto-imports ConfigMaps with this label. |
+| **Traces** | OTel instrumentation | New template `otel.yaml` — optionally injects OTel environment variables (`OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`) into the pod spec. Services using OTel SDKs automatically send traces to the OTel Collector → Tempo. No sidecar needed for SDK-based instrumentation. |
+
+#### Observability integration design
+
+```
+Service created via app-create.yaml
+  │
+  ├── Chart renders (existing):
+  │   ├── ServiceMonitor          → Prometheus scrapes metrics
+  │   ├── CiliumNetworkPolicy     → network isolation
+  │   ├── AnalysisTemplate        → canary analysis during rollout
+  │   └── HTTPRoute               → Gateway API routing
+  │
+  ├── Chart renders (NEW — to be added):
+  │   ├── Gatus endpoint ConfigMap → Gatus starts uptime checking
+  │   ├── PrometheusRule          → Alertmanager gets default alert rules
+  │   ├── GrafanaDashboard CM     → Grafana auto-imports default dashboard
+  │   └── OTel env vars           → traces flow to OTel Collector → Tempo
+  │
+  └── Automatic (no template needed):
+      ├── Promtail → Loki         → logs collected cluster-wide
+      └── Falco                   → runtime security monitored cluster-wide
+```
+
+#### Data layer observability
+
+When the Terraform modules provision data services, they must also generate
+the observability resources:
+
+| Data service | Metrics | Logs | Uptime | Alerts |
+|---|---|---|---|---|
+| **CloudNativePG** | CNPG Prometheus exporter → ServiceMonitor | Promtail (automatic) | Gatus: `pg_isready` check | PrometheusRule: replication lag, connection pool saturation, WAL backlog, disk usage |
+| **PgBouncer (CNPG Pooler)** | PgBouncer Prometheus exporter → ServiceMonitor | Promtail (automatic) | Gatus: pooler health endpoint | PrometheusRule: pool exhaustion, max client connections |
+| **Valkey** | Valkey exporter → ServiceMonitor | Promtail (automatic) | Gatus: `PING` check | PrometheusRule: memory usage > 90%, evicted keys, connected clients |
+| **Redpanda** | Redpanda Prometheus metrics → ServiceMonitor | Promtail (automatic) | Gatus: Kafka API health endpoint | PrometheusRule: consumer lag, partition under-replicated, disk usage |
+| **Infisical** | Infisical metrics → ServiceMonitor | Promtail (automatic) | Gatus: Infisical health endpoint | PrometheusRule: secret sync failures, API errors |
+
+### Per-service integration checklist
+
+When a new service is created via `app-create.yaml`, the chart generates:
+
+**Already implemented (✅):**
+- ✅ HTTPRoute (Gateway API) — internal route, optional public route
+- ✅ ExternalSecret — references the configured ClusterSecretStore
+- ✅ ServiceMonitor — Prometheus scraping
+- ✅ CiliumNetworkPolicy — default-deny ingress, allow cluster entities
+- ✅ ServiceAccount — with optional cloud identity annotations
+- ✅ PDB + HPA — availability and scaling
+- ✅ Resource requests/limits — per environment
+- ✅ Pod security — seccomp, non-root, read-only fs, drop ALL caps
+- ✅ AnalysisTemplate — canary analysis during rollout
+
+**To be added (❌):**
+- ❌ Gatus uptime check — auto-register service endpoint
+- ❌ PrometheusRule — default alert rules (5xx, latency, restarts, OOM)
+- ❌ Grafana dashboard — default dashboard ConfigMap (request rate, error rate, latency, resources)
+- ❌ OTel env vars — trace export config for SDK-based instrumentation
+
+**For services that need data layer (Terraform modules generate):**
+- ❌ CNPG Cluster + Pooler — Ceph RBD StorageClass, CiliumNetworkPolicy, ServiceMonitor, PrometheusRule, Velero backup
+- ❌ Valkey StatefulSet — Ceph RBD StorageClass, CiliumNetworkPolicy, ServiceMonitor, PrometheusRule
+- ❌ Redpanda topics — CiliumNetworkPolicy, ServiceMonitor, PrometheusRule
+
+### Resource planning
+
+Running the full data layer stack on the management cluster is **not
+recommended** — these are workload services that belong on staging/production
+clusters:
+
+| Component | Where it runs | Est. resources (small) |
+|---|---|---|
+| Infisical | Management cluster (platform service) | 1-2 GB RAM, 5-10 GB storage (CNPG) |
+| Per-service CNPG | Staging/production clusters | 1-2 GB RAM per cluster, 10-50 GB storage |
+| Per-service Valkey | Staging/production clusters | 256-512 MB RAM, 1-5 GB storage |
+| Redpanda | Staging/production clusters | 2-4 GB RAM, 20-50 GB storage per broker |
+
+The management cluster runs platform services (Authentik, ArgoCD, monitoring,
+Infisical, ESO, cert-manager). Staging/production clusters run application
+workloads + their data layer (CNPG, Valkey, Redpanda).
+
+---
+
+## 12. Summary
 
 ```
                     CLOUD-AGNOSTIC SERVICE FACTORY
@@ -1074,7 +1231,11 @@ configuration (PKI engine only, no KV, no auth methods) just for cert signing.
     ├── ExternalSecret (references ClusterSecretStore by name)
     ├── ServiceAccount (with cloud identity annotations)
     ├── ServiceMonitor + CiliumNetworkPolicy + RBAC
-    └── ConfigMap + ResourceQuota + LimitRange
+    ├── ConfigMap + ResourceQuota + LimitRange
+    ├── [NEW] Gatus uptime check (auto-register endpoint)
+    ├── [NEW] PrometheusRule (default alert rules per service)
+    ├── [NEW] Grafana dashboard ConfigMap (auto-provisioned dashboard)
+    └── [NEW] OTel env vars (trace export to OTel Collector → Tempo)
     │
     ▼
   ArgoCD ApplicationSet (deploys by cluster name)
@@ -1104,6 +1265,7 @@ The platform is ~80% built. The remaining work is:
 2. **Phase 1:** Switch to Infisical (1-2 sessions)
 3. **Phase 2:** CI/CD deploy automation (1-2 sessions)
 4. **Phase 3:** Identity provider abstraction (1 session)
-5. **Phase 4:** Data layer — Database + PgBouncer + Redis (2-3 sessions)
-6. **Phase 5:** Event streaming — Kafka/Redpanda (2-3 sessions)
-7. **Phase 6:** Cloud IaC modules (3-5 sessions, only when deploying to cloud)
+5. **Phase 3.5:** Observability automation — add Gatus, PrometheusRule, Grafana dashboard, OTel templates to the chart (1-2 sessions)
+6. **Phase 4:** Data layer — Database + PgBouncer + Redis (2-3 sessions)
+7. **Phase 5:** Event streaming — Kafka/Redpanda (2-3 sessions)
+8. **Phase 6:** Cloud IaC modules (3-5 sessions, only when deploying to cloud)
