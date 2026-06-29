@@ -5,24 +5,19 @@
 #
 # Auth: Kubernetes auth (cert-manager's service account → OpenBao role)
 # Path: pki/sign/cert-manager (OpenBao PKI role)
-# CA:   nqlabs-internal-ca-tls secret (cert-manager-managed, holds the CA that
-#       signed OpenBao's server TLS cert during bootstrap)
-#
-# caBundleSecretRef must trust the CA that signed OpenBao's *server TLS cert*,
-# not the OpenBao PKI engine root CA. OpenBao's server cert is issued by
-# nqlabs-internal-ca (via the nqlabs-internal-ca ClusterIssuer), so we point
-# here to nqlabs-internal-ca-tls (cert-manager manages this secret directly).
+# Server: HTTP (Cilium v1.19 lacks BackendTLSPolicy; TLS terminated at gateway)
+# No caBundleSecretRef needed since server runs HTTP (no TLS to verify)
 #
 # The openbao-pki-ca ExternalSecret pulls kv/openbao-pki/ca (the PKI engine
-# root) — correct for client cert trust AFTER migration, but wrong for server
-# TLS verification during bootstrap.
+# root CA cert) and stores it in the openbao-pki-ca Secret. This can be
+# used as a trust anchor for client cert verification once the PKI migration
+# is complete.
 #
 # Migration steps (manual, after bootstrap):
 #   1. Verify nqlabs-openbao-pki issuer is Ready (this file)
 #   2. Update openbao-server-tls Certificate issuerRef to nqlabs-openbao-pki
 #   3. Wait for cert renewal — OpenBao TLS now signed by PKI engine
-#   4. Update caBundleSecretRef below to openbao-pki-ca
-#   5. Remove selfsigned-bootstrap + nqlabs-internal-ca issuers
+#   4. Remove selfsigned-bootstrap + nqlabs-internal-ca issuers
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -32,11 +27,8 @@ metadata:
     argocd.argoproj.io/sync-wave: "5"
 spec:
   vault:
-    server: "https://openbao.openbao.svc.cluster.local:8200"
+    server: "http://openbao.openbao.svc:8200"
     path: pki/sign/cert-manager
-    caBundleSecretRef:
-      name: nqlabs-internal-ca-tls
-      key: ca.crt
     auth:
       kubernetes:
         mountPath: /v1/auth/kubernetes-management
