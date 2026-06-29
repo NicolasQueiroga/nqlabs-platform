@@ -264,11 +264,46 @@ spec:
             - port: "6443"
               protocol: TCP
 ---
-# Allow OpenBao server pods to reach Authentik's OIDC discovery endpoint.
-# Required for the auth/oidc method to fetch Authentik's OIDC configuration
-# (https://auth.platform.nqlabs.network/application/o/openbao-oidc/.well-known/openid-configuration)
-# and validate JWT signatures. Uses FQDN egress so Cilium tracks the DNS
-# resolution and only allows the resolved IPs.
+# Allow OpenBao server pods to reach the Cilium Gateway (LoadBalancer VIP
+# 192.168.15.195:443) for OIDC discovery, JWKS, and token exchange with
+# Authentik. Traffic flows: openbao pod → LB VIP → Cilium Envoy (DNAT to
+# 127.0.0.1:19128) → authentik-server:80.
+#
+# Two policies are needed because Cilium's Gateway API uses a cilium.l7policy
+# filter on the gateway Envoy that enforces CiliumNetworkPolicy egress rules
+# at L7. The K8s NetworkPolicy handles L4 (BPF) enforcement; the
+# CiliumNetworkPolicy handles L7 (Envoy) enforcement.
+#
+# 1. K8s NetworkPolicy: allows L4 egress to the LB IPAM range on port 443.
+# 2. CiliumNetworkPolicy: allows L7 egress to cluster entities. The
+#    toEntities: [cluster] is required (not [ingress] or [world]) because
+#    the DNAT'd destination is a localhost listener. No toPorts restriction
+#    is possible because the DNAT changes the port from 443 to the Envoy's
+#    dynamic listener port (19128).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: openbao-egress-gateway
+  namespace: openbao
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: openbao
+      component: server
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 192.168.15.0/24
+      ports:
+        - protocol: TCP
+          port: 443
+---
+# CiliumNetworkPolicy: L7 enforcement for gateway traffic.
+# See comment above for why toEntities: [cluster] without toPorts is required.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -282,12 +317,8 @@ spec:
       app.kubernetes.io/name: openbao
       component: server
   egress:
-    - toFQDNs:
-        - matchName: auth.platform.nqlabs.network
-      toPorts:
-        - ports:
-            - port: "443"
-              protocol: TCP
+    - toEntities:
+        - cluster
 ---
 # Allow OpenBao pods to reach each other on Raft cluster port (8201).
 # Required for Raft leader election and peer communication.
