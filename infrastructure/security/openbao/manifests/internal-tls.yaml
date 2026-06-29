@@ -9,6 +9,8 @@
 #   - openbao.openbao.svc               — in-cluster clients (ESO, cert-manager)
 #   - openbao.openbao.svc.cluster.local  — FQDN for internal resolution
 #   - *.openbao.openbao.svc.cluster.local — StatefulSet pod DNS (Raft peer join)
+#   - *.openbao-internal                 — headless service pod DNS (Raft auto-join)
+#   - *.openbao-internal.openbao.svc.cluster.local — headless service FQDN
 #   - openbao.platform.nqlabs.network    — gateway/external clients
 ---
 apiVersion: cert-manager.io/v1
@@ -27,6 +29,8 @@ spec:
     - openbao.openbao.svc
     - openbao.openbao.svc.cluster.local
     - "*.openbao.openbao.svc.cluster.local"
+    - "*.openbao-internal"
+    - "*.openbao-internal.openbao.svc.cluster.local"
     - openbao.platform.nqlabs.network
   privateKey:
     algorithm: ECDSA

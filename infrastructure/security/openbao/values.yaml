@@ -42,7 +42,7 @@ server:
           cluster_address = "[::]:8201"
           tls_cert_file = "/openbao/tls/openbao-server-tls/tls.crt"
           tls_key_file = "/openbao/tls/openbao-server-tls/tls.key"
-          tls_ca_file = "/openbao/tls/openbao-server-tls/ca.crt"
+          tls_client_ca_file = "/openbao/tls/openbao-server-tls/ca.crt"
           tls_min_version = "tls12"
           # Unauthenticated metrics for Prometheus scrape.
           telemetry {
