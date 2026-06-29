@@ -37,13 +37,9 @@ server:
         ui = true
 
         listener "tcp" {
-          tls_disable = 0
+          tls_disable = 1
           address = "[::]:8200"
           cluster_address = "[::]:8201"
-          tls_cert_file = "/openbao/tls/openbao-server-tls/tls.crt"
-          tls_key_file = "/openbao/tls/openbao-server-tls/tls.key"
-          tls_client_ca_file = "/openbao/tls/openbao-server-tls/ca.crt"
-          tls_min_version = "tls12"
           # Unauthenticated metrics for Prometheus scrape.
           telemetry {
             unauthenticated_metrics_access = "true"
@@ -54,11 +50,7 @@ server:
           path = "/openbao/data"
           retry_join {
             auto_join = "provider=k8s label_selector=\"app.kubernetes.io/name=openbao,component=server\" namespace=\"openbao\""
-            auto_join_scheme = "https"
-            leader_tls_servername = "openbao.openbao.svc"
-            leader_ca_cert_file = "/openbao/tls/openbao-server-tls/ca.crt"
-            leader_client_cert_file = "/openbao/tls/openbao-server-tls/tls.crt"
-            leader_client_key_file = "/openbao/tls/openbao-server-tls/tls.key"
+            auto_join_scheme = "http"
           }
         }
 
@@ -83,11 +75,7 @@ server:
     storageClass: ceph-block
     accessMode: ReadWriteOnce
 
-  # Mount cert-manager TLS secret for internal HTTPS.
-  extraVolumes:
-    - type: secret
-      name: openbao-server-tls
-      path: /openbao/tls
+  extraVolumes: []
 
   # OnDelete: manual unseal required after pod restart.
   # Prevents automatic restarts leaving OpenBao sealed.
@@ -117,16 +105,13 @@ ui:
 serverTelemetry:
   serviceMonitor:
     enabled: true
-    # Scrape via internal HTTPS.
-    scheme: https
+    # Scrape via HTTP (TLS disabled at listener; gateway handles edge TLS).
+    scheme: http
     interval: 30s
     scrapeTimeout: 10s
-    # TLS cert served by OpenBao listener; Prometheus needs to skip CA verify
-    # since the internal CA cert is not in Prometheus's trust store by default.
-    tlsConfig:
-      insecureSkipVerify: true
 
 # ── Global ──────────────────────────────────────────────────────────────────
 global:
-  # TLS enabled end-to-end.
-  tlsDisable: false
+  # TLS disabled at listener; edge TLS is handled by the Cilium Gateway.
+  # BackendTLSPolicy (re-encryption) is not supported in Cilium v1.19.
+  tlsDisable: true
