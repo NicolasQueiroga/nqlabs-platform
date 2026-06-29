@@ -69,14 +69,6 @@ server:
           disable_hostname = true
         }
 
-        # Stdout audit — declarative (API-based audit management removed in OpenBao 2.5+).
-        audit "stdout" {
-          type = "file"
-          options = {
-            file_path = "stdout"
-          }
-        }
-
   # Data storage on ceph-block (RWO).
   dataStorage:
     enabled: true
