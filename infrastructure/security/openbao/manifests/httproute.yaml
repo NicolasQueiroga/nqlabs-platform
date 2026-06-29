@@ -2,7 +2,12 @@
 #
 # Hostname: openbao.platform.nqlabs.network
 # TLS terminated at the gateway (Let's Encrypt wildcard).
-# Backend: authentik embedded outpost (proxy mode) → openbao:8200 (HTTPS).
+# Backend: openbao-ui:8200 (HTTPS) — direct access for OIDC login flow.
+#
+# The OIDC auth method requires the OpenBao login page to be directly
+# accessible so users can click "OIDC" and be redirected to Authentik
+# for authentication. Routing through the Authentik proxy provider
+# would intercept the login page and prevent the OIDC flow.
 #
 # The gateway-access label on the openbao namespace is applied via
 # platform-gateway.yaml (ServerSideApply) and managedNamespaceMetadata.
@@ -27,21 +32,6 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: authentik-server
-          namespace: authentik
-          port: 80
----
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: ReferenceGrant
-metadata:
-  name: openbao-to-authentik
-  namespace: authentik
-spec:
-  from:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      namespace: openbao
-  to:
-    - group: ""
-      kind: Service
-      name: authentik-server
+        - name: openbao-ui
+          namespace: openbao
+          port: 8200
