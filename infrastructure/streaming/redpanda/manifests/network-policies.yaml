@@ -46,6 +46,7 @@ spec:
               - matchPattern: "*"
 ---
 # Allow Cilium Gateway to reach Redpanda Console.
+# The console subchart sets app.kubernetes.io/name=console (not redpanda-console).
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -56,7 +57,7 @@ metadata:
 spec:
   endpointSelector:
     matchLabels:
-      app.kubernetes.io/name: redpanda-console
+      app.kubernetes.io/name: console
   ingress:
     - fromEntities:
         - ingress
@@ -65,7 +66,7 @@ spec:
             - port: "8080"
               protocol: TCP
 ---
-# Allow redpanda-console to reach redpanda broker (Kafka 9093, admin API 9644,
+# Allow console to reach redpanda broker (Kafka 9093, admin API 9644,
 # schema registry 8081). The console runs in the same namespace but the
 # default-deny policy blocks inter-pod traffic without this rule.
 # This is the EGRESS side (console → broker).
@@ -79,7 +80,7 @@ metadata:
 spec:
   endpointSelector:
     matchLabels:
-      app.kubernetes.io/name: redpanda-console
+      app.kubernetes.io/name: console
   egress:
     - toEndpoints:
         - matchLabels:
@@ -112,7 +113,7 @@ spec:
     - fromEndpoints:
         - matchLabels:
             "k8s:io.kubernetes.pod.namespace": redpanda
-            "k8s:app.kubernetes.io/name": redpanda-console
+            "k8s:app.kubernetes.io/name": console
       toPorts:
         - ports:
             - port: "9093"
