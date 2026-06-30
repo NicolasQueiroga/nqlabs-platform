@@ -72,6 +72,36 @@ variable "environments" {
     }), {})
     route_enabled = optional(bool, true)
     route_host    = optional(string)
+
+    # Cloud identity provider for workload identity (pairs with serviceAccount.identity in the chart).
+    identity = optional(object({
+      provider         = optional(string, "none") # none | gcp-wif | aws-irsa | azure-mi
+      gcp_sa_email     = optional(string, "")
+      aws_role_arn     = optional(string, "")
+      azure_client_id  = optional(string, "")
+      azure_tenant_id  = optional(string, "")
+    }), {})
+
+    # Data layer flags — mirrors the chart database/redis/kafka values.
+    database = optional(object({
+      enabled  = optional(bool, false)
+      tier     = optional(string, "small")
+    }), {})
+
+    redis = optional(object({
+      enabled = optional(bool, false)
+      ha      = optional(bool, false)
+    }), {})
+
+    kafka = optional(object({
+      enabled = optional(bool, false)
+      topics  = optional(list(object({
+        name         = string
+        partitions   = optional(number, 1)
+        replicas     = optional(number, 1)
+        retention_ms = optional(number, 604800000)
+      })), [])
+    }), {})
   }))
 
   validation {

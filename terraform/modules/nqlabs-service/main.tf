@@ -20,6 +20,10 @@ locals {
       cilium_network_policy = env.cilium_network_policy
       route_enabled         = env.route_enabled
       route_host            = coalesce(env.route_host, "${var.name}.${env_name}.${var.base_domain}")
+      identity              = env.identity
+      database              = env.database
+      redis                 = env.redis
+      kafka                 = env.kafka
     }
   }
 }
@@ -53,5 +57,9 @@ resource "local_file" "environment" {
     cilium_network_policy = each.value.cilium_network_policy
     route_enabled         = each.value.route_enabled
     route_host            = each.value.route_host
+    identity              = each.value.identity
+    database              = each.value.database
+    redis                 = each.value.redis
+    kafka                 = each.value.kafka
   })
 }

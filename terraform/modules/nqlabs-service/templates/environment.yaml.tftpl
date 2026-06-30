@@ -109,3 +109,49 @@ service:
 route:
   enabled: ${route_enabled}
   host: ${route_host}
+%{ if identity.provider != "none" ~}
+
+serviceAccount:
+  identity:
+    provider: ${identity.provider}
+%{ if identity.provider == "gcp-wif" && identity.gcp_sa_email != "" ~}
+    gcpServiceAccount: ${identity.gcp_sa_email}
+%{ endif ~}
+%{ if identity.provider == "aws-irsa" && identity.aws_role_arn != "" ~}
+    awsRoleARN: ${identity.aws_role_arn}
+%{ endif ~}
+%{ if identity.provider == "azure-mi" && identity.azure_client_id != "" ~}
+    azureClientID: ${identity.azure_client_id}
+%{ endif ~}
+%{ if identity.provider == "azure-mi" && identity.azure_tenant_id != "" ~}
+    azureTenantID: ${identity.azure_tenant_id}
+%{ endif ~}
+%{ endif ~}
+%{ if database.enabled ~}
+
+database:
+  enabled: true
+  tier: ${database.tier}
+%{ endif ~}
+%{ if redis.enabled ~}
+
+redis:
+  enabled: true
+  ha: ${redis.ha}
+%{ endif ~}
+%{ if kafka.enabled ~}
+
+kafka:
+  enabled: true
+%{ if length(kafka.topics) > 0 ~}
+  topics:
+%{ for topic in kafka.topics ~}
+    - name: ${topic.name}
+      partitions: ${topic.partitions}
+      replicas: ${topic.replicas}
+      retentionMs: ${topic.retention_ms}
+%{ endfor ~}
+%{ else ~}
+  topics: []
+%{ endif ~}
+%{ endif ~}
