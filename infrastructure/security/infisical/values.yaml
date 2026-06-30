@@ -38,7 +38,10 @@ ingress:
 # The Infisical chart (>=1.8.0) bundles ingress-nginx as a subchart; even
 # with ingress.enabled=false, the subchart's admission webhook Jobs are still
 # rendered, triggering Kyverno policy violations (missing resource requests,
-# seccomp, and non-approved image registry). Setting the subchart to disabled
-# suppresses all ingress-nginx resources including the admission Jobs.
-ingress-nginx:
+# seccomp, and non-approved image registry).
+# The chart.yaml condition for the subchart is `ingress.nginx.enabled`,
+# so we must set this to false (not the top-level ingress-nginx.enabled key).
+ingress:
   enabled: false
+  nginx:
+    enabled: false
