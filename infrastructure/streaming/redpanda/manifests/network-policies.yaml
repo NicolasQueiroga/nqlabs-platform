@@ -2,7 +2,8 @@
 #
 # Default-deny ingress + egress, then allow only the specific flows:
 #   - Gateway → redpanda-console (8080) — admin UI via platform gateway
-#   - All service namespaces → redpanda (9092) — Kafka API
+#   - All service namespaces → redpanda (9093) — Kafka API
+#   - redpanda-console → redpanda (9093, 9644, 8081) — internal admin UI
 #   - monitoring → redpanda (9644) — Prometheus metrics scrape
 #   - DNS egress for all pods
 ---
@@ -64,7 +65,35 @@ spec:
             - port: "8080"
               protocol: TCP
 ---
-# Allow all service namespaces to reach Redpanda Kafka API (port 9092).
+# Allow redpanda-console to reach redpanda broker (Kafka 9093, admin API 9644,
+# schema registry 8081). The console runs in the same namespace but the
+# default-deny policy blocks inter-pod traffic without this rule.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: redpanda-allow-console-to-broker
+  namespace: redpanda
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: redpanda-console
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": redpanda
+            "k8s:app.kubernetes.io/name": redpanda
+      toPorts:
+        - ports:
+            - port: "9093"
+              protocol: TCP
+            - port: "9644"
+              protocol: TCP
+            - port: "8081"
+              protocol: TCP
+---
+# Allow all service namespaces to reach Redpanda Kafka API (port 9093).
 # Services connect from their own namespaces to produce/consume.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -85,7 +114,7 @@ spec:
               operator: Exists
       toPorts:
         - ports:
-            - port: "9092"
+            - port: "9093"
               protocol: TCP
 ---
 # Allow Prometheus to scrape Redpanda metrics.
