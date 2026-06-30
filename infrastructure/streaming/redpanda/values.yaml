@@ -15,11 +15,12 @@ resources:
     cores: 250m
     overprovisioned: true
   memory:
-    # Redpanda requires: container.min >= redpanda + reserve
-    # With 250m overprovisioned cores: redpanda=614Mi, reserve=201Mi → min ≥ 815Mi.
+    # Redpanda allocates floor(container.min * 0.8) for its engine + 201Mi reserve.
+    # Fixed point: container.min * 0.2 >= 201  →  container.min >= 1005Mi.
+    # At min=1Gi: floor(0.8*1024)=819 + reserve=201 = 1020 <= 1024 ✓
     container:
-      min: 900Mi
-      max: 1Gi
+      min: 1Gi
+      max: 2Gi
 
 storage:
   persistentVolume:
