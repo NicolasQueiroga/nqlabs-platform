@@ -42,7 +42,10 @@ spec:
       selfHeal: true
     managedNamespaceMetadata:
       labels:
-        pod-security.kubernetes.io/enforce: baseline
+        # Redpanda requires privileged PSA: the "tuning" init container needs
+        # SYS_RESOURCE capability and privileged=true to set kernel parameters
+        # (e.g. vm.max_map_count) required for Redpanda's performance tuning.
+        pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/enforce-version: latest
         gateway-access: "true"
     retry:
