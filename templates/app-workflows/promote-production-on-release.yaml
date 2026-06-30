@@ -1,0 +1,32 @@
+# App repo workflow: promote to production on GitHub Release
+#
+# Copy this file to .github/workflows/promote-production-on-release.yaml in the app repo.
+# Replace <app> with the service name and <owner> with the GHCR owner.
+#
+# This workflow is triggered by release-please creating a GitHub Release.
+# It promotes the exact staged artifact (sha-<shortsha>) to the release tag
+# and opens a PR in the platform repo to update production.yaml.
+
+name: Promote to production
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  promote-production:
+    uses: NicolasQueiroga/nqlabs-platform/.github/workflows/deploy-reusable.yaml@main
+    with:
+      service: <app>
+      environment: production
+      image: ghcr.io/<owner>/<app>
+      release-tag: ${{ github.event.release.tag_name }}
+      release-sha: ${{ github.event.release.target_commitish }}
+    secrets: inherit

@@ -1,0 +1,30 @@
+# App repo workflow: preview environments
+#
+# Copy this file to .github/workflows/preview.yaml in the app repo.
+# Replace <app> with the service name and <owner> with the GHCR owner.
+#
+# Usage: comment "/preview deploy" on a PR to spin up an ephemeral environment.
+#        comment "/preview destroy" to tear it down.
+#        comment "/preview renew" to extend the TTL.
+#        comment "/preview status" to check the state.
+
+name: Preview
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request:
+    types: [synchronize, closed]
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+jobs:
+  preview:
+    uses: NicolasQueiroga/nqlabs-platform/.github/workflows/preview-reusable.yaml@main
+    with:
+      app: <app>
+      image: ghcr.io/<owner>/<app>
+    secrets: inherit

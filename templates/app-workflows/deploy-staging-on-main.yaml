@@ -1,0 +1,26 @@
+# App repo workflow: deploy to staging on merge to main
+#
+# Copy this file to .github/workflows/deploy-staging-on-main.yaml in the app repo.
+# Replace <app> with the service name and <owner> with the GHCR owner.
+
+name: Deploy to staging
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  deploy-staging:
+    uses: NicolasQueiroga/nqlabs-platform/.github/workflows/deploy-reusable.yaml@main
+    with:
+      service: <app>
+      environment: staging
+      image: ghcr.io/<owner>/<app>
+    secrets: inherit

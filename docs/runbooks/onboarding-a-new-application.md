@@ -27,26 +27,15 @@ A new app needs **no** new AppProject, ApplicationSet, gateway, cert, DNS, or ed
 Create `<owner>/<app>` with:
 
 - application source + `Dockerfile`
-- CI workflows (copy from `nqlabs-demo`, adjust `app`/`image`):
-  - `build.yaml` — PR build validation
-  - `deploy-staging-on-main.yaml` — on merge to `main`, build + push `sha-<commit>` and update the platform staging descriptor
-  - `release-please.yaml` + `promote-production-on-release.yaml` — release PR → tag → production proposal PR (exact staged artifact)
-  - `preview.yaml` + `preview-reaper.yaml` — thin callers to the platform reusable preview workflows:
+- CI workflows — copy from `templates/app-workflows/` in the platform repo and replace `<app>`/`<owner>`:
+  - `build.yaml` — PR build validation (no push)
+  - `deploy-staging-on-main.yaml` — on merge to `main`, calls the platform `deploy-reusable` workflow which builds, pushes `sha-<commit>`, and updates the staging descriptor
+  - `release-please.yaml` — manages versioning via release PRs; on merge creates a GitHub Release + tag
+  - `promote-production-on-release.yaml` — on GitHub Release, calls the platform `deploy-reusable` workflow which promotes the exact staged artifact and opens a production PR
+  - `preview.yaml` — thin caller for `/preview deploy|renew|destroy|status` commands
+  - `preview-reaper.yaml` — scheduled TTL reaper for expired previews
 
-    ```yaml
-    # .github/workflows/preview.yaml
-    on:
-      issue_comment: { types: [created] }
-      pull_request:  { types: [synchronize, closed] }
-    permissions: { contents: read, packages: write, pull-requests: write }
-    jobs:
-      preview:
-        uses: NicolasQueiroga/nqlabs-platform/.github/workflows/preview-reusable.yaml@main
-        with:
-          app: <app>
-          image: ghcr.io/<owner>/<app>
-        secrets: inherit
-    ```
+All workflows are thin callers that delegate to platform reusable workflows. The app repo only needs to set the `service` and `image` parameters — the platform handles build, push, descriptor updates, and supply chain security.
 
 ### Required repo secrets
 

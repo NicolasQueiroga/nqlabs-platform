@@ -1,0 +1,32 @@
+# App repo workflow: release-please
+#
+# Copy this file to .github/workflows/release-please.yaml in the app repo.
+# Replace <app> with the service name.
+#
+# release-please manages versioning: it creates a release PR that bumps
+# the version, and when merged, creates a GitHub Release + tag.
+# The promote-production-on-release workflow then promotes that release
+# to production.
+
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          release-type: simple
+          # Use a release token (fine-grained PAT on the app repo) to allow
+          # release-please to create tags that trigger the release workflow.
+          # Without this, the default GITHUB_TOKEN won't trigger subsequent workflows.
+          token: ${{ secrets.NQLABS_<APP>_RELEASE_TOKEN }}
