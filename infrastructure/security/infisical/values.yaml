@@ -33,3 +33,12 @@ redis:
 # Infisical's built-in ingress is disabled — we use Gateway API HTTPRoute
 ingress:
   enabled: false
+
+# Explicitly disable the bundled ingress-nginx subchart.
+# The Infisical chart (>=1.8.0) bundles ingress-nginx as a subchart; even
+# with ingress.enabled=false, the subchart's admission webhook Jobs are still
+# rendered, triggering Kyverno policy violations (missing resource requests,
+# seccomp, and non-approved image registry). Setting the subchart to disabled
+# suppresses all ingress-nginx resources including the admission Jobs.
+ingress-nginx:
+  enabled: false

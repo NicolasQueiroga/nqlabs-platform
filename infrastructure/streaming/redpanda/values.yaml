@@ -8,12 +8,16 @@
 
 statefulset:
   replicas: 1
-  resources:
-    requests:
-      cpu: 250m
-      memory: 512Mi
-    limits:
-      memory: 1Gi
+
+# Resources live at the top level, not under statefulset.
+resources:
+  cpu:
+    cores: 250m
+    overprovisioned: true
+  memory:
+    container:
+      min: 512Mi
+      max: 1Gi
 
 storage:
   persistentVolume:
@@ -26,12 +30,12 @@ storage:
 tls:
   enabled: false
 
-# SASL authentication for Kafka API.
-sasl:
-  enabled: true
-  secretRef: "redpanda-sasl"
-  mechanisms:
-    - SCRAM-SHA-512
+# SASL authentication is configured under auth.sasl (not a top-level sasl key).
+auth:
+  sasl:
+    enabled: true
+    secretRef: "redpanda-sasl"
+    mechanism: SCRAM-SHA-512
 
 # Disable external access (accessed via in-cluster service).
 external:
@@ -40,14 +44,9 @@ external:
 # Redpanda Console (admin UI).
 console:
   enabled: true
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      memory: 128Mi
 
-# Auto-create topics (convenient for dev, disable for production).
+# Cluster-level config properties live under config.cluster.
 config:
-  auto_create_topics_enabled: true
-  default_topic_replications: 1
+  cluster:
+    auto_create_topics_enabled: true
+    default_topic_replications: 1
