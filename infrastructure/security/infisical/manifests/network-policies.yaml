@@ -86,6 +86,7 @@ spec:
               protocol: TCP
 ---
 # Allow Cilium Gateway to reach Infisical.
+# Helm chart sets: app=infisical-standalone, component=infisical, release=infisical
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -96,7 +97,8 @@ metadata:
 spec:
   endpointSelector:
     matchLabels:
-      app.kubernetes.io/name: infisical
+      app: infisical-standalone
+      component: infisical
   ingress:
     - fromEntities:
         - ingress
@@ -116,7 +118,8 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: infisical
+      app: infisical-standalone
+      component: infisical
   policyTypes:
     - Ingress
   ingress:
@@ -139,7 +142,8 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: infisical
+      app: infisical-standalone
+      component: infisical
   policyTypes:
     - Ingress
   ingress:
@@ -162,7 +166,8 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: infisical
+      app: infisical-standalone
+      component: infisical
   policyTypes:
     - Egress
   egress:
@@ -185,7 +190,8 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: infisical
+      app: infisical-standalone
+      component: infisical
   policyTypes:
     - Egress
   egress:

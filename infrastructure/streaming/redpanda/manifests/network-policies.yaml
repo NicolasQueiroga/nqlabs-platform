@@ -147,6 +147,56 @@ spec:
             - port: "9093"
               protocol: TCP
 ---
+# Allow the post-install configuration job to reach the broker.
+# Job pods have app.kubernetes.io/name=redpanda-configuration and need
+# egress to the broker admin API (9644) and Kafka (9093).
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: redpanda-allow-config-job-to-broker
+  namespace: redpanda
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: redpanda-configuration
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": redpanda
+            "k8s:app.kubernetes.io/name": redpanda
+      toPorts:
+        - ports:
+            - port: "9644"
+              protocol: TCP
+            - port: "9093"
+              protocol: TCP
+---
+# Ingress side: broker accepts connections from the config job.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: redpanda-allow-config-job-ingress
+  namespace: redpanda
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: redpanda
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": redpanda
+            "k8s:app.kubernetes.io/name": redpanda-configuration
+      toPorts:
+        - ports:
+            - port: "9644"
+              protocol: TCP
+            - port: "9093"
+              protocol: TCP
+---
 # Allow Prometheus to scrape Redpanda metrics.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
