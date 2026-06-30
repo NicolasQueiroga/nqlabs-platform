@@ -39,6 +39,21 @@ on:
         required: false
         type: boolean
         default: false
+      database:
+        description: Provision a PostgreSQL database (CNPG + PgBouncer)
+        required: false
+        type: boolean
+        default: false
+      databaseTier:
+        description: Database tier (small | standard | large)
+        required: false
+        type: string
+        default: small
+      redis:
+        description: Provision a Valkey (Redis) cache
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -59,6 +74,9 @@ jobs:
           PORT: ${{ inputs.port }}
           TIER: ${{ inputs.tier }}
           PUBLIC: ${{ inputs.public }}
+          DB: ${{ inputs.database }}
+          DB_TIER: ${{ inputs.databaseTier }}
+          REDIS: ${{ inputs.redis }}
         run: |
           set -euo pipefail
           if [ -e "apps/$NAME" ]; then echo "::error::apps/$NAME already exists"; exit 1; fi
@@ -100,6 +118,29 @@ jobs:
             ' > "apps/$NAME/environments/$env.yaml"
           done
 
+          # Add database configuration if requested
+          if [ "$DB" = "true" ]; then
+            for env in staging production; do
+              if [ "$env" = "production" ] && [ "$DB_TIER" = "small" ]; then
+                # Production defaults to standard tier for HA
+                yq -i ".database.enabled = true | .database.tier = \"standard\"" "apps/$NAME/environments/$env.yaml"
+              else
+                yq -i ".database.enabled = true | .database.tier = strenv(DB_TIER)" "apps/$NAME/environments/$env.yaml"
+              fi
+            done
+          fi
+
+          # Add Redis configuration if requested
+          if [ "$REDIS" = "true" ]; then
+            for env in staging production; do
+              if [ "$env" = "production" ]; then
+                yq -i ".redis.enabled = true | .redis.ha = true" "apps/$NAME/environments/$env.yaml"
+              else
+                yq -i ".redis.enabled = true | .redis.ha = false" "apps/$NAME/environments/$env.yaml"
+              fi
+            done
+          fi
+
           # Production gets a progressive canary by default (review 5.6); staging stays
           # fast. Basic (replica-ratio) canary — valid without a traffic router.
           yq -i '.rollout.strategy.canary.steps = [
@@ -117,6 +158,8 @@ jobs:
           TEAM: ${{ inputs.team }}
           REPO: ${{ inputs.repository }}
           IMG: ${{ inputs.image }}
+          DB: ${{ inputs.database }}
+          REDIS: ${{ inputs.redis }}
         run: |
           set -euo pipefail
           branch="app-create/$NAME"
@@ -126,4 +169,9 @@ jobs:
           git add "apps/$NAME"
           git commit -q -m "feat(app): scaffold $NAME for team $TEAM (staging + production descriptors)"
           git push -u origin "$branch"
-          gh pr create --title "Create application: $NAME (team: $TEAM)" --body "$(printf 'Scaffolds platform descriptors for **%s** (team: %s, repo %s, image %s).\n\n- apps/%s/app.yaml (identity + shape, team: %s)\n- apps/%s/environments/{staging,production}.yaml (runtime; image tag is a placeholder until the first build)\n- ArgoCD project: %s-staging, %s-production\n- Namespace: %s-%s\n\nAfter merge, in the app repo: add the build / staging / release / production / preview caller workflows (see docs/runbooks/onboarding-a-new-application.md), set secrets NQLABS_PLATFORM_REPO_TOKEN and the release token, and grant the repo GHCR package write access. The app deploys to staging on first main merge.' "$NAME" "$TEAM" "$REPO" "$IMG" "$NAME" "$TEAM" "$NAME" "$TEAM" "$TEAM" "$TEAM" "$NAME")"
+
+          extras=""
+          if [ "$DB" = "true" ]; then extras="$extras\n- PostgreSQL database (CNPG + PgBouncer pooler, WAL backup to Ceph RGW)"; fi
+          if [ "$REDIS" = "true" ]; then extras="$extras\n- Valkey (Redis) cache with persistent storage"; fi
+
+          gh pr create --title "Create application: $NAME (team: $TEAM)" --body "$(printf 'Scaffolds platform descriptors for **%s** (team: %s, repo %s, image %s).\n\n- apps/%s/app.yaml (identity + shape, team: %s)\n- apps/%s/environments/{staging,production}.yaml (runtime; image tag is a placeholder until the first build)\n- ArgoCD project: %s-staging, %s-production\n- Namespace: %s-%s%s\n\nAfter merge, in the app repo: add the build / staging / release / production / preview caller workflows (see docs/runbooks/onboarding-a-new-application.md), set secrets NQLABS_PLATFORM_REPO_TOKEN and the release token, and grant the repo GHCR package write access. The app deploys to staging on first main merge.' "$NAME" "$TEAM" "$REPO" "$IMG" "$NAME" "$TEAM" "$NAME" "$TEAM" "$TEAM" "$TEAM" "$NAME" "$extras")"

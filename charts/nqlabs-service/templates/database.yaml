@@ -1,0 +1,320 @@
+{{- if .Values.database.enabled -}}
+{{- $svcName := include "nqlabs-service.name" . -}}
+{{- $fullname := include "nqlabs-service.fullname" . -}}
+{{- $namespace := .Release.Namespace -}}
+{{- $tier := .Values.database.tier | default "small" -}}
+{{- $pgVersion := .Values.database.version | default "17.6" -}}
+{{- $storageClass := .Values.database.storageClass | default "ceph-block" -}}
+{{- $storageSize := .Values.database.storage | default "5Gi" -}}
+{{- $instances := 1 -}}
+{{- $poolerInstances := 1 -}}
+{{- $cpuReq := "100m" -}}
+{{- $memReq := "256Mi" -}}
+{{- $memLim := "512Mi" -}}
+{{- if eq $tier "standard" -}}
+{{- $instances = 2 -}}
+{{- $poolerInstances = 2 -}}
+{{- $cpuReq = "250m" -}}
+{{- $memReq = "512Mi" -}}
+{{- $memLim = "1Gi" -}}
+{{- $storageSize = "10Gi" -}}
+{{- else if eq $tier "large" -}}
+{{- $instances = 3 -}}
+{{- $poolerInstances = 3 -}}
+{{- $cpuReq = "500m" -}}
+{{- $memReq = "1Gi" -}}
+{{- $memLim = "2Gi" -}}
+{{- $storageSize = "20Gi" -}}
+{{- end -}}
+# ExternalSecret for the database password.
+# Pulls from the platform secret store (nqlabs-infisical or nqlabs-openbao).
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: {{ $fullname }}-pg-app
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  refreshPolicy: CreatedOnce
+  secretStoreRef:
+    name: {{ .Values.externalSecrets.store | default "nqlabs-infisical" }}
+    kind: {{ .Values.externalSecrets.storeKind | default "ClusterSecretStore" }}
+  target:
+    name: {{ $fullname }}-pg-app
+    type: kubernetes.io/basic-auth
+    template:
+      metadata:
+        annotations:
+          cnpg.io/username: {{ $svcName }}
+  data:
+    - secretKey: username
+      remoteRef:
+        key: {{ $svcName }}/{{ .Values.environment.name }}/database
+        property: username
+    - secretKey: password
+      remoteRef:
+        key: {{ $svcName }}/{{ .Values.environment.name }}/database
+        property: password
+
+{{- if .Values.database.backup.enabled }}
+---
+# ObjectBucketClaim for PostgreSQL WAL + backup storage on Ceph RGW.
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: {{ $fullname }}-pg-rgw
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backup
+spec:
+  bucketName: {{ $fullname }}-pg
+  storageClassName: ceph-bucket
+{{- end }}
+
+---
+# CloudNativePG Cluster — PostgreSQL with tier-based sizing.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ $fullname }}-pg
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  instances: {{ $instances }}
+  imageName: ghcr.io/cloudnative-pg/postgresql:{{ $pgVersion }}
+
+  bootstrap:
+    initdb:
+      database: {{ $svcName }}
+      owner: {{ $svcName }}
+      secret:
+        name: {{ $fullname }}-pg-app
+
+  storage:
+    storageClass: {{ $storageClass }}
+    size: {{ $storageSize }}
+
+  resources:
+    requests:
+      cpu: {{ $cpuReq }}
+      memory: {{ $memReq }}
+    limits:
+      memory: {{ $memLim }}
+
+  monitoring:
+    enablePodMonitor: true
+
+  affinity:
+    podAntiAffinityType: preferred
+
+{{- if .Values.database.backup.enabled }}
+  backup:
+    barmanObjectStore:
+      destinationPath: s3://{{ $fullname }}-pg/wal
+      endpointURL: http://rook-ceph-rgw-platform-object-store.rook-ceph.svc:80
+      s3Credentials:
+        accessKeyId:
+          name: {{ $fullname }}-pg-backup-s3
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: {{ $fullname }}-pg-backup-s3
+          key: SECRET_ACCESS_KEY
+      wal:
+        maxParallel: 2
+        compression: gzip
+    retentionPolicy: {{ .Values.database.backup.retention | default "7d" }}
+{{- end }}
+
+---
+# CNPG Pooler — PgBouncer connection pooling (transaction mode).
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: {{ $fullname }}-pg-pooler
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  cluster:
+    name: {{ $fullname }}-pg
+  instances: {{ $poolerInstances }}
+  type: rw
+  pgbouncer:
+    poolMode: transaction
+    parameters:
+      max_client_conn: "100"
+      default_pool_size: "25"
+      reserve_pool_size: "5"
+
+{{- if .Values.database.backup.enabled }}
+---
+# Scheduled backup: daily at 02:00 UTC.
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: {{ $fullname }}-pg-daily
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.database.backup.schedule | default "0 2 * * *" }}
+  backupOwnerReference: self
+  cluster:
+    name: {{ $fullname }}-pg
+{{- end }}
+
+---
+# CiliumNetworkPolicy — isolate the database to the service namespace.
+# Only the service's pods can connect to PostgreSQL on port 5432.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ $fullname }}-pg-isolation
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  endpointSelector:
+    matchLabels:
+      cnpg.io/cluster: {{ $fullname }}-pg
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": {{ $namespace }}
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP
+
+---
+# ServiceMonitor for CNPG PostgreSQL metrics.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ $fullname }}-pg
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      cnpg.io/cluster: {{ $fullname }}-pg
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+
+---
+# PrometheusRule — PostgreSQL-specific alerts.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ $fullname }}-pg-alerts
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+    prometheus: kube-prometheus-stack-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: {{ $svcName }}-pg.alerts
+      rules:
+        # Replication lag (HA tiers)
+        - alert: {{ $svcName }}PgReplicationLag
+          expr: |
+            cnpg_replication_lag_seconds{cluster="{{ $fullname }}-pg"} > 30
+          for: 5m
+          labels:
+            severity: warning
+            service: {{ $svcName }}
+          annotations:
+            summary: "{{ $svcName }} PostgreSQL replication lag"
+            description: "Replication lag > 30s for 5m."
+
+        # Connection pool saturation
+        - alert: {{ $svcName }}PgPoolSaturation
+          expr: |
+            cnpg_pooler_client_connections{
+              cluster="{{ $fullname }}-pg",
+              pooler="{{ $fullname }}-pg-pooler"
+            }
+            /
+            cnpg_pooler_max_client_connections{
+              cluster="{{ $fullname }}-pg",
+              pooler="{{ $fullname }}-pg-pooler"
+            }
+            > 0.8
+          for: 10m
+          labels:
+            severity: warning
+            service: {{ $svcName }}
+          annotations:
+            summary: "{{ $svcName }} PgBouncer pool saturation"
+            description: "PgBouncer pool > 80% capacity for 10m."
+
+        # WAL backlog
+        - alert: {{ $svcName }}PgWalBacklog
+          expr: |
+            cnpg_wal_files_archive_status{cluster="{{ $fullname }}-pg",status="pending"}
+            > 10
+          for: 10m
+          labels:
+            severity: warning
+            service: {{ $svcName }}
+          annotations:
+            summary: "{{ $svcName }} PostgreSQL WAL backlog"
+            description: "More than 10 WAL files pending archive for 10m."
+
+        # Disk usage
+        - alert: {{ $svcName }}PgDiskUsage
+          expr: |
+            cnpg_cluster_volume_size_bytes{cluster="{{ $fullname }}-pg"}
+            /
+            cnpg_cluster_volume_size_bytes{cluster="{{ $fullname }}-pg"}
+            > 0.85
+          for: 15m
+          labels:
+            severity: warning
+            service: {{ $svcName }}
+          annotations:
+            summary: "{{ $svcName }} PostgreSQL disk usage"
+            description: "PostgreSQL volume > 85% full for 15m."
+
+---
+# Gatus health check — pg_isready via the pooler service.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullname }}-pg-gatus
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+    gatus.io/enabled: "true"
+data:
+  endpoint.yaml: |
+    endpoints:
+      - name: {{ $svcName }} PostgreSQL
+        group: Database
+        url: tcp://{{ $fullname }}-pg-pooler-rw.{{ $namespace }}.svc.cluster.local:5432
+        interval: 1m
+        conditions:
+          - "[CONNECTED] == true"
+{{- end -}}

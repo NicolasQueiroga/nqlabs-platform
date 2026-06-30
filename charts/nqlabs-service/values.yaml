@@ -156,7 +156,7 @@ otel:
   serviceName: ""
 
 # External Secrets Operator integration. Materializes a Kubernetes Secret from the
-# platform secret store. Defaults to the NQLabs 1Password-backed ClusterSecretStore.
+# platform secret store. Defaults to the NQLabs Infisical-backed ClusterSecretStore.
 externalSecrets:
   enabled: false
   store: nqlabs-infisical
@@ -170,6 +170,45 @@ externalSecrets:
   #     remoteRef:
   #       key: demo/staging/database-url
   #       property: ""
+
+# ── Data layer ────────────────────────────────────────────────────────────
+# When enabled, the chart generates a CloudNativePG PostgreSQL cluster with
+# PgBouncer connection pooling, CiliumNetworkPolicy isolation, monitoring
+# (ServiceMonitor + PrometheusRule + Gatus), and optional WAL archiving +
+# scheduled backups to Ceph RGW.
+#
+# The database password is pulled from the platform secret store via ESO.
+# The secret key is: <service>/<environment>/database with properties
+# `username` and `password`.
+#
+# Tiers:
+#   small    — 1 instance, 5Gi, 100m/256Mi (staging, dev)
+#   standard — 2 instances (HA), 10Gi, 250m/512Mi (production)
+#   large    — 3 instances (HA), 20Gi, 500m/1Gi (high-traffic production)
+database:
+  enabled: false
+  tier: small  # small | standard | large
+  version: "17.6"
+  storageClass: ceph-block  # Ceph RBD for staging/production; local-path for management
+  storage: ""  # override tier default if needed (e.g. "5Gi")
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"  # daily at 02:00 UTC
+    retention: "7d"
+
+# Valkey (BSD Redis fork) for caching and queues. When enabled, the chart
+# generates a Valkey StatefulSet with persistent storage, CiliumNetworkPolicy
+# isolation, and monitoring (ServiceMonitor + PrometheusRule + Gatus).
+#
+# The Valkey password is pulled from the platform secret store via ESO.
+# The secret key is: <service>/<environment>/redis with property `password`.
+redis:
+  enabled: false
+  ha: false  # false = single-node (staging), true = 3-node HA (production)
+  storageClass: ceph-block
+  storage: "1Gi"
+  maxmemoryPolicy: noeviction  # noeviction | allkeys-lru | allkeys-lfu | volatile-lru
+  passwordSecretKey: redis  # secret store key for the password
 
 # Namespace-scoped guardrails. The Mac lab uses dedicated service-environment
 # namespaces such as <service>-staging or <service>-production so these apply to

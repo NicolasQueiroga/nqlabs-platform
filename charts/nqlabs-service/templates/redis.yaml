@@ -1,0 +1,294 @@
+{{- if .Values.redis.enabled -}}
+{{- $svcName := include "nqlabs-service.name" . -}}
+{{- $fullname := include "nqlabs-service.fullname" . -}}
+{{- $namespace := .Release.Namespace -}}
+{{- $ha := .Values.redis.ha -}}
+{{- $replicas := 1 -}}
+{{- if $ha -}}{{- $replicas = 3 -}}{{- end -}}
+{{- $storageClass := .Values.redis.storageClass | default "ceph-block" -}}
+{{- $storageSize := .Values.redis.storage | default "1Gi" -}}
+# ExternalSecret for the Valkey password.
+# Pulls from the platform secret store (nqlabs-infisical or nqlabs-openbao).
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: {{ $fullname }}-valkey-auth
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  refreshPolicy: CreatedOnce
+  secretStoreRef:
+    name: {{ .Values.externalSecrets.store | default "nqlabs-infisical" }}
+    kind: {{ .Values.externalSecrets.storeKind | default "ClusterSecretStore" }}
+  target:
+    name: {{ $fullname }}-valkey-auth
+    type: Opaque
+  data:
+    - secretKey: password
+      remoteRef:
+        key: {{ $svcName }}/{{ .Values.environment.name }}/redis
+        property: password
+
+---
+# Valkey Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}-valkey
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: valkey
+spec:
+  selector:
+    app.kubernetes.io/name: {{ $svcName }}-valkey
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: valkey
+      port: 6379
+      targetPort: valkey
+
+---
+# Valkey StatefulSet — persistent cache/queue with configurable HA.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $fullname }}-valkey
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: valkey
+spec:
+  replicas: {{ $replicas }}
+  serviceName: {{ $fullname }}-valkey
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $svcName }}-valkey
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ $svcName }}-valkey
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: valkey
+        {{- include "nqlabs-service.labels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: valkey
+          image: ghcr.io/valkey-io/valkey:8.0-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - valkey-server
+            - --requirepass
+            - $(VALKEY_PASSWORD)
+            - --save
+            - "60"
+            - "1"
+            - --appendonly
+            - "yes"
+            - --dir
+            - /data
+            - --maxmemory-policy
+            - {{ .Values.redis.maxmemoryPolicy | default "noeviction" }}
+          env:
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullname }}-valkey-auth
+                  key: password
+            - name: REDISCLI_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullname }}-valkey-auth
+                  key: password
+            - name: VALKEYCLI_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullname }}-valkey-auth
+                  key: password
+          ports:
+            - name: valkey
+              containerPort: 6379
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          livenessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: {{ $storageClass }}
+        volumeMode: Filesystem
+        resources:
+          requests:
+            storage: {{ $storageSize }}
+
+---
+# CiliumNetworkPolicy — isolate Valkey to the service namespace.
+# Only the service's pods can connect to Valkey on port 6379.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ $fullname }}-valkey-isolation
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $svcName }}-valkey
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": {{ $namespace }}
+      toPorts:
+        - ports:
+            - port: "6379"
+              protocol: TCP
+
+---
+# ServiceMonitor for Valkey metrics.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ $fullname }}-valkey
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $svcName }}-valkey
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  endpoints:
+    - port: valkey
+      path: /metrics
+      interval: 30s
+
+---
+# PrometheusRule — Valkey/Redis-specific alerts.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ $fullname }}-valkey-alerts
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+    prometheus: kube-prometheus-stack-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: {{ $svcName }}-valkey.alerts
+      rules:
+        # Memory usage > 90%
+        - alert: {{ $svcName }}ValkeyMemoryHigh
+          expr: |
+            redis_memory_used_bytes{namespace="{{ $namespace }}",
+              pod=~"{{ $fullname }}-valkey-.*"}
+            /
+            redis_memory_max_bytes{namespace="{{ $namespace }}",
+              pod=~"{{ $fullname }}-valkey-.*"}
+            > 0.9
+          for: 10m
+          labels:
+            severity: warning
+            service: {{ $svcName }}
+          annotations:
+            summary: "{{ $svcName }} Valkey memory > 90%"
+            description: "Valkey memory usage > 90% for 10m."
+
+        # Evicted keys
+        - alert: {{ $svcName }}ValkeyEvictions
+          expr: |
+            rate(redis_evicted_keys_total{namespace="{{ $namespace }}",
+              pod=~"{{ $fullname }}-valkey-.*"}[5m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+            service: {{ $svcName }}
+          annotations:
+            summary: "{{ $svcName }} Valkey evicting keys"
+            description: "Valkey is evicting keys — memory pressure."
+
+        # Connected clients spike
+        - alert: {{ $svcName }}ValkeyClientSpike
+          expr: |
+            redis_connected_clients{namespace="{{ $namespace }}",
+              pod=~"{{ $fullname }}-valkey-.*"} > 200
+          for: 5m
+          labels:
+            severity: warning
+            service: {{ $svcName }}
+          annotations:
+            summary: "{{ $svcName }} Valkey client spike"
+            description: "Valkey has > 200 connected clients for 5m."
+
+---
+# Gatus health check — Valkey PING.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullname }}-valkey-gatus
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+    gatus.io/enabled: "true"
+data:
+  endpoint.yaml: |
+    endpoints:
+      - name: {{ $svcName }} Valkey
+        group: Database
+        url: tcp://{{ $fullname }}-valkey.{{ $namespace }}.svc.cluster.local:6379
+        interval: 1m
+        conditions:
+          - "[CONNECTED] == true"
+{{- end -}}
