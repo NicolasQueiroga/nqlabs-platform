@@ -91,6 +91,8 @@ grafana:
 # Required for namespaced PolicyException objects to be processed by the
 # admission controller. Without this flag, PolicyExceptions are created but
 # silently ignored (--enablePolicyException=false by default).
+# Set namespace to "*" to allow exceptions in any namespace.
 features:
   policyExceptions:
     enabled: true
+    namespace: "*"
