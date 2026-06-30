@@ -1,0 +1,112 @@
+# NetworkPolicies for the redpanda namespace.
+#
+# Default-deny ingress + egress, then allow only the specific flows:
+#   - Gateway → redpanda-console (8080) — admin UI via platform gateway
+#   - All service namespaces → redpanda (9092) — Kafka API
+#   - monitoring → redpanda (9644) — Prometheus metrics scrape
+#   - DNS egress for all pods
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redpanda-default-deny
+  namespace: redpanda
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress: []
+---
+# DNS egress.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: redpanda-allow-dns
+  namespace: redpanda
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": kube-system
+            "k8s:k8s-app": kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
+---
+# Allow Cilium Gateway to reach Redpanda Console.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: redpanda-allow-gateway
+  namespace: redpanda
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: redpanda-console
+  ingress:
+    - fromEntities:
+        - ingress
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+---
+# Allow all service namespaces to reach Redpanda Kafka API (port 9092).
+# Services connect from their own namespaces to produce/consume.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: redpanda-allow-kafka-clients
+  namespace: redpanda
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: redpanda
+  ingress:
+    - fromEndpoints:
+        # Allow all namespaces with the gateway-access label (service namespaces)
+        - matchExpressions:
+            - key: "k8s:io.kubernetes.pod.namespace"
+              operator: Exists
+      toPorts:
+        - ports:
+            - port: "9092"
+              protocol: TCP
+---
+# Allow Prometheus to scrape Redpanda metrics.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redpanda-allow-prometheus
+  namespace: redpanda
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 9644
+          protocol: TCP
+        - port: 8080
+          protocol: TCP

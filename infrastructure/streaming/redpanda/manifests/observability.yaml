@@ -1,0 +1,77 @@
+# ServiceMonitor for Redpanda metrics.
+# Redpanda exposes Prometheus metrics on port 9644.
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: redpanda
+  namespace: redpanda
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: redpanda
+    app.kubernetes.io/part-of: nqlabs-platform
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redpanda
+  endpoints:
+    - port: admin
+      path: /metrics
+      interval: 30s
+---
+# PrometheusRule — Redpanda-specific alerts.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: redpanda-alerts
+  namespace: redpanda
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: redpanda
+    app.kubernetes.io/part-of: nqlabs-platform
+    prometheus: kube-prometheus-stack-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: redpanda.alerts
+      rules:
+        # Consumer group lag
+        - alert: RedpandaConsumerLag
+          expr: |
+            redpanda_kafka_consumer_group_lag_sum > 1000
+          for: 10m
+          labels:
+            severity: warning
+            service: redpanda
+          annotations:
+            summary: "Redpanda consumer group lag"
+            description: "Consumer group lag > 1000 messages for 10m."
+
+        # Under-replicated partitions
+        - alert: RedpandaUnderReplicatedPartitions
+          expr: |
+            redpanda_cluster_partition_under_replicated_replicas > 0
+          for: 5m
+          labels:
+            severity: critical
+            service: redpanda
+          annotations:
+            summary: "Redpanda under-replicated partitions"
+            description: "Under-replicated partitions > 0 for 5m."
+
+        # Disk usage
+        - alert: RedpandaDiskUsage
+          expr: |
+            redpanda_storage_disk_free_bytes
+            /
+            redpanda_storage_disk_total_bytes
+            < 0.15
+          for: 15m
+          labels:
+            severity: warning
+            service: redpanda
+          annotations:
+            summary: "Redpanda disk usage"
+            description: "Redpanda disk usage > 85% for 15m."

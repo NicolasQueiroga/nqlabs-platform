@@ -42,6 +42,7 @@ spec:
     - https://ceph.github.io/ceph-csi-operator
     - https://openbao.github.io/openbao-helm
     - https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/
+    - https://charts.redpanda.com
 
   # Platform apps are trusted and may target any namespace on the management
   # cluster (in-cluster) or the registered environment clusters.

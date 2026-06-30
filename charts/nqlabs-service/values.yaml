@@ -210,6 +210,34 @@ redis:
   maxmemoryPolicy: noeviction  # noeviction | allkeys-lru | allkeys-lfu | volatile-lru
   passwordSecretKey: redis  # secret store key for the password
 
+# Kafka / Redpanda event streaming. When enabled, the chart:
+#   1. Creates a per-service SASL credential ExternalSecret
+#   2. Provisions the service's Kafka topics via a PostSync Job (rpk)
+#   3. Adds a CiliumNetworkPolicy allowing this service to reach Redpanda
+#
+# The SASL credentials are pulled from the platform secret store.
+# The secret key is: <service>/<environment>/kafka with properties
+# `username` and `password`.
+#
+# Topic config:
+#   name        — Kafka topic name (required)
+#   partitions  — Number of partitions (default: 1)
+#   replicas    — Replication factor (default: 1, set to 3 for HA)
+#   retentionMs — Message retention in ms (default: 604800000 = 7 days)
+kafka:
+  enabled: false
+  brokers: "redpanda.redpanda.svc.cluster.local:9092"
+  topics: []
+  # Example:
+  # topics:
+  #   - name: my-service.events
+  #     partitions: 3
+  #     replicas: 1
+  #     retentionMs: 604800000
+  #   - name: my-service.commands
+  #     partitions: 1
+  #     replicas: 1
+
 # Namespace-scoped guardrails. The Mac lab uses dedicated service-environment
 # namespaces such as <service>-staging or <service>-production so these apply to
 # one service environment instead of a shared environment namespace.

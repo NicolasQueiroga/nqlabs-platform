@@ -1,0 +1,142 @@
+{{- if .Values.kafka.enabled -}}
+{{- $svcName := include "nqlabs-service.name" . -}}
+{{- $fullname := include "nqlabs-service.fullname" . -}}
+{{- $namespace := .Release.Namespace -}}
+{{- $brokers := .Values.kafka.brokers | default "redpanda.redpanda.svc.cluster.local:9092" -}}
+{{- $saslSecretName := printf "%s-kafka-sasl" $fullname -}}
+# ExternalSecret — Kafka SASL credentials for this service.
+# The secret store key is: <service>/<environment>/kafka with properties
+# `username` and `password`.
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: {{ $fullname }}-kafka-sasl
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  refreshPolicy: CreatedOnce
+  secretStoreRef:
+    name: {{ .Values.externalSecrets.store | default "nqlabs-infisical" }}
+    kind: {{ .Values.externalSecrets.storeKind | default "ClusterSecretStore" }}
+  target:
+    name: {{ $saslSecretName }}
+    type: Opaque
+  data:
+    - secretKey: username
+      remoteRef:
+        key: {{ $svcName }}/{{ .Values.environment.name }}/kafka
+        property: username
+    - secretKey: password
+      remoteRef:
+        key: {{ $svcName }}/{{ .Values.environment.name }}/kafka
+        property: password
+
+---
+# Topic provisioner Job — runs on deploy to create/ensure the service's topics.
+# Idempotent: re-running it is safe; existing topics are left unchanged.
+# Uses rpk (Redpanda CLI) with SASL auth.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $fullname }}-kafka-topics
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "nqlabs-service.labels" . | nindent 8 }}
+        app.kubernetes.io/component: kafka-topic-provisioner
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: rpk
+          image: docker.io/redpandadata/redpanda:v25.1.5
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -euc
+            - |
+              {{- range .Values.kafka.topics }}
+              echo "Ensuring topic: {{ .name }}"
+              rpk topic create {{ .name }} \
+                --brokers "${KAFKA_BROKERS}" \
+                --partitions {{ .partitions | default 1 }} \
+                --replicas {{ .replicas | default 1 }} \
+                --config retention.ms={{ .retentionMs | default 604800000 }} \
+                --user "${KAFKA_USERNAME}" \
+                --password "${KAFKA_PASSWORD}" \
+                --sasl-mechanism SCRAM-SHA-512 \
+                || true
+              {{- end }}
+              echo "Topic provisioning complete."
+          env:
+            - name: KAFKA_BROKERS
+              value: {{ $brokers | quote }}
+            - name: KAFKA_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $saslSecretName }}
+                  key: username
+            - name: KAFKA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $saslSecretName }}
+                  key: password
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+---
+# CiliumNetworkPolicy — allow this service's pods to reach Redpanda.
+# Kafka API port 9092 only. Producer/consumer traffic is scoped to this service.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ $fullname }}-kafka-egress
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "nqlabs-service.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": redpanda
+            app.kubernetes.io/name: redpanda
+      toPorts:
+        - ports:
+            - port: "9092"
+              protocol: TCP
+
+{{- end -}}

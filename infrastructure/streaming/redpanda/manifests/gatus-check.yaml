@@ -1,0 +1,22 @@
+# Gatus endpoint for Redpanda Kafka API health check.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redpanda-gatus
+  namespace: redpanda
+  labels:
+    app.kubernetes.io/name: redpanda
+    app.kubernetes.io/part-of: nqlabs-platform
+    gatus.io/enabled: "true"
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+data:
+  endpoint.yaml: |
+    endpoints:
+      - name: Redpanda Kafka API
+        group: Streaming
+        url: tcp://redpanda.redpanda.svc.cluster.local:9092
+        interval: 1m
+        conditions:
+          - "[CONNECTED] == true"

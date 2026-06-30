@@ -1,0 +1,53 @@
+# Redpanda Helm values for the NQLabs platform.
+#
+# Single-broker deployment for the home lab (management cluster).
+# Scale to 3 brokers for HA once NUC nodes are added.
+#
+# TLS is disabled for internal communication (the platform uses
+# CiliumNetworkPolicies for isolation). SASL is enabled for auth.
+
+statefulset:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+storage:
+  persistentVolume:
+    enabled: true
+    storageClass: ceph-block
+    size: 20Gi
+
+# Disable TLS for internal listeners (platform uses CiliumNetworkPolicy).
+# The external listener uses the platform gateway's TLS.
+tls:
+  enabled: false
+
+# SASL authentication for Kafka API.
+sasl:
+  enabled: true
+  secretRef: "redpanda-sasl"
+  mechanisms:
+    - SCRAM-SHA-512
+
+# Disable external access (accessed via in-cluster service).
+external:
+  enabled: false
+
+# Redpanda Console (admin UI).
+console:
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+# Auto-create topics (convenient for dev, disable for production).
+config:
+  auto_create_topics_enabled: true
+  default_topic_replications: 1

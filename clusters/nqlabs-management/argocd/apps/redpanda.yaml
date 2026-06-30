@@ -1,0 +1,52 @@
+# Redpanda — Kafka-compatible event streaming platform
+#
+# Multi-source Application:
+#   1. Helm chart (redpanda/redpanda) with values from git
+#   2. Git ref for valueFiles
+#   3. Git path for platform manifests (network policies, HTTPRoute, monitoring)
+#
+# Sync wave 3: after rook-ceph (wave 0-1, ceph-block SC).
+# The HTTPRoute (wave 4) waits for the gateway.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: redpanda
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://charts.redpanda.com
+      chart: redpanda
+      targetRevision: "26.1.5"
+      helm:
+        releaseName: redpanda
+        valueFiles:
+          - $values/infrastructure/streaming/redpanda/values.yaml
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/streaming/redpanda/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: redpanda
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest
+        gateway-access: "true"
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
