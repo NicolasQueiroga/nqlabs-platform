@@ -33,12 +33,13 @@ storage:
 tls:
   enabled: false
 
-# SASL authentication is configured under auth.sasl (not a top-level sasl key).
+# SASL authentication: disabled until OpenBao is unsealed and the
+# redpanda-sasl ExternalSecret can be bootstrapped.
+# The management cluster is network-isolated via CiliumNetworkPolicy.
+# TODO: re-enable once OpenBao is healthy + ExternalSecret exists.
 auth:
   sasl:
-    enabled: true
-    secretRef: "redpanda-sasl"
-    mechanism: SCRAM-SHA-512
+    enabled: false
 
 # Disable external access (accessed via in-cluster service).
 external:
