@@ -8,10 +8,6 @@
 
 statefulset:
   replicas: 1
-  podTemplate:
-    securityContext:
-      seccompProfile:
-        type: RuntimeDefault
 
 # Resources live at the top level, not under statefulset.
 resources:
@@ -49,6 +45,9 @@ external:
   enabled: false
 
 # Redpanda Console (admin UI).
+# Note: console.podTemplate is not a valid schema key in this chart version.
+# Seccomp and resource exemptions for the console are handled via the
+# Kyverno PolicyException in manifests/kyverno-exception.yaml.
 console:
   enabled: true
   resources:
@@ -57,11 +56,6 @@ console:
       memory: 64Mi
     limits:
       memory: 128Mi
-  podTemplate:
-    pod:
-      securityContext:
-        seccompProfile:
-          type: RuntimeDefault
 
 # Cluster-level config properties live under config.cluster.
 config:
