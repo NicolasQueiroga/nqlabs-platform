@@ -86,3 +86,11 @@ cleanupController:
 grafana:
   enabled: true
   namespace: monitoring
+
+# Enable PolicyException resources.
+# Required for namespaced PolicyException objects to be processed by the
+# admission controller. Without this flag, PolicyExceptions are created but
+# silently ignored (--enablePolicyException=false by default).
+features:
+  policyExceptions:
+    enabled: true

@@ -15,14 +15,33 @@
 apiVersion: kyverno.io/v2
 kind: PolicyException
 metadata:
-  name: redpanda-policy-exception
+  name: redpanda-require-seccomp
   namespace: redpanda
 spec:
   exceptions:
-    - policyName: baseline
+    - policyName: require-seccomp
       ruleNames:
         - require-seccomp
         - autogen-require-seccomp
+  match:
+    any:
+      - resources:
+          kinds:
+            - StatefulSet
+            - Deployment
+            - Pod
+          namespaces:
+            - redpanda
+---
+apiVersion: kyverno.io/v2
+kind: PolicyException
+metadata:
+  name: redpanda-require-resource-requests
+  namespace: redpanda
+spec:
+  exceptions:
+    - policyName: require-resource-requests
+      ruleNames:
         - require-resource-requests
         - autogen-require-requests
   match:
