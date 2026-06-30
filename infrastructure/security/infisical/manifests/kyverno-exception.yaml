@@ -1,0 +1,55 @@
+# Kyverno PolicyExceptions for Infisical.
+#
+# The Infisical Helm chart (infisical-standalone v1.8.0) does not expose
+# seccompProfile or runAsNonRoot through its values schema. These exceptions
+# allow the Infisical deployment to be admitted despite missing security
+# contexts that the chart does not support configuring.
+#
+# The restrict-image-registries policy is resolved globally by adding
+# docker.io/infisical/* to the allowed-registries ClusterPolicy.
+---
+apiVersion: kyverno.io/v2
+kind: PolicyException
+metadata:
+  name: infisical-require-seccomp
+  namespace: infisical
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  exceptions:
+    - policyName: require-seccomp
+      ruleNames:
+        - require-seccomp
+        - autogen-require-seccomp
+  match:
+    any:
+      - resources:
+          kinds:
+            - StatefulSet
+            - Deployment
+            - Pod
+          namespaces:
+            - infisical
+---
+apiVersion: kyverno.io/v2
+kind: PolicyException
+metadata:
+  name: infisical-require-run-as-nonroot
+  namespace: infisical
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  exceptions:
+    - policyName: require-run-as-nonroot
+      ruleNames:
+        - run-as-non-root
+        - autogen-run-as-non-root
+  match:
+    any:
+      - resources:
+          kinds:
+            - StatefulSet
+            - Deployment
+            - Pod
+          namespaces:
+            - infisical
