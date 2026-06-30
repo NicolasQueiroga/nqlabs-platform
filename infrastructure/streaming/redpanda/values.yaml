@@ -35,10 +35,9 @@ storage:
 tls:
   enabled: false
 
-# SASL authentication: disabled until OpenBao is unsealed and the
-# redpanda-sasl ExternalSecret can be bootstrapped.
-# The management cluster is network-isolated via CiliumNetworkPolicy.
-# TODO: re-enable once OpenBao is healthy + ExternalSecret exists.
+# SASL authentication: disabled until 1Password-backed ExternalSecret for
+# redpanda-sasl is created. The management cluster is network-isolated via
+# CiliumNetworkPolicy. TODO: re-enable once the ExternalSecret exists.
 auth:
   sasl:
     enabled: false
@@ -59,6 +58,16 @@ console:
       memory: 64Mi
     limits:
       memory: 128Mi
+  # The chart's default liveness probe has initialDelaySeconds=0 which kills
+  # the console before it finishes initialising. Give it breathing room.
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    failureThreshold: 5
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 5
 
 # Cluster-level config properties live under config.cluster.
 config:
