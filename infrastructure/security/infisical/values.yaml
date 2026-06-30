@@ -1,0 +1,35 @@
+# Infisical — self-hosted secrets manager
+#
+# Replaces OpenBao KV for application secrets. OpenBao PKI engine stays
+# for cert-manager internal certificate issuance.
+#
+# Backend: CloudNativePG (PostgreSQL 17) + Valkey (Redis fork)
+# Auth: Email/password initially (OIDC requires enterprise license)
+# ESO: Kubernetes Auth for Machine Identity (free, no license needed)
+#
+# UI: https://infisical.platform.nqlabs.network
+# Port: 8080
+
+infisical:
+  image:
+    repository: infisical/infisical
+    tag: "v0.151.0"
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  kubeSecretRef: "infisical-secrets"
+  resources:
+    requests:
+      cpu: 350m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+# Disable in-cluster PostgreSQL and Redis — we use CloudNativePG + Valkey
+postgresql:
+  enabled: false
+redis:
+  enabled: false
+
+# Infisical's built-in ingress is disabled — we use Gateway API HTTPRoute
+ingress:
+  enabled: false

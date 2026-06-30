@@ -159,7 +159,7 @@ otel:
 # platform secret store. Defaults to the NQLabs 1Password-backed ClusterSecretStore.
 externalSecrets:
   enabled: false
-  store: nqlabs-openbao
+  store: nqlabs-infisical
   storeKind: ClusterSecretStore
   refreshInterval: 1h
   targetName: ""

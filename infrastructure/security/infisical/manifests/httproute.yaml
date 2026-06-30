@@ -1,0 +1,29 @@
+# HTTPRoute for Infisical UI/API via the platform gateway.
+#
+# Hostname: infisical.platform.nqlabs.network
+# TLS terminated at the gateway (Let's Encrypt wildcard).
+# Backend: infisical:8080 (HTTP).
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: infisical
+  namespace: infisical
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  parentRefs:
+    - name: platform-gateway
+      namespace: platform
+      sectionName: https
+  hostnames:
+    - infisical.platform.nqlabs.network
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: infisical
+          namespace: infisical
+          port: 8080
