@@ -16,9 +16,9 @@ resources:
     overprovisioned: true
   memory:
     # Redpanda requires: container.min >= redpanda + reserve
-    # redpanda=409Mi, reserve=201Mi → min must be ≥ 610Mi.
+    # With 250m overprovisioned cores: redpanda=614Mi, reserve=201Mi → min ≥ 815Mi.
     container:
-      min: 768Mi
+      min: 900Mi
       max: 1Gi
 
 storage:
