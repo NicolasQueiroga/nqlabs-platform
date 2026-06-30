@@ -1,11 +1,12 @@
 # Kyverno PolicyException for Redpanda.
 #
 # Redpanda is a performance-sensitive distributed broker that uses a
-# thread-per-core model. Its Helm chart (v26.x) does not expose seccompProfile
-# or init-container resource requests through its values schema.
+# thread-per-core model. Its Helm chart (v26.x) does not expose seccompProfile,
+# runAsNonRoot, or init-container resource requests through its values schema.
 #
 # This exception covers:
 #   - require-seccomp: Redpanda pods do not support seccompProfile via values.
+#   - require-run-as-nonroot: Redpanda runs as root (needs privileged PSA).
 #   - require-resource-requests: Init containers (configurator, rpk, etc.)
 #     do not have configurable resource requests in the chart.
 #
@@ -30,6 +31,29 @@ spec:
             - StatefulSet
             - Deployment
             - Pod
+            - Job
+          namespaces:
+            - redpanda
+---
+apiVersion: kyverno.io/v2
+kind: PolicyException
+metadata:
+  name: redpanda-require-run-as-nonroot
+  namespace: redpanda
+spec:
+  exceptions:
+    - policyName: require-run-as-nonroot
+      ruleNames:
+        - run-as-non-root
+        - autogen-run-as-non-root
+  match:
+    any:
+      - resources:
+          kinds:
+            - StatefulSet
+            - Deployment
+            - Pod
+            - Job
           namespaces:
             - redpanda
 ---
@@ -51,5 +75,6 @@ spec:
             - StatefulSet
             - Deployment
             - Pod
+            - Job
           namespaces:
             - redpanda
