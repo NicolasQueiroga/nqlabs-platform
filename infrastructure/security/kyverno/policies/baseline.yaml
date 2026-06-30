@@ -130,7 +130,7 @@ spec:
         pattern:
           spec:
             containers:
-              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/library/* | docker.io/cloudflare/* | docker.io/louislam/* | docker.io/grafana/* | docker.io/bitnami/* | docker.io/otel/* | docker.io/coredns/* | docker.io/velero/* | docker.io/falcosecurity/* | docker.io/curlimages/* | curlimages/* | cr.l5d.io/* | argoproj.github.io/* | reg.kyverno.io/* | ecr-public.aws.com/* | gcr.io/*"
+              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/library/* | docker.io/cloudflare/* | docker.io/louislam/* | docker.io/grafana/* | docker.io/bitnami/* | docker.io/otel/* | docker.io/coredns/* | docker.io/velero/* | docker.io/falcosecurity/* | docker.io/curlimages/* | curlimages/* | cr.l5d.io/* | argoproj.github.io/* | reg.kyverno.io/* | ecr-public.aws.com/* | gcr.io/* | docker.redpanda.com/*"
 ---
 # --- require-run-as-nonroot ---
 # Tightened from optional pattern to anyPattern — now requires runAsNonRoot: true

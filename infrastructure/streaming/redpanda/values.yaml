@@ -8,6 +8,10 @@
 
 statefulset:
   replicas: 1
+  podTemplate:
+    securityContext:
+      seccompProfile:
+        type: RuntimeDefault
 
 # Resources live at the top level, not under statefulset.
 resources:
@@ -47,6 +51,17 @@ external:
 # Redpanda Console (admin UI).
 console:
   enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+  podTemplate:
+    pod:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
 
 # Cluster-level config properties live under config.cluster.
 config:
