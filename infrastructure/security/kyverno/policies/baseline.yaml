@@ -78,6 +78,7 @@ spec:
                 - dns
                 - rook-ceph
                 - openbao
+                - redpanda
       validate:
         failureAction: Enforce
         message: "CPU and memory requests are required."
@@ -246,6 +247,7 @@ spec:
                 - dns
                 - rook-ceph
                 - openbao
+                - redpanda
       validate:
         failureAction: Enforce
         message: "Seccomp profile must be set (RuntimeDefault or Localhost) at pod or container level."
