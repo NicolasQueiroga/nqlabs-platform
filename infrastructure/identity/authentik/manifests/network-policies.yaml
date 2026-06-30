@@ -208,36 +208,6 @@ spec:
         - protocol: TCP
           port: 9000
 ---
-# Allow openbao namespace pods to reach authentik-server over HTTP.
-# Required for OpenBao's OIDC auth method to fetch Authentik's OIDC discovery
-# document and JWKS endpoint. OpenBao connects to the external URL
-# (https://auth.platform.nqlabs.network) which routes through the Cilium
-# Gateway; the Gateway's Envoy upstream connection to authentik-server:80
-# (pod port 9000) is subject to this ingress policy, and Cilium preserves
-# the original source identity (openbao namespace) through the gateway.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: authentik-allow-openbao-http
-  namespace: authentik
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/component: server
-      app.kubernetes.io/instance: authentik
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: openbao
-      ports:
-        - protocol: TCP
-          port: 9000
----
 # Allow authentik server/worker to reach Valkey (cache + Celery broker).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -346,13 +316,6 @@ spec:
           port: 80
         - protocol: TCP
           port: 8081
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: openbao
-      ports:
-        - protocol: TCP
-          port: 8200
 ---
 # Allow authentik server/worker egress to Valkey and Postgres within namespace.
 apiVersion: networking.k8s.io/v1

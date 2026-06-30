@@ -178,34 +178,6 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: staging-openbao-config
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-  annotations:
-    argocd.argoproj.io/sync-wave: "2"
-spec:
-  project: platform
-  source:
-    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
-    targetRevision: HEAD
-    path: clusters/nqlabs-staging/external-secrets
-  destination:
-    name: nqlabs-staging
-    namespace: external-secrets
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    retry:
-      limit: 5
-    syncOptions:
-      - CreateNamespace=true
-      - ServerSideApply=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
   name: staging-argo-rollouts
   namespace: argocd
   finalizers:

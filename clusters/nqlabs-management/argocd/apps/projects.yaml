@@ -40,7 +40,6 @@ spec:
     - https://charts.goauthentik.io
     - https://charts.rook.io/release
     - https://ceph.github.io/ceph-csi-operator
-    - https://openbao.github.io/openbao-helm
     - https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/
     - https://charts.redpanda.com
 

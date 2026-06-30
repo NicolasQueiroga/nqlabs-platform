@@ -8,7 +8,7 @@
 {{- $storageClass := .Values.redis.storageClass | default "ceph-block" -}}
 {{- $storageSize := .Values.redis.storage | default "1Gi" -}}
 # ExternalSecret for the Valkey password.
-# Pulls from the platform secret store (nqlabs-infisical or nqlabs-openbao).
+# Pulls from the platform secret store (nqlabs-infisical or nqlabs-1password).
 ---
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret

@@ -1,13 +1,11 @@
 # ClusterIssuers — NQLabs Platform
 #
-# Three issuers:
-#   1. nqlabs-internal-ca  — self-signed fallback CA for bootstrap/internal use
+# Two active issuers:
+#   1. nqlabs-internal-ca  — self-signed CA for internal/private certificates
 #   2. letsencrypt-prod    — Let's Encrypt via Cloudflare DNS-01 for *.nqlabs.network
-#   3. nqlabs-openbao-pki  — OpenBao PKI engine (defined in openbao/manifests/)
 #
-# After OpenBao PKI migration is complete, nqlabs-internal-ca and
-# selfsigned-bootstrap are retired. nqlabs-openbao-pki becomes the
-# internal CA for all private certs.
+# nqlabs-internal-ca is the active internal CA (signed by selfsigned-bootstrap).
+# selfsigned-bootstrap exists only to issue the nqlabs-internal-ca certificate.
 
 # Step 1: Bootstrap a self-signed issuer (issues the CA cert itself)
 ---

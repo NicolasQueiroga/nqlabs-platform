@@ -171,11 +171,4 @@ data:
           - "[STATUS] == 200"
 
       # ── Security ───────────────────────────────────────────────────────
-      - name: OpenBao
-        group: Security
-        url: https://openbao.openbao.svc.cluster.local:8200/v1/sys/health
-        interval: 1m
-        client:
-          skip-ssl-verify: true
-        conditions:
-          - "[STATUS] == 200 || [STATUS] == 429 || [STATUS] == 472 || [STATUS] == 473 || [STATUS] == 503"
+      # OpenBao removed — secrets now managed by Infisical + nqlabs-1password

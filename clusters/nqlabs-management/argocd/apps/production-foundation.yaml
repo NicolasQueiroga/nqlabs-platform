@@ -182,34 +182,6 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: production-openbao-config
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-  annotations:
-    argocd.argoproj.io/sync-wave: "2"
-spec:
-  project: platform
-  source:
-    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
-    targetRevision: HEAD
-    path: clusters/nqlabs-production/external-secrets
-  destination:
-    name: nqlabs-production
-    namespace: external-secrets
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    retry:
-      limit: 5
-    syncOptions:
-      - CreateNamespace=true
-      - ServerSideApply=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
   name: production-argo-rollouts
   namespace: argocd
   finalizers:

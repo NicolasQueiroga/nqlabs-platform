@@ -2,7 +2,7 @@
 #
 # Requires:
 #   - External Secrets Operator installed
-#   - nqlabs-openbao ClusterSecretStore Ready
+#   - nqlabs-1password ClusterSecretStore Ready
 #   - cert-manager CRDs installed
 
 apiVersion: argoproj.io/v1alpha1
@@ -13,8 +13,8 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    # Wave 2: after external-secrets-config (wave 1) so the ClusterSecretStore
-    # is Ready before cert-manager-config creates ExternalSecrets that reference it.
+    # Wave 2: after external-secrets-config (wave 1) so nqlabs-1password
+    # ClusterSecretStore is Ready before cert-manager ExternalSecrets sync.
     argocd.argoproj.io/sync-wave: "2"
 spec:
   project: platform

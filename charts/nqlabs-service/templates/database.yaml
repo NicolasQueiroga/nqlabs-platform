@@ -27,7 +27,7 @@
 {{- $storageSize = "20Gi" -}}
 {{- end -}}
 # ExternalSecret for the database password.
-# Pulls from the platform secret store (nqlabs-infisical or nqlabs-openbao).
+# Pulls from the platform secret store (nqlabs-infisical or nqlabs-1password).
 ---
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
