@@ -196,7 +196,7 @@ extraObjects:
       data:
         - secretKey: client_secret
           remoteRef:
-            key: "op://NQLabs/argocd-oidc/client_secret"
+            key: "argocd-oidc/client_secret"
 
 # Dex — not used; SSO is handled by Authentik via native oidc.config above.
 dex:

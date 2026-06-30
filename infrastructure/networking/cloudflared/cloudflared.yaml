@@ -102,4 +102,4 @@ spec:
   data:
     - secretKey: token
       remoteRef:
-        key: "op://NQLabs/cloudflared-tunnel/token"
+        key: "cloudflared-tunnel/token"
