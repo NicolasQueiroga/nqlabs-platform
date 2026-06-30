@@ -179,6 +179,33 @@ spec:
         - port: 5432
           protocol: TCP
 ---
+# Allow the CNPG operator (cnpg-system) to reach postgres pods on port 8000 (status/mgmt API).
+# Without this the operator reports "Instance Status Extraction Error" and the
+# Cluster never becomes Ready.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: infisical-pg-allow-operator
+  namespace: infisical
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: infisical-pg
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+      ports:
+        - port: 8000
+          protocol: TCP
+        - port: 5432
+          protocol: TCP
+---
 # Allow the infisical app to reach PostgreSQL (ingress side on the CNPG pod).
 # The default-deny blocks all ingress; we must explicitly allow port 5432
 # ingress to CNPG pods from the infisical app pod.
