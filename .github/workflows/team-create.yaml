@@ -1,0 +1,194 @@
+name: Create team
+
+# Team onboarding. Generates the platform-side resources for a new team:
+#   - Authentik group (via blueprint entry)
+#   - ArgoCD AppProjects: <team>-staging, <team>-production, <team>-preview
+#   - ArgoCD RBAC: team group → manage apps in <team>-* projects
+#   - terraform/teams/<team>/ directory for per-team infrastructure
+#
+# After merge, the team can create services via app-create.yaml with team=<team>.
+
+on:
+  workflow_dispatch:
+    inputs:
+      team:
+        description: Team name (lowercase, hyphenated, e.g. payments)
+        required: true
+        type: string
+      leads:
+        description: Comma-separated Authentik usernames for team leads
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate team name
+        env:
+          TEAM: ${{ inputs.team }}
+        run: |
+          set -euo pipefail
+          # lowercase, alphanumeric + hyphens only, 2-20 chars
+          if ! echo "$TEAM" | grep -qE '^[a-z][a-z0-9-]{1,19}$'; then
+            echo "::error::Team name must be lowercase, alphanumeric with hyphens, 2-20 chars"
+            exit 1
+          fi
+          if [ -e "infrastructure/identity/authentik/blueprints/teams/$TEAM.yaml" ]; then
+            echo "::error::Team $TEAM already exists"
+            exit 1
+          fi
+
+      - name: Generate Authentik blueprint
+        env:
+          TEAM: ${{ inputs.team }}
+          LEADS: ${{ inputs.leads }}
+        run: |
+          set -euo pipefail
+          mkdir -p "infrastructure/identity/authentik/blueprints/teams"
+
+          # Generate blueprint file for the team group
+          cat > "infrastructure/identity/authentik/blueprints/teams/${TEAM}.yaml" << 'BLUEPRINT'
+          version: 1
+          metadata:
+            name: team-${TEAM}
+          entries:
+            # Team group
+            - identifiers:
+                name: ${TEAM}
+              model: authentik_core.group
+              attrs:
+                name: ${TEAM}
+                is_superuser: false
+          BLUEPRINT
+
+          # Add lead users to the group
+          IFS=',' read -ra LEAD_ARRAY <<< "$LEADS"
+          for lead in "${LEAD_ARRAY[@]}"; do
+            lead=$(echo "$lead" | xargs)  # trim whitespace
+            cat >> "infrastructure/identity/authentik/blueprints/teams/${TEAM}.yaml" << USER_ENTRY
+            - identifiers:
+                username: ${lead}
+              model: authentik_core.user
+              attrs:
+                username: ${lead}
+                name: ${lead}
+                groups:
+                  - ${TEAM}
+          USER_ENTRY
+          done
+
+          echo "Generated Authentik blueprint for team ${TEAM}"
+
+      - name: Generate ArgoCD AppProjects
+        env:
+          TEAM: ${{ inputs.team }}
+        run: |
+          set -euo pipefail
+          mkdir -p "clusters/nqlabs-management/argocd/apps/teams"
+
+          # Resource whitelist — same as services-* projects
+          RESOURCE_WHITELIST='[
+            "ConfigMap","LimitRange","ResourceQuota","Secret","Service","ServiceAccount",
+            "PersistentVolumeClaim","Deployment","StatefulSet","ReplicaSet",
+            "HorizontalPodAutoscaler","Job","CronJob","PodDisruptionBudget",
+            "NetworkPolicy","CiliumNetworkPolicy","Role","RoleBinding",
+            "HTTPRoute","ExternalSecret","ServiceMonitor","PrometheusRule",
+            "Rollout","AnalysisTemplate","Experiment"
+          ]'
+
+          for env in staging production preview; do
+            if [ "$env" = "preview" ]; then
+              CLUSTER="nqlabs-staging"
+              NAMESPACE_PATTERN="${TEAM}-*-pr-*"
+            else
+              CLUSTER="nqlabs-${env}"
+              NAMESPACE_PATTERN="${TEAM}-*"
+            fi
+
+            cat > "clusters/nqlabs-management/argocd/apps/teams/${TEAM}-${env}.yaml" << EOF
+          ---
+          apiVersion: argoproj.io/v1alpha1
+          kind: AppProject
+          metadata:
+            name: ${TEAM}-${env}
+            namespace: argocd
+            labels:
+              nqlabs.io/team: ${TEAM}
+              nqlabs.io/environment: ${env}
+          spec:
+            sourceNamespaces:
+              - argocd
+            sourceRepos:
+              - https://github.com/NicolasQueiroga/nqlabs-platform.git
+            destinations:
+              - name: ${CLUSTER}
+                namespace: ${NAMESPACE_PATTERN}
+            namespaceResourceWhitelist:
+          EOF
+
+            # Write resource whitelist entries
+            for resource in $(echo "$RESOURCE_WHITELIST" | yq -r '.[]'); do
+              echo "              - $resource" >> "clusters/nqlabs-management/argocd/apps/teams/${TEAM}-${env}.yaml"
+            done
+
+            cat >> "clusters/nqlabs-management/argocd/apps/teams/${TEAM}-${env}.yaml" << EOF
+            orphanedResources:
+              warn: true
+            roles:
+              - name: ${TEAM}-admin
+                policies:
+                  - p, proj:${TEAM}-${env}:${TEAM}-admin, applications, *, ${TEAM}-${env}/*, allow
+                groups:
+                  - ${TEAM}
+          EOF
+          done
+
+          echo "Generated ArgoCD AppProjects for team ${TEAM}"
+
+      - name: Generate terraform team directory
+        env:
+          TEAM: ${{ inputs.team }}
+        run: |
+          set -euo pipefail
+          mkdir -p "terraform/teams/${TEAM}"
+          cat > "terraform/teams/${TEAM}/main.tf" << 'EOF'
+          # Team infrastructure for ${TEAM}
+          #
+          # This directory holds per-service infrastructure (databases, Redis,
+          # Kafka topics) provisioned by the data layer Terraform modules.
+          # Each service gets a subdirectory: terraform/teams/${TEAM}/<service>/
+
+          terraform {
+            required_version = ">= 1.5"
+          }
+          EOF
+
+          echo "Generated terraform directory for team ${TEAM}"
+
+      - name: Open team onboarding PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TEAM: ${{ inputs.team }}
+          LEADS: ${{ inputs.leads }}
+        run: |
+          set -euo pipefail
+          branch="team-create/$TEAM"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -b "$branch"
+          git add \
+            "infrastructure/identity/authentik/blueprints/teams/${TEAM}.yaml" \
+            "clusters/nqlabs-management/argocd/apps/teams/${TEAM}-staging.yaml" \
+            "clusters/nqlabs-management/argocd/apps/teams/${TEAM}-production.yaml" \
+            "clusters/nqlabs-management/argocd/apps/teams/${TEAM}-preview.yaml" \
+            "terraform/teams/${TEAM}/"
+          git commit -q -m "feat(team): scaffold ${TEAM} (Authentik group + ArgoCD projects + terraform dir)"
+          git push -u origin "$branch"
+          gh pr create --title "Create team: ${TEAM}" --body "$(printf 'Scaffolds platform resources for team **%s** (leads: %s).\n\n- Authentik group blueprint: `infrastructure/identity/authentik/blueprints/teams/%s.yaml`\n- ArgoCD AppProjects: `%s-staging`, `%s-production`, `%s-preview`\n- ArgoCD RBAC: `%s` group → `%s-admin` role on `%s-*` projects\n- Terraform directory: `terraform/teams/%s/`\n\nAfter merge, use **Create application** workflow with `team=%s` to scaffold services under this team.' "$TEAM" "$LEADS" "$TEAM" "$TEAM" "$TEAM" "$TEAM" "$TEAM" "$TEAM" "$TEAM" "$TEAM" "$TEAM")"

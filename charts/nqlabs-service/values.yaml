@@ -25,6 +25,19 @@ container:
 serviceAccount:
   create: true
   annotations: {}
+  # Cloud identity provider abstraction. When set to a provider other than
+  # `none`, the chart renders the provider-specific annotations on the
+  # ServiceAccount so the cloud's workload-identity mechanism binds the K8s
+  # SA to a cloud IAM role.
+  identity:
+    provider: none  # none | gcp-wif | aws-irsa | azure-mi
+    # GCP Workload Identity Federation
+    gcpServiceAccount: ""
+    # AWS IAM Roles for Service Accounts
+    awsRoleARN: ""
+    # Azure Workload Identity
+    azureClientID: ""
+    azureTenantID: ""
 
 podAnnotations: {}
 podLabels: {}
@@ -96,6 +109,51 @@ metrics:
   path: /metrics
   port: http
   interval: 30s
+
+# ── Observability automation ──────────────────────────────────────────────
+# When enabled, the chart generates the resources needed for the service to
+# appear in Gatus (uptime), Alertmanager (alerts), Grafana (dashboards), and
+# Tempo (traces) — with zero manual configuration.
+
+# Uptime monitoring via Gatus. Generates a ConfigMap with a Gatus endpoint
+# entry. The Gatus deployment is configured to load all ConfigMaps with label
+# gatus.io/enabled: "true" from any namespace via a projected volume.
+gatus:
+  enabled: true
+  group: ""  # defaults to the service name
+  interval: 1m
+  # Conditions for the health check. Defaults to HTTP 200.
+  conditions:
+    - "[STATUS] == 200"
+  # URL is derived from the internal route host if available, otherwise
+  # the in-cluster service URL. Override per-service if needed.
+  url: ""
+
+# Prometheus alert rules. Generates a PrometheusRule with default alert rules
+# for the service: high 5xx rate, high p99 latency, pod restarts, OOMKilled.
+# Rules use the platform's standard PrometheusRule labels.
+prometheusRule:
+  enabled: true
+  # Severity for default rules
+  severity: warning
+  # Additional rules appended after the defaults
+  additionalRules: []
+
+# Grafana dashboard. Generates a ConfigMap with label grafana_dashboard: "1"
+# containing a default dashboard (request rate, error rate, latency p50/p95/p99,
+# pod CPU/memory, restart count). The Grafana sidecar provisioner auto-imports
+# ConfigMaps with this label from all namespaces.
+grafanaDashboard:
+  enabled: true
+
+# OpenTelemetry tracing. Injects OTel environment variables into every
+# container's env block so services using OTel SDKs send traces to the platform
+# OTel Collector → Tempo automatically.
+otel:
+  enabled: true
+  endpoint: http://otel-collector.monitoring.svc.cluster.local:4318
+  # Service name defaults to the chart's app name if empty
+  serviceName: ""
 
 # External Secrets Operator integration. Materializes a Kubernetes Secret from the
 # platform secret store. Defaults to the NQLabs 1Password-backed ClusterSecretStore.

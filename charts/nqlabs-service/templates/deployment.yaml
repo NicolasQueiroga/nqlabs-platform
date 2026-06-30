@@ -41,9 +41,15 @@ spec:
             - name: http
               containerPort: {{ .Values.container.port }}
               protocol: TCP
-          {{- with .Values.container.env }}
+          {{- $otelEnv := include "nqlabs-service.otelEnv" . | fromYamlArray }}
+          {{- if or .Values.container.env .Values.otel.enabled }}
           env:
+            {{- with .Values.container.env }}
             {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if .Values.otel.enabled }}
+            {{- toYaml $otelEnv | nindent 12 }}
+            {{- end }}
           {{- end }}
           {{- $df := include "nqlabs-service.depsEnvFrom" . }}
           {{- if $df }}

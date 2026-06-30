@@ -87,3 +87,16 @@ envFrom:
 {{- end }}
 {{- end }}
 {{- end -}}
+
+{{/*
+OTel environment variables for trace export. Returns a YAML list of env vars
+suitable for inclusion in a container's `env:` block. Empty string if disabled.
+*/}}
+{{- define "nqlabs-service.otelEnv" -}}
+{{- if .Values.otel.enabled }}
+- name: OTEL_EXPORTER_OTLP_ENDPOINT
+  value: {{ .Values.otel.endpoint | quote }}
+- name: OTEL_SERVICE_NAME
+  value: {{ .Values.otel.serviceName | default (include "nqlabs-service.name" .) | quote }}
+{{- end }}
+{{- end -}}

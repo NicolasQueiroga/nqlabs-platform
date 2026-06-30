@@ -1,0 +1,28 @@
+{{- if and (not .Values.workloads) .Values.gatus.enabled -}}
+{{- $svcName := include "nqlabs-service.fullname" . -}}
+{{- $svcPort := .Values.service.port -}}
+{{- $url := .Values.gatus.url -}}
+{{- if not $url -}}
+{{- if .Values.routes.internal.enabled -}}
+{{- $url = printf "https://%s" .Values.routes.internal.host -}}
+{{- else -}}
+{{- $url = printf "http://%s.%s.svc.cluster.local:%v" $svcName .Release.Namespace $svcPort -}}
+{{- end -}}
+{{- end -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $svcName }}-gatus
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+    gatus.io/enabled: "true"
+data:
+  endpoint.yaml: |
+    endpoints:
+      - name: {{ include "nqlabs-service.name" . }}
+        group: {{ .Values.gatus.group | default (include "nqlabs-service.name" .) }}
+        url: {{ $url }}
+        interval: {{ .Values.gatus.interval }}
+        conditions:
+          {{- toYaml .Values.gatus.conditions | nindent 10 }}
+{{- end }}

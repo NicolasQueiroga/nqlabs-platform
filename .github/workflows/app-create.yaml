@@ -12,6 +12,10 @@ on:
         description: Service name (apps/<name>/, namespace, host prefix)
         required: true
         type: string
+      team:
+        description: Team name (must exist — created via team-create workflow)
+        required: true
+        type: string
       repository:
         description: Application repo (owner/repo)
         required: true
@@ -49,6 +53,7 @@ jobs:
       - name: Generate descriptors
         env:
           NAME: ${{ inputs.name }}
+          TEAM: ${{ inputs.team }}
           REPO: ${{ inputs.repository }}
           IMG: ${{ inputs.image }}
           PORT: ${{ inputs.port }}
@@ -61,6 +66,7 @@ jobs:
 
           yq -n '
             .metadata.name = strenv(NAME) |
+            .metadata.team = strenv(TEAM) |
             .metadata.repository = strenv(REPO) |
             .metadata.tier = strenv(TIER) |
             .metadata.lifecycle = "active" |
@@ -83,8 +89,8 @@ jobs:
             ENV="$env" CLUSTER="$cluster" yq -n '
               .app.name = strenv(NAME) |
               .environment.name = strenv(ENV) |
-              .environment.namespace = strenv(NAME) |
-              .argocd.project = "services-" + strenv(ENV) |
+              .environment.namespace = (strenv(TEAM) + "-" + strenv(NAME)) |
+              .argocd.project = strenv(TEAM) + "-" + strenv(ENV) |
               .argocd.valueFile = "apps/" + strenv(NAME) + "/environments/" + strenv(ENV) + ".yaml" |
               .argocd.destination.name = strenv(CLUSTER) |
               .image.repository = strenv(IMG) |
@@ -108,6 +114,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NAME: ${{ inputs.name }}
+          TEAM: ${{ inputs.team }}
           REPO: ${{ inputs.repository }}
           IMG: ${{ inputs.image }}
         run: |
@@ -117,6 +124,6 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git checkout -b "$branch"
           git add "apps/$NAME"
-          git commit -q -m "feat(app): scaffold $NAME (staging + production descriptors)"
+          git commit -q -m "feat(app): scaffold $NAME for team $TEAM (staging + production descriptors)"
           git push -u origin "$branch"
-          gh pr create --title "Create application: $NAME" --body "$(printf 'Scaffolds platform descriptors for %s (repo %s, image %s).\n\n- apps/%s/app.yaml (identity + shape)\n- apps/%s/environments/{staging,production}.yaml (runtime; image tag is a placeholder until the first build)\n\nAfter merge, in the app repo: add the build / staging / release / production / preview caller workflows (see docs/runbooks/onboarding-a-new-application.md), set secrets NQLABS_PLATFORM_REPO_TOKEN and the release token, and grant the repo GHCR package write access. The app deploys to staging on first main merge.' "$NAME" "$REPO" "$IMG" "$NAME" "$NAME")"
+          gh pr create --title "Create application: $NAME (team: $TEAM)" --body "$(printf 'Scaffolds platform descriptors for **%s** (team: %s, repo %s, image %s).\n\n- apps/%s/app.yaml (identity + shape, team: %s)\n- apps/%s/environments/{staging,production}.yaml (runtime; image tag is a placeholder until the first build)\n- ArgoCD project: %s-staging, %s-production\n- Namespace: %s-%s\n\nAfter merge, in the app repo: add the build / staging / release / production / preview caller workflows (see docs/runbooks/onboarding-a-new-application.md), set secrets NQLABS_PLATFORM_REPO_TOKEN and the release token, and grant the repo GHCR package write access. The app deploys to staging on first main merge.' "$NAME" "$TEAM" "$REPO" "$IMG" "$NAME" "$TEAM" "$NAME" "$TEAM" "$TEAM" "$TEAM" "$NAME")"

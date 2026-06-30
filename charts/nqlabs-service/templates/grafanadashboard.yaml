@@ -1,0 +1,80 @@
+{{- if and (not .Values.workloads) .Values.grafanaDashboard.enabled -}}
+{{- $svcName := include "nqlabs-service.name" . -}}
+{{- $ns := .Release.Namespace -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "nqlabs-service.fullname" . }}-dashboard
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  dashboard.json: |
+    {
+      "title": "{{ $svcName }}",
+      "tags": ["nqlabs", "{{ $svcName }}"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "refresh": "30s",
+      "time": {"from": "now-1h", "to": "now"},
+      "panels": [
+        {
+          "title": "Request Rate",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "thanos"},
+          "targets": [
+            {"expr": "sum(rate(http_requests_total{service=\"{{ $svcName }}\"}[5m]))", "legendFormat": "req/s"}
+          ]
+        },
+        {
+          "title": "Error Rate (5xx)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "thanos"},
+          "targets": [
+            {"expr": "sum(rate(http_requests_total{service=\"{{ $svcName }}\",code=~\"5..\"}[5m]))", "legendFormat": "5xx/s"}
+          ]
+        },
+        {
+          "title": "Latency p50/p95/p99",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "thanos"},
+          "targets": [
+            {"expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{service=\"{{ $svcName }}\"}[5m])) by (le))", "legendFormat": "p50"},
+            {"expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\"{{ $svcName }}\"}[5m])) by (le))", "legendFormat": "p95"},
+            {"expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service=\"{{ $svcName }}\"}[5m])) by (le))", "legendFormat": "p99"}
+          ]
+        },
+        {
+          "title": "Pod CPU / Memory",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "datasource": {"type": "prometheus", "uid": "thanos"},
+          "targets": [
+            {"expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"{{ $ns }}\",container=\"{{ $svcName }}\"}[5m]))", "legendFormat": "CPU cores"},
+            {"expr": "sum(container_memory_working_set_bytes{namespace=\"{{ $ns }}\",container=\"{{ $svcName }}\"})", "legendFormat": "Memory bytes"}
+          ]
+        },
+        {
+          "title": "Pod Restarts",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "thanos"},
+          "targets": [
+            {"expr": "increase(kube_pod_container_status_restarts_total{namespace=\"{{ $ns }}\",container=\"{{ $svcName }}\"}[1h])", "legendFormat": "restarts/1h"}
+          ]
+        },
+        {
+          "title": "Replicas",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 16},
+          "datasource": {"type": "prometheus", "uid": "thanos"},
+          "targets": [
+            {"expr": "kube_pod_status_phase{namespace=\"{{ $ns }}\",phase=\"Running\"}", "legendFormat": "running"}
+          ]
+        }
+      ]
+    }
+{{- end }}

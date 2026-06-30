@@ -1,0 +1,100 @@
+{{- if and (not .Values.workloads) .Values.prometheusRule.enabled -}}
+{{- $svcName := include "nqlabs-service.name" . -}}
+{{- $severity := .Values.prometheusRule.severity -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "nqlabs-service.fullname" . }}
+  labels:
+    {{- include "nqlabs-service.labels" . | nindent 4 }}
+    prometheus: kube-prometheus-stack-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: {{ $svcName }}.alerts
+      rules:
+        # High 5xx error rate (requires nginx/ambient mesh metrics or app-level)
+        - alert: {{ $svcName }}HighErrorRate
+          expr: |
+            sum(rate(http_requests_total{service="{{ $svcName }}",code=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{service="{{ $svcName }}"}[5m]))
+            > 0.05
+          for: 10m
+          labels:
+            severity: {{ $severity }}
+            service: {{ $svcName }}
+          annotations:
+            summary: "{{ $svcName }} high error rate"
+            description: "{{ $svcName }} 5xx error rate > 5% for 10m."
+
+        # High latency p99
+        - alert: {{ $svcName }}HighLatency
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(http_request_duration_seconds_bucket{service="{{ $svcName }}"}[5m]))
+              by (le)
+            ) > 2
+          for: 10m
+          labels:
+            severity: {{ $severity }}
+            service: {{ $svcName }}
+          annotations:
+            summary: "{{ $svcName }} high latency"
+            description: "{{ $svcName }} p99 latency > 2s for 10m."
+
+        # Pod restarts
+        - alert: {{ $svcName }}PodRestarts
+          expr: |
+            increase(kube_pod_container_status_restarts_total{
+              namespace="{{ .Release.Namespace }}",
+              container="{{ $svcName }}"
+            }[1h]) > 5
+          for: 5m
+          labels:
+            severity: {{ $severity }}
+            service: {{ $svcName }}
+          annotations:
+            summary: "{{ $svcName }} pod restarts"
+            description: "{{ $svcName }} restarted > 5 times in 1h."
+
+        # OOMKilled
+        - alert: {{ $svcName }}OOMKilled
+          expr: |
+            kube_pod_container_status_last_terminated_reason{
+              namespace="{{ .Release.Namespace }}",
+              container="{{ $svcName }}",
+              reason="OOMKilled"
+            } == 1
+          for: 5m
+          labels:
+            severity: critical
+            service: {{ $svcName }}
+          annotations:
+            summary: "{{ $svcName }} OOMKilled"
+            description: "{{ $svcName }} container was OOMKilled."
+
+        # HPA maxed out
+        - alert: {{ $svcName }}HPAMaxedOut
+          expr: |
+            kube_hpa_status_current_replicas{
+              namespace="{{ .Release.Namespace }}",
+              hpa="{{ include "nqlabs-service.fullname" . }}"
+            }
+            ==
+            kube_hpa_spec_max_replicas{
+              namespace="{{ .Release.Namespace }}",
+              hpa="{{ include "nqlabs-service.fullname" . }}"
+            }
+          for: 15m
+          labels:
+            severity: {{ $severity }}
+            service: {{ $svcName }}
+          annotations:
+            summary: "{{ $svcName }} HPA maxed out"
+            description: "{{ $svcName }} HPA at max replicas for 15m."
+
+        {{- with .Values.prometheusRule.additionalRules }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+{{- end }}

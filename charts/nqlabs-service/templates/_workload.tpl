@@ -127,9 +127,16 @@ spec:
               containerPort: {{ $port }}
               protocol: TCP
           {{- end }}
-          {{- with dig "container" "env" list $wl }}
+          {{- $wlEnv := dig "container" "env" list $wl }}
+          {{- $otelEnv := include "nqlabs-service.otelEnv" $root | fromYamlArray }}
+          {{- if or $wlEnv $root.Values.otel.enabled }}
           env:
+            {{- with $wlEnv }}
             {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if $root.Values.otel.enabled }}
+            {{- toYaml $otelEnv | nindent 12 }}
+            {{- end }}
           {{- end }}
           {{- $df := include "nqlabs-service.depsEnvFrom" $root }}
           {{- if $df }}
