@@ -686,9 +686,9 @@ spec:
       containers:
       - args:
         - --enable-leader-election
-        - --feature-gates=MachinePool=${EXP_MACHINE_POOL:=false}
-        - --diagnostics-address=${CAPI_DIAGNOSTICS_ADDRESS:=:8443}
-        - --insecure-diagnostics=${CAPI_INSECURE_DIAGNOSTICS:=false}
+        - --feature-gates=MachinePool=false
+        - --diagnostics-address=:8443
+        - --insecure-diagnostics=false
         command:
         - /manager
         image: ghcr.io/siderolabs/cluster-api-talos-controller:v0.6.12
