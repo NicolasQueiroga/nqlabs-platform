@@ -691,8 +691,8 @@ spec:
       containers:
       - args:
         - --enable-leader-election
-        - --diagnostics-address=${CAPI_DIAGNOSTICS_ADDRESS:=:8443}
-        - --insecure-diagnostics=${CAPI_INSECURE_DIAGNOSTICS:=false}
+        - --diagnostics-address=:8443
+        - --insecure-diagnostics=false
         command:
         - /manager
         env:
