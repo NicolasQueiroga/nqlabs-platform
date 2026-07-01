@@ -1,31 +1,31 @@
-# BareMetalHost: mgmt-01 (proxmox 101)
+# BareMetalHost: production-cp-01 (proxmox 105)
 #
 # Generated from inventory.csv — do not edit directly.
 # To change: edit inventory.csv and run ./generate.sh
 #
-# Cluster: nqlabs-management
+# Cluster: nqlabs-production
 # Role: control-plane
-# MAC: BC:24:11:15:00:10
-# BMC: redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/101
+# MAC: BC:24:11:15:00:30
+# BMC: redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/105
 # Credentials: proxmox-bmc
 
 ---
 apiVersion: metal3.io/v1alpha1
 kind: BareMetalHost
 metadata:
-  name: mgmt-01
+  name: production-cp-01
   namespace: metal3
   labels:
-    cluster: nqlabs-management
+    cluster: nqlabs-production
     role: control-plane
     provider: proxmox
 spec:
-  online: false
-  bootMACAddress: BC:24:11:15:00:10
+  online: true
+  bootMACAddress: BC:24:11:15:00:30
   bootMode: UEFI
   hardwareProfile: unknown
   bmc:
-    address: redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/101
+    address: redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/105
     credentialsName: proxmox-bmc
     disableCertificateVerification: true
-  accepted: false
+  accepted: true
