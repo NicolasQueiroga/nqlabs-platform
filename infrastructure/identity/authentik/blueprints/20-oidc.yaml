@@ -267,7 +267,7 @@ entries:
       group: Platform
 
   # ── OpenBao group bindings ──────────────────────────────────────────────
-  # platform-admins + platform-engineers → secrets management access
+  # platform-admins + sre → secrets management access
   - model: authentik_policies.policybinding
     identifiers:
       target: !KeyOf openbao-app
@@ -277,6 +277,6 @@ entries:
   - model: authentik_policies.policybinding
     identifiers:
       target: !KeyOf openbao-app
-      group: !Find [authentik_core.group, [name, platform-engineers]]
+      group: !Find [authentik_core.group, [name, sre]]
     attrs:
       order: 20
