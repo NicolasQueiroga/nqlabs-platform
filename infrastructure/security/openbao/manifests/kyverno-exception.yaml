@@ -1,0 +1,65 @@
+# PolicyExceptions for OpenBao — the upstream Helm chart does not set
+# seccomp profiles or resource requests on the StatefulSet pods.
+---
+apiVersion: kyverno.io/v2
+kind: PolicyException
+metadata:
+  name: openbao-seccomp
+  namespace: openbao
+spec:
+  exceptions:
+    - policyName: require-seccomp
+      ruleNames:
+        - require-seccomp
+        - autogen-require-seccomp
+  match:
+    any:
+      - resources:
+          kinds:
+            - Pod
+            - StatefulSet
+            - Job
+          namespaces:
+            - openbao
+---
+apiVersion: kyverno.io/v2
+kind: PolicyException
+metadata:
+  name: openbao-resource-requests
+  namespace: openbao
+spec:
+  exceptions:
+    - policyName: require-resource-requests
+      ruleNames:
+        - require-resource-requests
+        - autogen-require-resource-requests
+  match:
+    any:
+      - resources:
+          kinds:
+            - Pod
+            - StatefulSet
+            - Job
+          namespaces:
+            - openbao
+---
+apiVersion: kyverno.io/v2
+kind: PolicyException
+metadata:
+  name: openbao-run-as-nonroot
+  namespace: openbao
+spec:
+  exceptions:
+    - policyName: require-run-as-nonroot
+      ruleNames:
+        - require-run-as-nonroot
+        - autogen-require-run-as-nonroot
+  match:
+    any:
+      - resources:
+          kinds:
+            - Pod
+            - StatefulSet
+            - Job
+          namespaces:
+            - openbao
