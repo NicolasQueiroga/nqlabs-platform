@@ -24,6 +24,6 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: infisical
+        - name: infisical-infisical-standalone-infisical
           namespace: infisical
           port: 8080
