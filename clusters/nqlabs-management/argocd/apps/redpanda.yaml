@@ -37,19 +37,48 @@ spec:
     server: https://kubernetes.default.svc
     namespace: redpanda
   ignoreDifferences:
-    # The Redpanda Helm chart renders null/empty values for several pod spec
-    # fields (env: null, imagePullSecrets: [], nodeSelector: {}, etc.) that
-    # the Kubernetes API server strips out. With ServerSideApply, these show
-    # as permanent OutOfSync differences. Ignore them.
+    # The Redpanda Helm chart renders null/empty values and omits server-side
+    # defaults that the Kubernetes API server adds (apiVersion in fieldRefs,
+    # protocol: TCP on ports, scheme: HTTP on probes, defaultMode: 420 on
+    # configMap volumes, imagePullPolicy, successThreshold/timeoutSeconds on
+    # probes, env: null on initContainers, etc.). These show as permanent
+    # OutOfSync differences. Ignore them all.
     - group: apps
       kind: StatefulSet
       jsonPointers:
+        # Empty/null fields rendered by chart but stripped by API server
         - /spec/template/spec/imagePullSecrets
         - /spec/template/spec/nodeSelector
         - /spec/template/spec/priorityClassName
         - /spec/template/spec/tolerations
         - /spec/template/spec/initContainers/0/env
         - /spec/template/spec/initContainers/2/env
+        # Server-side defaults added by API server
+        - /spec/template/spec/dnsPolicy
+        - /spec/template/spec/restartPolicy
+        - /spec/template/spec/schedulerName
+        - /spec/template/spec/serviceAccount
+        # Server adds defaultMode: 420 to configMap volumes
+        - /spec/template/spec/volumes/1/configMap/defaultMode
+        # Server adds apiVersion: v1 to fieldRef
+        - /spec/template/spec/containers/0/env/0/valueFrom/fieldRef/apiVersion
+        - /spec/template/spec/containers/0/env/1/valueFrom/fieldRef/apiVersion
+        - /spec/template/spec/containers/0/env/2/valueFrom/fieldRef/apiVersion
+        - /spec/template/spec/containers/1/env/0/valueFrom/fieldRef/apiVersion
+        - /spec/template/spec/containers/1/env/1/valueFrom/fieldRef/apiVersion
+        - /spec/template/spec/containers/1/env/2/valueFrom/fieldRef/apiVersion
+        # Server adds protocol: TCP to container ports
+        - /spec/template/spec/containers/0/ports
+        # Server adds successThreshold, timeoutSeconds to probes
+        - /spec/template/spec/containers/0/livenessProbe
+        - /spec/template/spec/containers/1/readinessProbe
+        # K8s version env var changes with cluster upgrades
+        - /spec/template/spec/containers/0/env/3/value
+        - /spec/template/spec/containers/0/env/4/value
+        - /spec/template/spec/containers/0/env/5/value
+        - /spec/template/spec/containers/1/env/3/value
+        - /spec/template/spec/containers/1/env/4/value
+        - /spec/template/spec/containers/1/env/5/value
   syncPolicy:
     automated:
       prune: true
