@@ -20,9 +20,9 @@ metadata:
   namespace: metal3
 type: Opaque
 data:
-  # proxmox-redfish credentials (admin:admin for lab)
-  username: YWRtaW4=
-  password: YWRtaW4=
+  # Proxmox credentials (root@pam)
+  username: cm9vdEBwYW0=
+  password: cXVlaXJvZ2E=
 ---
 apiVersion: metal3.io/v1alpha1
 kind: BareMetalHost
