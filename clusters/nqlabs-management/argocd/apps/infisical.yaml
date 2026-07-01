@@ -37,9 +37,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: infisical
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # Auto-sync temporarily disabled while secrets are managed manually.
+    # Re-enable once ExternalSecrets are properly configured with OpenBao.
+    # automated:
+    #   prune: true
+    #   selfHeal: true
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/enforce: baseline
