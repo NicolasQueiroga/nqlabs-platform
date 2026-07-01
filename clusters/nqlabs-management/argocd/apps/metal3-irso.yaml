@@ -1,0 +1,48 @@
+# Ironic Standalone Operator (IrSO) + Ironic instance for nqlabs-management.
+#
+# Installs:
+# 1. IrSO controller (from infrastructure/metal3/irso/install.yaml)
+# 2. Ironic CR (from infrastructure/metal3/ironic/ironic.yaml)
+#
+# IrSO requires cert-manager to be healthy before installation.
+# The Ironic CR is applied after IrSO is ready — ArgoCD handles ordering
+# via sync-wave annotations on the Ironic resource.
+#
+# Sync wave: 1 (after cert-manager at wave 0)
+# IrSO version: v0.10.0
+# Ironic version: v34.0
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metal3-irso
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: infrastructure/metal3
+    directory:
+      include: "{irso/install.yaml,ironic/ironic.yaml}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: metal3
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/enforce-version: latest
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -1,0 +1,56 @@
+# Ironic instance — managed by IrSO (Ironic Standalone Operator).
+#
+# Scenario 1: No dedicated provisioning network, virtual media only.
+#
+# This is the simplest deployment: Ironic uses the host cluster networking
+# (192.168.15.0/24) and provisions nodes via virtual media (Redfish).
+# No DHCP or TFTP is needed — Ironic mounts an ISO to the node's BMC
+# (Redfish virtual media) and boots from it.
+#
+# This works for Proxmox VMs with proxmox-redfish and for physical NUCs
+# that support Redfish virtual media.
+#
+# When physical NUCs without Redfish virtual media are added later,
+# switch to Scenario 3 (dedicated networking with DHCP + PXE boot) by
+# adding the networking.dhcp and networking.interface fields.
+#
+# Ports:
+#   - TCP 6385: Ironic API
+#   - TCP 6180: HTTP server (images, virtual media)
+#   - TCP 9999: Ironic Python Agent (IPA) callback
+#
+# The Ironic pod runs with host networking (required by Ironic) on a
+# control-plane node.  Talos supports hostNetwork pods.
+
+---
+apiVersion: ironic.metal3.io/v1alpha1
+kind: Ironic
+metadata:
+  name: ironic
+  namespace: metal3
+  annotations:
+    # Apply after IrSO controller is installed
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  # Ironic version (container image tag from quay.io/metal3-io/ironic)
+  version: "34.0"
+
+  # SSH key for accessing the Ironic Python Agent ramdisk (debugging)
+  # deployRamdisk:
+  #   sshKey: "ssh-ed25519 AAAAC3..."
+
+  # No dedicated networking — use host cluster networking.
+  # Virtual media only (no PXE boot, no DHCP, no TFTP).
+  # To enable PXE boot later, add:
+  #   networking:
+  #     interface: "eth0"
+  #     ipAddress: "192.168.15.50"
+  #     ipAddressManager: keepalived
+  #     dhcp:
+  #       networkCIDR: "192.168.15.0/24"
+  #       rangeStart: "192.168.15.200"
+  #       rangeEnd: "192.168.15.250"
+
+  # TLS is disabled for the lab.  Enable for production:
+  # tls:
+  #   certificateName: ironic-tls

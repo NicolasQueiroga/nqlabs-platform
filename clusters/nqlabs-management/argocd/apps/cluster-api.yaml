@@ -1,0 +1,53 @@
+# Cluster API providers for nqlabs-management.
+#
+# Installs all Cluster API providers needed for Metal3 + Talos:
+#   - CAPI core (cluster-api v1.13.1)
+#   - CAPM3 infrastructure (metal3 v1.13.1)
+#   - CABPT bootstrap (talos v0.6.12)
+#   - CACPPT control plane (talos v0.5.13)
+#
+# These manifests are pre-rendered from upstream releases and committed
+# to the repo for GitOps reproducibility.  They are NOT managed by
+# clusterctl — they are applied directly by ArgoCD.
+#
+# Sync wave: 1 (same as IrSO, after cert-manager at wave 0)
+# Prerequisites:
+#   - cert-manager (for CAPI webhooks)
+#   - Metal3 CRDs (BareMetalHost) must exist for CAPM3 to work
+#     (BMO installs the CRDs at wave 2, but CAPM3 controllers can
+#     start without them — they'll wait for the CRDs to appear)
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-api
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: infrastructure/metal3/cluster-api
+    directory:
+      include: "{core-components.yaml,infrastructure-components.yaml,bootstrap-components.yaml,control-plane-components.yaml}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cluster-api-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: latest
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -1,0 +1,38 @@
+# Metal3 BareMetalHost inventory for nqlabs-management.
+#
+# Syncs BareMetalHost CRDs that register nodes with Metal3 for
+# provisioning and lifecycle management.
+#
+# Sync wave: 3 (after BMO at wave 2, which installs the BareMetalHost CRD)
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metal3-hosts
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+    targetRevision: HEAD
+    path: infrastructure/metal3/hosts
+    directory:
+      include: "*.yaml"
+      exclude: "README.md"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: metal3
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

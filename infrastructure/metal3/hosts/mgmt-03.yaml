@@ -1,0 +1,41 @@
+# BareMetalHost: mgmt-03 (Proxmox VM 103)
+#
+# Existing management cluster node — already running Talos.
+# Registered for inventory only (accepted: false — not managed by Metal3).
+#
+# Proxmox VM 103:
+#   - Name: mgmt-03
+#   - MAC: BC:24:11:15:00:12
+#   - Cores: 8, Memory: 38912 MB
+#   - Network: vmbr0 (192.168.15.0/24)
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mgmt-03-bmc
+  namespace: metal3
+type: Opaque
+data:
+  username: cm9vdEBwYW0=
+  password: cXVlaXJvZ2E=
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  name: mgmt-03
+  namespace: metal3
+  labels:
+    cluster: nqlabs-management
+    role: control-plane
+    provider: proxmox
+spec:
+  online: false
+  bootMACAddress: BC:24:11:15:00:12
+  bootMode: UEFI
+  hardwareProfile: unknown
+  bmc:
+    address: redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/103
+    credentialsName: mgmt-03-bmc
+    disableCertificateVerification: true
+  accepted: false
