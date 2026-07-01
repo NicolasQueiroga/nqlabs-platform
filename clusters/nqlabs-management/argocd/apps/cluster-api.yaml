@@ -33,8 +33,6 @@ spec:
     repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
     targetRevision: HEAD
     path: infrastructure/metal3/cluster-api
-    directory:
-      include: "{core-components.yaml,infrastructure-components.yaml,bootstrap-components.yaml,control-plane-components.yaml}"
   destination:
     server: https://kubernetes.default.svc
     namespace: cluster-api-system
