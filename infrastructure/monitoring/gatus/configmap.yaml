@@ -171,4 +171,4 @@ data:
           - "[STATUS] == 200"
 
       # ── Security ───────────────────────────────────────────────────────
-      # OpenBao removed — secrets now managed by Infisical + nqlabs-1password
+      # Secrets managed by OpenBao + nqlabs-1password

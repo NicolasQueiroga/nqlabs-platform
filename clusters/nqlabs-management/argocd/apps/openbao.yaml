@@ -1,17 +1,18 @@
-# Infisical — self-hosted secrets manager
+# OpenBao — self-hosted secrets backend + PKI
 #
 # Multi-source Application:
-#   1. Helm chart (infisical-standalone) with values from git
+#   1. Helm chart (openbao/openbao) with values from git
 #   2. Git ref for valueFiles
-#   3. Git path for platform manifests (CNPG, Valkey, network policies, HTTPRoute)
+#   3. Git path for platform manifests (TLS cert, network policies, HTTPRoute)
 #
 # Sync wave 3: after rook-ceph (wave 0-1, ceph-block SC) and
-# cert-manager-config (wave 2). The HTTPRoute (wave 4) waits for the gateway.
+# cert-manager-config (wave 2, nqlabs-internal-ca issuer for bootstrap).
+# The HTTPRoute (wave 4 inside manifests) waits for the gateway (wave 4).
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: infisical
+  name: openbao
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -20,22 +21,22 @@ metadata:
 spec:
   project: platform
   sources:
-    - repoURL: https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/
-      chart: infisical-standalone
-      targetRevision: "1.8.0"
+    - repoURL: https://openbao.github.io/openbao-helm
+      chart: openbao
+      targetRevision: "0.26.2"
       helm:
-        releaseName: infisical
+        releaseName: openbao
         valueFiles:
-          - $values/infrastructure/security/infisical/values.yaml
+          - $values/infrastructure/security/openbao/values.yaml
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
       ref: values
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
-      path: infrastructure/security/infisical/manifests
+      path: infrastructure/security/openbao/manifests
   destination:
     server: https://kubernetes.default.svc
-    namespace: infisical
+    namespace: openbao
   syncPolicy:
     automated:
       prune: true

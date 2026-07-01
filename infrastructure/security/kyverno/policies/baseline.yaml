@@ -3,7 +3,7 @@
 # block non-compliant resources and surface violations in PolicyReports.
 #
 # Namespace exclusions: kube-system, falco, tailscale, local-path-storage,
-# velero, monitoring, dns, rook-ceph — system/infra namespaces that
+# velero, monitoring, dns, rook-ceph, openbao — system/infra namespaces that
 # may need exceptions. Add/remove namespaces from the exclude lists as needed.
 #
 # Autogen is intentionally enabled so policies validate controllers
@@ -39,6 +39,7 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - openbao
       validate:
         failureAction: Enforce
         message: "An explicit image tag is required (no :latest, no untagged)."
@@ -76,6 +77,7 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - openbao
                 - redpanda
       validate:
         failureAction: Enforce
@@ -122,13 +124,14 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - openbao
       validate:
         failureAction: Enforce
         message: "Images must come from an approved registry."
         pattern:
           spec:
             containers:
-              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/library/* | docker.io/cloudflare/* | docker.io/louislam/* | docker.io/grafana/* | docker.io/bitnami/* | docker.io/otel/* | docker.io/coredns/* | docker.io/velero/* | docker.io/falcosecurity/* | docker.io/curlimages/* | curlimages/* | cr.l5d.io/* | argoproj.github.io/* | reg.kyverno.io/* | ecr-public.aws.com/* | gcr.io/* | docker.redpanda.com/* | docker.io/infisical/* | infisical/*"
+              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/library/* | docker.io/cloudflare/* | docker.io/louislam/* | docker.io/grafana/* | docker.io/bitnami/* | docker.io/otel/* | docker.io/coredns/* | docker.io/velero/* | docker.io/falcosecurity/* | docker.io/curlimages/* | curlimages/* | cr.l5d.io/* | argoproj.github.io/* | reg.kyverno.io/* | ecr-public.aws.com/* | gcr.io/* | docker.redpanda.com/*"
 ---
 # --- require-run-as-nonroot ---
 # Tightened from optional pattern to anyPattern — now requires runAsNonRoot: true
@@ -161,6 +164,7 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - openbao
       validate:
         failureAction: Enforce
         message: "Containers must run as non-root. Set runAsNonRoot: true in pod or container securityContext."
@@ -202,6 +206,7 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - openbao
       validate:
         failureAction: Enforce
         message: "Privileged containers are not allowed."
@@ -241,6 +246,7 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - openbao
                 - redpanda
       validate:
         failureAction: Enforce
@@ -294,6 +300,7 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - openbao
       validate:
         failureAction: Enforce
         message: "Host PID and IPC namespaces are not allowed."
@@ -332,6 +339,7 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - openbao
       validate:
         failureAction: Enforce
         message: "Containers must drop ALL capabilities."
@@ -372,6 +380,7 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - openbao
       context:
         - name: hostpathvols
           variable:

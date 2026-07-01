@@ -1,0 +1,117 @@
+# OpenBao — self-hosted secrets backend + PKI
+#
+# Chart: openbao/openbao (https://openbao.github.io/openbao-helm)
+#
+# HA mode with Raft integrated storage on ceph-block.
+# Internal TLS via cert-manager (nqlabs-internal-ca for bootstrap,
+# then nqlabs-openbao-pki after PKI migration).
+# Manual unseal (Shamir) — see docs/runbooks/openbao.md.
+#
+# 1Password used for bootstrap only: root token, recovery keys, unseal keys.
+# All operational secrets migrate to OpenBao kv-v2 via ESO.
+
+# Disable injector and CSI — platform uses ESO, not agent injection.
+injector:
+  enabled: false
+
+csi:
+  enabled: false
+
+# ── Server ──────────────────────────────────────────────────────────────────
+server:
+  image:
+    # quay.io already in Kyverno image allowlist.
+    tag: "2.5.2"
+
+  # HA mode: 3 replicas on ceph-block.
+  ha:
+    enabled: true
+    replicas: 3
+
+    # Raft integrated storage.
+    raft:
+      enabled: true
+      # Set node ID to pod name for stable Raft identity.
+      setNodeId: true
+      config: |
+        ui = true
+
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+          # Unauthenticated metrics for Prometheus scrape.
+          telemetry {
+            unauthenticated_metrics_access = "true"
+          }
+        }
+
+        storage "raft" {
+          path = "/openbao/data"
+          retry_join {
+            auto_join = "provider=k8s label_selector=\"app.kubernetes.io/name=openbao,component=server\" namespace=\"openbao\""
+            auto_join_scheme = "http"
+          }
+        }
+
+        service_registration "kubernetes" {}
+
+        telemetry {
+          prometheus_retention_time = "30s"
+          disable_hostname = true
+        }
+
+  # Data storage on ceph-block (RWO).
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: ceph-block
+    accessMode: ReadWriteOnce
+
+  # Audit storage on ceph-block.
+  auditStorage:
+    enabled: true
+    size: 5Gi
+    storageClass: ceph-block
+    accessMode: ReadWriteOnce
+
+  extraVolumes: []
+
+  # OnDelete: manual unseal required after pod restart.
+  # Prevents automatic restarts leaving OpenBao sealed.
+  updateStrategyType: OnDelete
+
+  # Resource requests for Kyverno require-resource-requests policy.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+  # authDelegator: grants system:auth-delegator ClusterRoleBinding
+  # so OpenBao can verify Kubernetes service account tokens via TokenReview.
+  # Enabled by default — required for Kubernetes auth method.
+  authDelegator:
+    enabled: true
+
+# ── UI ──────────────────────────────────────────────────────────────────────
+ui:
+  enabled: true
+  # ClusterIP behind the platform gateway; not directly exposed.
+  serviceType: ClusterIP
+
+# ── Telemetry ───────────────────────────────────────────────────────────────
+serverTelemetry:
+  serviceMonitor:
+    enabled: true
+    # Scrape via HTTP (TLS disabled at listener; gateway handles edge TLS).
+    scheme: http
+    interval: 30s
+    scrapeTimeout: 10s
+
+# ── Global ──────────────────────────────────────────────────────────────────
+global:
+  # TLS disabled at listener; edge TLS is handled by the Cilium Gateway.
+  # BackendTLSPolicy (re-encryption) is not supported in Cilium v1.19.
+  tlsDisable: true

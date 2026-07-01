@@ -330,46 +330,7 @@ entries:
     attrs:
       order: 20
 
-  # OpenBao proxy provider removed — secrets now managed by Infisical.
-
-  # ── Infisical (secrets management UI) ───────────────────────────────────
-  - id: infisical-provider
-    model: authentik_providers_proxy.proxyprovider
-    identifiers:
-      name: infisical
-    attrs:
-      mode: proxy
-      external_host: https://infisical.platform.nqlabs.network
-      internal_host: http://infisical-infisical-standalone-infisical.infisical:8080
-      internal_host_ssl_validation: false
-      authorization_flow:
-        !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
-      invalidation_flow:
-        !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
-  - id: infisical-app
-    model: authentik_core.application
-    identifiers:
-      slug: infisical
-    attrs:
-      name: Infisical
-      provider: !KeyOf infisical-provider
-      meta_launch_url: https://infisical.platform.nqlabs.network
-      group: Platform
-
-  # ── Infisical group bindings ─────────────────────────────────────────
-  # platform-admins + sre → full access (secrets management)
-  - model: authentik_policies.policybinding
-    identifiers:
-      target: !KeyOf infisical-app
-      group: !Find [authentik_core.group, [name, platform-admins]]
-    attrs:
-      order: 10
-  - model: authentik_policies.policybinding
-    identifiers:
-      target: !KeyOf infisical-app
-      group: !Find [authentik_core.group, [name, sre]]
-    attrs:
-      order: 20
+  # OpenBao proxy provider removed — secrets now managed by OpenBao with native OIDC.
 
   # ── Redpanda Console (streaming/kafka UI) ────────────────────────────────
   - id: redpanda-provider
@@ -433,5 +394,4 @@ entries:
         - !KeyOf hubble-provider
         - !KeyOf thanos-provider
         - !KeyOf pyroscope-provider
-        - !KeyOf infisical-provider
         - !KeyOf redpanda-provider
