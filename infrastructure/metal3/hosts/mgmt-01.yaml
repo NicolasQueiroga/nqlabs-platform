@@ -1,0 +1,47 @@
+# BareMetalHost: mgmt-01 (Proxmox VM 101)
+#
+# Existing management cluster node — already running Talos.
+# Registered for inventory only (accepted: false — not managed by Metal3).
+#
+# Proxmox VM 101:
+#   - Name: mgmt-01
+#   - MAC: BC:24:11:15:00:10
+#   - Cores: 8, Memory: 38912 MB
+#   - Network: vmbr0 (192.168.15.0/24)
+#
+# BMC: proxmox-redfish at https://192.168.15.20:8443
+#   redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/101
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mgmt-01-bmc
+  namespace: metal3
+type: Opaque
+data:
+  # proxmox-redfish credentials (admin:admin for lab)
+  username: YWRtaW4=
+  password: YWRtaW4=
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  name: mgmt-01
+  namespace: metal3
+  labels:
+    cluster: nqlabs-management
+    role: control-plane
+    provider: proxmox
+spec:
+  online: false
+  bootMACAddress: BC:24:11:15:00:10
+  bootMode: UEFI
+  hardwareProfile: unknown
+  bmc:
+    address: redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/101
+    credentialsName: mgmt-01-bmc
+    disableCertificateVerification: true
+  # Not accepted — this node is already running and managed manually.
+  # Set to true and provide a spec.image to reprovision with Metal3.
+  accepted: false
