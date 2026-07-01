@@ -45,8 +45,11 @@ spec:
             dns:
               - matchPattern: "*"
 ---
-# Allow Cilium Gateway to reach Redpanda Console.
+# Allow Cilium Gateway and Authentik proxy outpost to reach Redpanda Console.
 # The console subchart sets app.kubernetes.io/name=console (not redpanda-console).
+# Traffic flow: Gateway → authentik-server (outpost proxy) → Redpanda Console.
+# The ingress entity covers the Cilium Gateway; the authentik namespace selector
+# covers the embedded outpost proxy which reverse-proxies after authentication.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -61,6 +64,14 @@ spec:
   ingress:
     - fromEntities:
         - ingress
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": authentik
+            "k8s:app.kubernetes.io/component": server
       toPorts:
         - ports:
             - port: "8080"

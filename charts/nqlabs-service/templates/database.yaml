@@ -27,7 +27,7 @@
 {{- $storageSize = "20Gi" -}}
 {{- end -}}
 # ExternalSecret for the database password.
-# Pulls from the platform secret store (nqlabs-infisical or nqlabs-1password).
+# Pulls from the platform secret store (nqlabs-openbao or nqlabs-1password).
 ---
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
@@ -41,7 +41,7 @@ metadata:
 spec:
   refreshPolicy: CreatedOnce
   secretStoreRef:
-    name: {{ .Values.externalSecrets.store | default "nqlabs-infisical" }}
+    name: {{ .Values.externalSecrets.store | default "nqlabs-openbao" }}
     kind: {{ .Values.externalSecrets.storeKind | default "ClusterSecretStore" }}
   target:
     name: {{ $fullname }}-pg-app

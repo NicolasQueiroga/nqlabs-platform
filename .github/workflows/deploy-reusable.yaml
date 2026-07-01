@@ -8,7 +8,7 @@ name: Deploy (reusable)
 #   1. Build + push image as sha-<shortsha>
 #   2. Update apps/<service>/environments/staging.yaml on platform main
 #   3. ArgoCD detects the change and deploys to staging
-#   4. Call image-supply-chain-reusable for scan + sign + SBOM
+#   4. Image supply chain job runs (scan + sign + SBOM)
 #
 # Production flow (called on GitHub Release):
 #   1. Verify the release commit is on app main
@@ -16,7 +16,7 @@ name: Deploy (reusable)
 #   3. Retag the exact staged artifact as the release tag (vX.Y.Z)
 #   4. Open a PR in the platform repo updating production.yaml
 #   5. Operator reviews + merges → ArgoCD deploys production (canary)
-#   6. Call image-supply-chain-reusable for scan + sign + SBOM
+#   6. Image supply chain job runs (scan + sign + SBOM)
 #
 # App repos call this via:
 #   deploy-staging-on-main.yaml:
@@ -78,6 +78,8 @@ jobs:
       contents: read
       packages: write
       id-token: write
+    outputs:
+      tag: ${{ steps.sha.outputs.tag }}
     steps:
       - name: Checkout app repo
         uses: actions/checkout@v4
@@ -107,14 +109,6 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ inputs.image }}:${{ steps.sha.outputs.tag }}
-
-      - name: Image supply chain (scan + sign + SBOM)
-        if: inputs.supply-chain
-        uses: NicolasQueiroga/nqlabs-platform/.github/workflows/image-supply-chain-reusable.yaml@main
-        with:
-          image: ${{ inputs.image }}
-          tag: ${{ steps.sha.outputs.tag }}
-        secrets: inherit
 
       - name: Checkout platform repo
         uses: actions/checkout@v4
@@ -150,6 +144,16 @@ jobs:
           git commit -q -m "deploy($SERVICE): staging → $TAG" || exit 0
           git push origin HEAD:main
 
+  staging-supply-chain:
+    name: Image supply chain (staging)
+    needs: staging
+    if: inputs.environment == 'staging' && inputs.supply-chain
+    uses: NicolasQueiroga/nqlabs-platform/.github/workflows/image-supply-chain-reusable.yaml@main
+    with:
+      image: ${{ inputs.image }}
+      tag: ${{ needs.staging.outputs.tag }}
+    secrets: inherit
+
   production:
     name: Promote to production
     if: inputs.environment == 'production'
@@ -159,6 +163,8 @@ jobs:
       packages: write
       id-token: write
       pull-requests: write
+    outputs:
+      release-tag: ${{ inputs.release-tag }}
     steps:
       - name: Validate inputs
         env:
@@ -191,6 +197,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install crane
+        uses: imjasonh/setup-crane@v0
+
       - name: Verify staged image exists
         env:
           IMAGE: ${{ inputs.image }}
@@ -212,14 +221,6 @@ jobs:
           set -euo pipefail
           crane copy "$IMAGE:$STAGED" "$IMAGE:$RELEASE"
           echo "Promoted $IMAGE:$STAGED → $IMAGE:$RELEASE"
-
-      - name: Image supply chain (scan + sign + SBOM)
-        if: inputs.supply-chain
-        uses: NicolasQueiroga/nqlabs-platform/.github/workflows/image-supply-chain-reusable.yaml@main
-        with:
-          image: ${{ inputs.image }}
-          tag: ${{ inputs.release-tag }}
-        secrets: inherit
 
       - name: Checkout platform repo
         uses: actions/checkout@v4
@@ -259,6 +260,27 @@ jobs:
           git add "apps/$SERVICE/environments/production.yaml"
           git commit -q -m "deploy($SERVICE): production → $RELEASE"
           git push -u origin "$branch"
+          body=$(cat <<BODY
+          Promotes **${SERVICE}** to production.
+
+          - Image: \`${IMAGE}:${RELEASE}\`
+          - Promoted from staged artifact: \`${IMAGE}:${STAGED}\`
+
+          Merge to deploy to production (canary rollout).
+
+          > Reviewer: verify the staging deployment is healthy before merging.
+          BODY
+          )
           gh pr create \
             --title "Promote $SERVICE to production: $RELEASE" \
-            --body "$(printf 'Promotes **%s** to production.\n\n- Image: `%s:%s`\n- Promoted from staged artifact: `%s:%s`\n\nMerge to deploy to production (canary rollout).\n\n> Reviewer: verify the staging deployment is healthy before merging.' "$SERVICE" "$IMAGE" "$RELEASE" "$IMAGE" "$STAGED")"
+            --body "$body"
+
+  production-supply-chain:
+    name: Image supply chain (production)
+    needs: production
+    if: inputs.environment == 'production' && inputs.supply-chain
+    uses: NicolasQueiroga/nqlabs-platform/.github/workflows/image-supply-chain-reusable.yaml@main
+    with:
+      image: ${{ inputs.image }}
+      tag: ${{ needs.production.outputs.release-tag }}
+    secrets: inherit

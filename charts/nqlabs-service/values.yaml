@@ -156,10 +156,10 @@ otel:
   serviceName: ""
 
 # External Secrets Operator integration. Materializes a Kubernetes Secret from the
-# platform secret store. Defaults to the NQLabs Infisical-backed ClusterSecretStore.
+# platform secret store. Defaults to the NQLabs OpenBao-backed ClusterSecretStore.
 externalSecrets:
   enabled: false
-  store: nqlabs-infisical
+  store: nqlabs-openbao
   storeKind: ClusterSecretStore
   refreshInterval: 1h
   targetName: ""

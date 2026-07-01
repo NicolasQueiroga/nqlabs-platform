@@ -20,7 +20,7 @@ metadata:
 spec:
   refreshPolicy: CreatedOnce
   secretStoreRef:
-    name: {{ .Values.externalSecrets.store | default "nqlabs-infisical" }}
+    name: {{ .Values.externalSecrets.store | default "nqlabs-openbao" }}
     kind: {{ .Values.externalSecrets.storeKind | default "ClusterSecretStore" }}
   target:
     name: {{ $saslSecretName }}
