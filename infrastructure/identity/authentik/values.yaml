@@ -72,8 +72,8 @@ global:
     - name: AUTHENTIK_OPENBAO_OIDC_SECRET
       valueFrom:
         secretKeyRef:
-          name: authentik-secrets
-          key: openbao_oidc_client_secret
+          name: openbao-oidc-client-secret
+          key: client_secret
     # Session timeout — 8h max session, 30m idle timeout.
     - name: AUTHENTIK_SESSION__MAX_AGE
       value: "28800"
