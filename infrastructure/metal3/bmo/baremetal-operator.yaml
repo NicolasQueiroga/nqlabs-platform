@@ -3107,9 +3107,9 @@ subjects:
 apiVersion: v1
 data:
   # Ironic is managed by IrSO in the metal3 namespace.
-  # The IrSO-created service exposes Ironic API at:
-  #   http://ironic.metal3.svc.cluster.local:6385/v1/
-  IRONIC_ENDPOINT: http://ironic.metal3.svc.cluster.local:6385/v1/
+  # The IrSO-created service exposes Ironic API at port 80 (mapped to 6385 inside the pod).
+  #   http://ironic.metal3.svc.cluster.local:80/v1/
+  IRONIC_ENDPOINT: http://ironic.metal3.svc.cluster.local/v1/
 kind: ConfigMap
 metadata:
   name: ironic
