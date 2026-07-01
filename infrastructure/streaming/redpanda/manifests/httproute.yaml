@@ -19,7 +19,8 @@ spec:
         - path:
             type: PathPrefix
             value: /
+      # Routed through the Authentik embedded outpost (forward-auth).
       backendRefs:
-        - name: redpanda-console
-          namespace: redpanda
-          port: 8080
+        - name: authentik-server
+          namespace: authentik
+          port: 80
