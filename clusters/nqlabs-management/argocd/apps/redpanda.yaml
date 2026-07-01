@@ -38,11 +38,8 @@ spec:
     namespace: redpanda
   ignoreDifferences:
     # The Redpanda Helm chart renders null/empty values and omits server-side
-    # defaults that the Kubernetes API server adds (apiVersion in fieldRefs,
-    # protocol: TCP on ports, scheme: HTTP on probes, defaultMode: 420 on
-    # configMap volumes, imagePullPolicy, successThreshold/timeoutSeconds on
-    # probes, env: null on initContainers, etc.). These show as permanent
-    # OutOfSync differences. Ignore them all.
+    # defaults that the Kubernetes API server adds. With ServerSideApply these
+    # show as permanent OutOfSync differences. Ignore them all.
     - group: apps
       kind: StatefulSet
       jsonPointers:
@@ -51,16 +48,22 @@ spec:
         - /spec/template/spec/nodeSelector
         - /spec/template/spec/priorityClassName
         - /spec/template/spec/tolerations
-        - /spec/template/spec/initContainers/0/env
-        - /spec/template/spec/initContainers/2/env
-        # Server-side defaults added by API server
+        # Server-side defaults added by API server to pod spec
         - /spec/template/spec/dnsPolicy
         - /spec/template/spec/restartPolicy
         - /spec/template/spec/schedulerName
         - /spec/template/spec/serviceAccount
+        # initContainers: chart renders env:null, server strips it;
+        # server adds imagePullPolicy: IfNotPresent
+        - /spec/template/spec/initContainers/0/env
+        - /spec/template/spec/initContainers/0/imagePullPolicy
+        - /spec/template/spec/initContainers/1/env
+        - /spec/template/spec/initContainers/1/imagePullPolicy
+        - /spec/template/spec/initContainers/2/env
+        - /spec/template/spec/initContainers/2/imagePullPolicy
         # Server adds defaultMode: 420 to configMap volumes
         - /spec/template/spec/volumes/1/configMap/defaultMode
-        # Server adds apiVersion: v1 to fieldRef
+        # Server adds apiVersion: v1 to fieldRef in container env
         - /spec/template/spec/containers/0/env/0/valueFrom/fieldRef/apiVersion
         - /spec/template/spec/containers/0/env/1/valueFrom/fieldRef/apiVersion
         - /spec/template/spec/containers/0/env/2/valueFrom/fieldRef/apiVersion
