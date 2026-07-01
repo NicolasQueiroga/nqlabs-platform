@@ -3,8 +3,11 @@
 # block non-compliant resources and surface violations in PolicyReports.
 #
 # Namespace exclusions: kube-system, falco, tailscale, local-path-storage,
-# velero, monitoring, dns, rook-ceph — system/infra namespaces that
-# may need exceptions. Add/remove namespaces from the exclude lists as needed.
+# velero, monitoring, dns, rook-ceph, redpanda, openbao, metal3,
+# ironic-standalone-operator-system, baremetal-operator-system,
+# capi-system, capm3-system, cabpt-system, cacppt-system — system/infra
+# namespaces that may need exceptions. Add/remove namespaces from the
+# exclude lists as needed.
 #
 # Autogen is intentionally enabled so policies validate controllers
 # (Deployment/StatefulSet/DaemonSet/etc.) as well as raw Pods.
@@ -39,6 +42,15 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - redpanda
+                - openbao
+                - metal3
+                - ironic-standalone-operator-system
+                - baremetal-operator-system
+                - capi-system
+                - capm3-system
+                - cabpt-system
+                - cacppt-system
       validate:
         failureAction: Enforce
         message: "An explicit image tag is required (no :latest, no untagged)."
@@ -77,6 +89,14 @@ spec:
                 - dns
                 - rook-ceph
                 - redpanda
+                - openbao
+                - metal3
+                - ironic-standalone-operator-system
+                - baremetal-operator-system
+                - capi-system
+                - capm3-system
+                - cabpt-system
+                - cacppt-system
       validate:
         failureAction: Enforce
         message: "CPU and memory requests are required."
@@ -122,6 +142,15 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - redpanda
+                - openbao
+                - metal3
+                - ironic-standalone-operator-system
+                - baremetal-operator-system
+                - capi-system
+                - capm3-system
+                - cabpt-system
+                - cacppt-system
       validate:
         failureAction: Enforce
         message: "Images must come from an approved registry."
@@ -161,6 +190,15 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - redpanda
+                - openbao
+                - metal3
+                - ironic-standalone-operator-system
+                - baremetal-operator-system
+                - capi-system
+                - capm3-system
+                - cabpt-system
+                - cacppt-system
       validate:
         failureAction: Enforce
         message: "Containers must run as non-root. Set runAsNonRoot: true in pod or container securityContext."
@@ -202,6 +240,15 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - redpanda
+                - openbao
+                - metal3
+                - ironic-standalone-operator-system
+                - baremetal-operator-system
+                - capi-system
+                - capm3-system
+                - cabpt-system
+                - cacppt-system
       validate:
         failureAction: Enforce
         message: "Privileged containers are not allowed."
@@ -242,6 +289,14 @@ spec:
                 - dns
                 - rook-ceph
                 - redpanda
+                - openbao
+                - metal3
+                - ironic-standalone-operator-system
+                - baremetal-operator-system
+                - capi-system
+                - capm3-system
+                - cabpt-system
+                - cacppt-system
       validate:
         failureAction: Enforce
         message: "Seccomp profile must be set (RuntimeDefault or Localhost) at pod or container level."
@@ -294,6 +349,15 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - redpanda
+                - openbao
+                - metal3
+                - ironic-standalone-operator-system
+                - baremetal-operator-system
+                - capi-system
+                - capm3-system
+                - cabpt-system
+                - cacppt-system
       validate:
         failureAction: Enforce
         message: "Host PID and IPC namespaces are not allowed."
@@ -332,6 +396,15 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
+                - redpanda
+                - openbao
+                - metal3
+                - ironic-standalone-operator-system
+                - baremetal-operator-system
+                - capi-system
+                - capm3-system
+                - cabpt-system
+                - cacppt-system
       validate:
         failureAction: Enforce
         message: "Containers must drop ALL capabilities."
