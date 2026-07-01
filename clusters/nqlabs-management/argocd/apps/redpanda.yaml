@@ -36,6 +36,20 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: redpanda
+  ignoreDifferences:
+    # The Redpanda Helm chart renders null/empty values for several pod spec
+    # fields (env: null, imagePullSecrets: [], nodeSelector: {}, etc.) that
+    # the Kubernetes API server strips out. With ServerSideApply, these show
+    # as permanent OutOfSync differences. Ignore them.
+    - group: apps
+      kind: StatefulSet
+      jsonPointers:
+        - /spec/template/spec/imagePullSecrets
+        - /spec/template/spec/nodeSelector
+        - /spec/template/spec/priorityClassName
+        - /spec/template/spec/tolerations
+        - /spec/template/spec/initContainers/0/env
+        - /spec/template/spec/initContainers/2/env
   syncPolicy:
     automated:
       prune: true
