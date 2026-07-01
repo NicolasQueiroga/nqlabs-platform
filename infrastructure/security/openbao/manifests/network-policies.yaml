@@ -136,6 +136,8 @@ spec:
             matchLabels:
               app.kubernetes.io/name: openbao
       ports:
+        - port: 8200
+          protocol: TCP
         - port: 8201
           protocol: TCP
   egress:
@@ -144,6 +146,8 @@ spec:
             matchLabels:
               app.kubernetes.io/name: openbao
       ports:
+        - port: 8200
+          protocol: TCP
         - port: 8201
           protocol: TCP
 ---
