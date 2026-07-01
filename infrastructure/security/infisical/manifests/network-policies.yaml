@@ -85,8 +85,11 @@ spec:
             - port: "6443"
               protocol: TCP
 ---
-# Allow Cilium Gateway to reach Infisical.
+# Allow Cilium Gateway and Authentik proxy outpost to reach Infisical.
 # Helm chart sets: app=infisical-standalone, component=infisical, release=infisical
+# Traffic flow: Gateway → authentik-server (outpost proxy) → Infisical backend.
+# The ingress entity covers the Cilium Gateway; the authentik namespace selector
+# covers the embedded outpost proxy which reverse-proxies after authentication.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -102,6 +105,14 @@ spec:
   ingress:
     - fromEntities:
         - ingress
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": authentik
+            "k8s:app.kubernetes.io/component": server
       toPorts:
         - ports:
             - port: "8080"
