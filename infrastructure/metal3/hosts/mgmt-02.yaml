@@ -1,24 +1,14 @@
-# BareMetalHost: mgmt-02 (Proxmox VM 102)
+# BareMetalHost: mgmt-02 (proxmox 102)
 #
-# Existing management cluster node — already running Talos.
-# Registered for inventory only (accepted: false — not managed by Metal3).
+# Generated from inventory.csv — do not edit directly.
+# To change: edit inventory.csv and run ./generate.sh
 #
-# Proxmox VM 102:
-#   - Name: mgmt-02
-#   - MAC: BC:24:11:15:00:11
-#   - Cores: 8, Memory: 38912 MB
-#   - Network: vmbr0 (192.168.15.0/24)
+# Cluster: nqlabs-management
+# Role: control-plane
+# MAC: BC:24:11:15:00:11
+# BMC: redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/102
+# Credentials: proxmox-bmc
 
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: mgmt-02-bmc
-  namespace: metal3
-type: Opaque
-data:
-  username: cm9vdEBwYW0=
-  password: cXVlaXJvZ2E=
 ---
 apiVersion: metal3.io/v1alpha1
 kind: BareMetalHost
@@ -36,6 +26,6 @@ spec:
   hardwareProfile: unknown
   bmc:
     address: redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/102
-    credentialsName: mgmt-02-bmc
+    credentialsName: proxmox-bmc
     disableCertificateVerification: true
   accepted: false
