@@ -69,6 +69,17 @@ grep -v '^#' "${INVENTORY}" | grep -v '^$' | grep -v '^name,' | while IFS=, read
 
     output_file="${SCRIPT_DIR}/${name}.yaml"
 
+    # For unaccepted hosts (accepted=false), use externallyProvisioned
+    # to prevent BMO from managing them. BMO v0.13.1 doesn't have an
+    # "accepted" field — hosts are managed when they have BMC details
+    # and online=true. externallyProvisioned=true tells BMO the host is
+    # managed by an external process and should not be provisioned.
+    if [ "$accepted_lower" = "false" ]; then
+        external_prov="  externallyProvisioned: true"
+    else
+        external_prov=""
+    fi
+
     cat > "${output_file}" << EOF
 # BareMetalHost: ${name} (${provider} ${vmid})
 #
@@ -100,7 +111,7 @@ spec:
     address: ${bmc_address}
     credentialsName: ${bmc_secret}
     disableCertificateVerification: true
-  accepted: ${accepted_lower}
+${external_prov}
 EOF
 
     echo "Generated: ${name}.yaml"

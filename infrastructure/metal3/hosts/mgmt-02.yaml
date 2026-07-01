@@ -28,4 +28,4 @@ spec:
     address: redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/102
     credentialsName: proxmox-bmc
     disableCertificateVerification: true
-  accepted: false
+  externallyProvisioned: true
