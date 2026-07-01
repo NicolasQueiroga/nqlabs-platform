@@ -189,4 +189,15 @@ jobs:
           if [ "$REDIS" = "true" ]; then extras="$extras\n- Valkey (Redis) cache with persistent storage"; fi
           if [ "$KAFKA" = "true" ]; then extras="$extras\n- Kafka event streaming via Redpanda (add topics to kafka.topics in app.yaml)"; fi
 
-          gh pr create --title "Create application: $NAME (team: $TEAM)" --body "$(printf 'Scaffolds platform descriptors for **%s** (team: %s, repo %s, image %s).\n\n- apps/%s/app.yaml (identity + shape, team: %s)\n- apps/%s/environments/{staging,production}.yaml (runtime; image tag is a placeholder until the first build)\n- ArgoCD project: %s-staging, %s-production\n- Namespace: %s-%s%s\n\nAfter merge, in the app repo: add the build / staging / release / production / preview caller workflows (see docs/runbooks/onboarding-a-new-application.md), set secrets NQLABS_PLATFORM_REPO_TOKEN and the release token, and grant the repo GHCR package write access. The app deploys to staging on first main merge.' "$NAME" "$TEAM" "$REPO" "$IMG" "$NAME" "$TEAM" "$NAME" "$TEAM" "$TEAM" "$TEAM" "$NAME" "$extras")"
+          body=$(cat <<BODY
+          Scaffolds platform descriptors for **${NAME}** (team: ${TEAM}, repo ${REPO}, image ${IMG}).
+
+          - apps/${NAME}/app.yaml (identity + shape, team: ${TEAM})
+          - apps/${NAME}/environments/{staging,production}.yaml (runtime; image tag is a placeholder until the first build)
+          - ArgoCD project: ${TEAM}-staging, ${TEAM}-production
+          - Namespace: ${TEAM}-${NAME}${extras}
+
+          After merge, in the app repo: add the build / staging / release / production / preview caller workflows (see docs/runbooks/onboarding-a-new-application.md), set secrets NQLABS_PLATFORM_REPO_TOKEN and the release token, and grant the repo GHCR package write access. The app deploys to staging on first main merge.
+          BODY
+          )
+          gh pr create --title "Create application: $NAME (team: $TEAM)" --body "$body"

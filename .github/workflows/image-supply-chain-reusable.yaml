@@ -49,6 +49,9 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@v3
 
+      - name: Install crane
+        uses: imjasonh/setup-crane@v0
+
       - name: Resolve digest
         id: digest
         run: |

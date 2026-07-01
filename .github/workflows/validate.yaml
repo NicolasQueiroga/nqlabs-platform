@@ -79,9 +79,34 @@ jobs:
         run: |
           python3 - <<'PY'
           import glob, yaml, sys
+
+          # Authentik blueprints use custom YAML tags (!Env, !Find, !KeyOf, etc.)
+          # that are not standard YAML. Skip them — they're validated by Authentik
+          # itself when the worker applies the blueprint.
+          SKIP_DIRS = {"infrastructure/identity/authentik/blueprints"}
+
+          # Register a permissive constructor for unknown tags so files with
+          # custom tags (e.g. Go template strings in Alertmanager configs) don't
+          # crash the parser.
+          class _UnknownTag(str):
+              pass
+
+          def _unknown_constructor(loader, tag_suffix, node):
+              if isinstance(node, yaml.ScalarNode):
+                  return loader.construct_scalar(node)
+              elif isinstance(node, yaml.SequenceNode):
+                  return loader.construct_sequence(node)
+              elif isinstance(node, yaml.MappingNode):
+                  return loader.construct_mapping(node)
+              return None
+
+          yaml.add_multi_constructor("", _unknown_constructor, Loader=yaml.SafeLoader)
+
           bad = 0; n = 0
           for pat in ("clusters/**/*.yaml", "platform/**/*.yaml", "apps/**/*.yaml", "infrastructure/**/*.yaml"):
               for f in glob.glob(pat, recursive=True):
+                  if any(f.startswith(d) for d in SKIP_DIRS):
+                      continue
                   n += 1
                   try:
                       list(yaml.safe_load_all(open(f)))

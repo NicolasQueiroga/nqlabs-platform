@@ -191,4 +191,15 @@ jobs:
             "terraform/teams/${TEAM}/"
           git commit -q -m "feat(team): scaffold ${TEAM} (Authentik group + ArgoCD projects + terraform dir)"
           git push -u origin "$branch"
-          gh pr create --title "Create team: ${TEAM}" --body "$(printf 'Scaffolds platform resources for team **%s** (leads: %s).\n\n- Authentik group blueprint: `infrastructure/identity/authentik/blueprints/teams/%s.yaml`\n- ArgoCD AppProjects: `%s-staging`, `%s-production`, `%s-preview`\n- ArgoCD RBAC: `%s` group → `%s-admin` role on `%s-*` projects\n- Terraform directory: `terraform/teams/%s/`\n\nAfter merge, use **Create application** workflow with `team=%s` to scaffold services under this team.' "$TEAM" "$LEADS" "$TEAM" "$TEAM" "$TEAM" "$TEAM" "$TEAM" "$TEAM" "$TEAM" "$TEAM" "$TEAM")"
+          body=$(cat <<BODY
+          Scaffolds platform resources for team **${TEAM}** (leads: ${LEADS}).
+
+          - Authentik group blueprint: \`infrastructure/identity/authentik/blueprints/teams/${TEAM}.yaml\`
+          - ArgoCD AppProjects: \`${TEAM}-staging\`, \`${TEAM}-production\`, \`${TEAM}-preview\`
+          - ArgoCD RBAC: \`${TEAM}\` group → \`${TEAM}-admin\` role on \`${TEAM}-*\` projects
+          - Terraform directory: \`terraform/teams/${TEAM}/\`
+
+          After merge, use **Create application** workflow with \`team=${TEAM}\` to scaffold services under this team.
+          BODY
+          )
+          gh pr create --title "Create team: ${TEAM}" --body "$body"
