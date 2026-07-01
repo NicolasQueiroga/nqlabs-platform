@@ -260,9 +260,20 @@ jobs:
           git add "apps/$SERVICE/environments/production.yaml"
           git commit -q -m "deploy($SERVICE): production → $RELEASE"
           git push -u origin "$branch"
+          body=$(cat <<BODY
+          Promotes **${SERVICE}** to production.
+
+          - Image: \`${IMAGE}:${RELEASE}\`
+          - Promoted from staged artifact: \`${IMAGE}:${STAGED}\`
+
+          Merge to deploy to production (canary rollout).
+
+          > Reviewer: verify the staging deployment is healthy before merging.
+          BODY
+          )
           gh pr create \
             --title "Promote $SERVICE to production: $RELEASE" \
-            --body "$(printf 'Promotes **%s** to production.\n\n- Image: `%s:%s`\n- Promoted from staged artifact: `%s:%s`\n\nMerge to deploy to production (canary rollout).\n\n> Reviewer: verify the staging deployment is healthy before merging.' "$SERVICE" "$IMAGE" "$RELEASE" "$IMAGE" "$STAGED")"
+            --body "$body"
 
   production-supply-chain:
     name: Image supply chain (production)
