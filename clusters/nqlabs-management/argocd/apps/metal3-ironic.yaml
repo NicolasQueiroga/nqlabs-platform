@@ -1,35 +1,30 @@
-# Bare Metal Operator (BMO) for nqlabs-management.
+# Ironic instance for nqlabs-management.
 #
-# BMO manages BareMetalHost CRDs and interfaces with Ironic for hardware
-# provisioning.  It requires Ironic to be running and accessible.
+# Creates the Ironic CR that triggers IrSO to deploy Ironic.
+# Ironic is configured for virtual media provisioning (no PXE/DHCP).
 #
-# After BMO is installed, BareMetalHost resources can be created to
-# register and manage bare metal nodes.
-#
-# Sync wave: 3 (after IrSO at wave 1 + Ironic at wave 2)
-# BMO version: v0.13.1
+# Sync wave: 2 (after IrSO controller at wave 1)
+# Ironic version: v34.0
 
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: metal3-bmo
+  name: metal3-ironic
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   project: platform
   source:
     repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
     targetRevision: HEAD
-    path: infrastructure/metal3/bmo
-    directory:
-      include: "baremetal-operator.yaml"
+    path: infrastructure/metal3/ironic
   destination:
     server: https://kubernetes.default.svc
-    namespace: baremetal-operator-system
+    namespace: metal3
   syncPolicy:
     automated:
       prune: true

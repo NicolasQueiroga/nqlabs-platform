@@ -3,7 +3,7 @@
 # Syncs BareMetalHost CRDs that register nodes with Metal3 for
 # provisioning and lifecycle management.
 #
-# Sync wave: 3 (after BMO at wave 2, which installs the BareMetalHost CRD)
+# Sync wave: 4 (after BMO at wave 3, which installs the BareMetalHost CRD)
 
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -14,7 +14,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-wave: "4"
 spec:
   project: platform
   source:
@@ -23,7 +23,7 @@ spec:
     path: infrastructure/metal3/hosts
     directory:
       include: "*.yaml"
-      exclude: "README.md"
+      exclude: "{README.md,inventory.csv,generate.sh}"
   destination:
     server: https://kubernetes.default.svc
     namespace: metal3
