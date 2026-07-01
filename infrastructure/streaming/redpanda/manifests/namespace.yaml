@@ -1,0 +1,18 @@
+# Redpanda namespace — explicit manifest for labels that managedNamespaceMetadata
+# cannot apply to pre-existing namespaces.
+#
+# Single owner: the redpanda ArgoCD app. The gateway app no longer manages
+# this namespace (removed from platform-gateway.yaml to avoid ownership conflict).
+#
+# Redpanda requires privileged PSA: the "tuning" init container needs SYS_RESOURCE
+# capability and privileged=true to set kernel parameters (e.g. vm.max_map_count).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: redpanda
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/enforce-version: latest
+    gateway-access: "true"
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"

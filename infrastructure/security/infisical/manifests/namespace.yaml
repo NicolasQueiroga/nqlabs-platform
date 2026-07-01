@@ -1,0 +1,15 @@
+# Infisical namespace — explicit manifest for labels that managedNamespaceMetadata
+# cannot apply to pre-existing namespaces.
+#
+# Single owner: the infisical ArgoCD app. The gateway app no longer manages
+# this namespace (removed from platform-gateway.yaml to avoid ownership conflict).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: infisical
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+    gateway-access: "true"
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
