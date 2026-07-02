@@ -6932,7 +6932,7 @@ subjects:
 ---
 apiVersion: v1
 data:
-  CAPM3_FAST_TRACK: false
+  CAPM3_FAST_TRACK: "false"
 kind: ConfigMap
 metadata:
   labels:
