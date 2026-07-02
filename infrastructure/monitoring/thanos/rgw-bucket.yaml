@@ -32,7 +32,7 @@ stringData:
     config:
       bucket: thanos
       endpoint: rook-ceph-rgw-platform-object-store.rook-ceph.svc:80
-      access_key: ZE5QAWLSEW3QOFX4AZ9X
-      secret_key: ZTqXJDSyAnihFY79Ni4voUOTQHYb4laBODhFKF1G
+      access_key: UJPLS2J8SEP6C4Y7VAPB
+      secret_key: 6eHsGcIg8js5lChoU95DSs7Sq9AKDUjbIHSK8Hjv
       insecure: true
       signature_version2: false
