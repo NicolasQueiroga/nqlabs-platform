@@ -20,7 +20,7 @@ metadata:
     role: control-plane
     provider: proxmox
 spec:
-  online: false
+  online: true
   bootMACAddress: BC:24:11:15:00:12
   bootMode: UEFI
   hardwareProfile: unknown
