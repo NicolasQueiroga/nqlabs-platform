@@ -3110,15 +3110,25 @@ data:
   # The IrSO-created service exposes Ironic API at port 80 (mapped to 6385 inside the pod).
   #   http://ironic.metal3.svc.cluster.local:80/v1/
   IRONIC_ENDPOINT: http://ironic.metal3.svc.cluster.local/v1/
-  # Ironic API uses basic auth. Credentials must match the
-  # ironic-api-credentials secret in the metal3 namespace.
-  IRONIC_AUTH_TYPE: basic
-  IRONIC_USERNAME: ironic
-  IRONIC_PASSWORD: "0ZX7CkZIX40-z6pSfHAvlKw3qNHrKDcl"
 kind: ConfigMap
 metadata:
   name: ironic
   namespace: baremetal-operator-system
+---
+# BMO v0.13.1 reads auth credentials from the filesystem, not env vars.
+# It checks for /opt/metal3/auth/ironic/ directory. If it exists and
+# contains username and password files, BMO uses HTTP Basic Auth.
+# If the directory doesn't exist, BMO defaults to noauth.
+# This Secret is mounted at /opt/metal3/auth/ironic/ in the BMO pod.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ironic-auth
+  namespace: baremetal-operator-system
+type: Opaque
+stringData:
+  username: ironic
+  password: "0ZX7CkZIX40-z6pSfHAvlKw3qNHrKDcl"
 ---
 apiVersion: v1
 kind: Service
@@ -3225,6 +3235,9 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
+        - mountPath: /opt/metal3/auth/ironic
+          name: ironic-auth
+          readOnly: true
       securityContext:
         runAsNonRoot: true
         seccompProfile:
@@ -3236,6 +3249,10 @@ spec:
         secret:
           defaultMode: 420
           secretName: bmo-webhook-server-cert
+      - name: ironic-auth
+        secret:
+          defaultMode: 420
+          secretName: ironic-auth
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
