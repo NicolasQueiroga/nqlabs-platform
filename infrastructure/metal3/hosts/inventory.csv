@@ -32,5 +32,8 @@ name,vmid,mac,bmc_address,cluster,role,provider,accepted,online,cores,memory,bmc
 mgmt-01,101,BC:24:11:15:00:10,redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/101,nqlabs-management,control-plane,proxmox,false,false,8,38912,proxmox-shared
 mgmt-02,102,BC:24:11:15:00:11,redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/102,nqlabs-management,control-plane,proxmox,false,false,8,38912,proxmox-shared
 mgmt-03,103,BC:24:11:15:00:12,redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/103,nqlabs-management,control-plane,proxmox,false,false,8,38912,proxmox-shared
-staging-cp-01,104,BC:24:11:15:00:20,redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/104,nqlabs-staging,control-plane,proxmox,true,true,4,8192,proxmox-shared
-production-cp-01,105,BC:24:11:15:00:30,redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/105,nqlabs-production,control-plane,proxmox,true,true,4,8192,proxmox-shared
+# staging-cp-01 — Add when physical hardware is ready:
+#   staging-cp-01,<mac>,redfish+https://<bmc-ip>/redfish/v1/Systems/0,nqlabs-staging,control-plane,physical,true,true,<cores>,<memory>,staging-cp-01-bmc
+#
+# production-cp-01 — Add when physical hardware is ready:
+#   production-cp-01,<mac>,redfish+https://<bmc-ip>/redfish/v1/Systems/0,nqlabs-production,control-plane,physical,true,true,<cores>,<memory>,production-cp-01-bmc
