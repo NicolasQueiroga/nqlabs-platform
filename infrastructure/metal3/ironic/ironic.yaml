@@ -35,6 +35,11 @@ spec:
   # Ironic version (container image tag from quay.io/metal3-io/ironic)
   version: "34.0"
 
+  # Reference a stable secret with Ironic API credentials.
+  # Created by ironic-api-credentials.yaml in the same directory.
+  # BMO uses the same credentials to connect to the Ironic API.
+  apiCredentialsName: ironic-api-credentials
+
   # SSH key for accessing the Ironic Python Agent ramdisk (debugging)
   # deployRamdisk:
   #   sshKey: "ssh-ed25519 AAAAC3..."

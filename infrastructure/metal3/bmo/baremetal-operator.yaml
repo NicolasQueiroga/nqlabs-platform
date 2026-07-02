@@ -3110,6 +3110,11 @@ data:
   # The IrSO-created service exposes Ironic API at port 80 (mapped to 6385 inside the pod).
   #   http://ironic.metal3.svc.cluster.local:80/v1/
   IRONIC_ENDPOINT: http://ironic.metal3.svc.cluster.local/v1/
+  # Ironic API uses basic auth. Credentials must match the
+  # ironic-api-credentials secret in the metal3 namespace.
+  IRONIC_AUTH_TYPE: basic
+  IRONIC_USERNAME: ironic
+  IRONIC_PASSWORD: "0ZX7CkZIX40-z6pSfHAvlKw3qNHrKDcl"
 kind: ConfigMap
 metadata:
   name: ironic
