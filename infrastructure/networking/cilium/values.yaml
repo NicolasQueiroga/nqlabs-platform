@@ -145,7 +145,12 @@ hubble:
 gatewayAPI:
   enabled: true
   gatewayClass:
-    create: false
+    # Use "auto" so Helm creates the GatewayClass if it doesn't exist,
+    # but doesn't delete it if we manage it separately. The GatewayClass
+    # with parametersRef is managed in git at
+    # clusters/nqlabs-management/cilium/gateway-class-config.yaml
+    # and applied by the cilium-config ArgoCD app.
+    create: "auto"
 
 # L2 Announcements — ARP-based LoadBalancer IP advertisement on local network
 # Required for CiliumLoadBalancerIPPool IPs to be reachable from the Mac host.
