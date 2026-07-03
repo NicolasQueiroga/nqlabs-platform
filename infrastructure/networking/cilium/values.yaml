@@ -150,3 +150,10 @@ l2announcements:
 # Pool defined in infrastructure/networking/cilium/lb-ipam/pool.yaml
 externalIPs:
   enabled: true
+
+# Enforce loadBalancerSourceRanges for all LB service types (including Gateway).
+# Required for CiliumGatewayClassConfig loadBalancerSourceRanges to work.
+# Without this, loadBalancerSourceRanges only applies to LoadBalancer services
+# with externalTrafficPolicy=Local, not Cluster (which is what Gateway uses).
+loadBalancer:
+  lbSourceRangeAllTypes: true

@@ -1,0 +1,19 @@
+# CiliumGatewayClassConfig — restrict gateway LB to tailnet IPs only.
+#
+# The Cilium Gateway controller auto-creates and reconciles the LoadBalancer
+# service for the Gateway. Setting loadBalancerSourceRanges directly on the
+# service gets overwritten. This CRD configures the service template so the
+# restriction persists across reconciliations.
+#
+# Only traffic from Tailscale tailnet (100.64.0.0/10) can reach the gateway.
+# LAN traffic without tailnet is blocked at the BPF level.
+apiVersion: cilium.io/v2alpha1
+kind: CiliumGatewayClassConfig
+metadata:
+  name: platform-gateway
+  namespace: platform
+spec:
+  service:
+    loadBalancerSourceRanges:
+      - 100.64.0.0/10
+    loadBalancerSourceRangesPolicy: Allow
