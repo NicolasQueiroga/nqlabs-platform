@@ -203,7 +203,9 @@ alertmanager:
       matchLabels:
         alertmanagerConfig: nqlabs
     alertmanagerConfigNamespaceSelector:
-      any: true
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: Exists
     storage:
       volumeClaimTemplate:
         spec:
