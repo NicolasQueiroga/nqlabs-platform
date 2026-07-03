@@ -28,7 +28,7 @@ spec:
     targetRevision: HEAD
     path: clusters/nqlabs-management/cilium
     directory:
-      include: "lb-ipam.yaml"
+      include: "lb-ipam.yaml,gateway-class-config.yaml"
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system

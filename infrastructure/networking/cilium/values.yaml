@@ -137,8 +137,15 @@ hubble:
 # Gateway API — replaces Nginx Ingress Controller
 # Requires Gateway API CRDs to be installed first (upstream Kubernetes project)
 # Exposes GatewayClass "cilium" for use by HTTPRoute, TLSRoute, GRPCRoute resources
+#
+# The Helm-managed GatewayClass is disabled (create: false) because we need
+# to add a parametersRef pointing to our CiliumGatewayClassConfig (which
+# restricts the gateway LB to tailnet IPs). The GatewayClass is managed
+# in git at infrastructure/networking/cilium/gateway-class-config.yaml.
 gatewayAPI:
   enabled: true
+  gatewayClass:
+    create: false
 
 # L2 Announcements — ARP-based LoadBalancer IP advertisement on local network
 # Required for CiliumLoadBalancerIPPool IPs to be reachable from the Mac host.
@@ -155,5 +162,5 @@ externalIPs:
 # Required for CiliumGatewayClassConfig loadBalancerSourceRanges to work.
 # Without this, loadBalancerSourceRanges only applies to LoadBalancer services
 # with externalTrafficPolicy=Local, not Cluster (which is what Gateway uses).
-loadBalancer:
+bpf:
   lbSourceRangeAllTypes: true
