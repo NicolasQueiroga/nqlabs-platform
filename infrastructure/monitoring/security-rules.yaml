@@ -96,3 +96,82 @@ spec:
             summary: "No recent Velero scheduled backup"
             description: "No successful scheduled Velero backup in the expected window."
 
+    - name: nqlabs.security.openbao
+      rules:
+        - alert: NQLabsOpenBaoSealed
+          expr: vault_core_unsealed == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "OpenBao is sealed"
+            description: "OpenBao instance {{ $labels.instance }} is sealed and cannot serve requests."
+        - alert: NQLabsOpenBaoDown
+          expr: absent(vault_core_unsealed == 1)
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: "OpenBao is down or not scraped"
+            description: "No OpenBao instance is reporting as unsealed."
+
+    - name: nqlabs.infrastructure.cilium
+      rules:
+        - alert: NQLabsCiliumAgentDown
+          expr: up{job="cilium-agent"} == 0
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Cilium agent metrics unavailable"
+            description: "Cilium agent on {{ $labels.instance }} is not responding to metrics scrapes."
+        - alert: NQLabsHubbleRelayDown
+          expr: up{job="hubble-relay"} == 0
+          for: 3m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Hubble Relay is down"
+            description: "Hubble Relay is not responding — flow visibility is degraded."
+
+    - name: nqlabs.infrastructure.metal3
+      rules:
+        - alert: NQLabsBMOControllerDown
+          expr: up{job="baremetal-operator"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Bare Metal Operator controller is down"
+            description: "BMO controller is not responding to metrics scrapes."
+        - alert: NQLabsIronicDown
+          expr: up{job="ironic"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Ironic is down"
+            description: "Ironic service is not responding — bare metal provisioning is unavailable."
+
+    - name: nqlabs.infrastructure.redpanda
+      rules:
+        - alert: NQLabsRedpandaClusterDegraded
+          expr: redpanda_kafka_cluster_partition_under_replicated_replica > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Redpanda cluster has under-replicated partitions"
+            description: "Redpanda cluster has under-replicated partitions — data may be at risk."
+
+    - name: nqlabs.infrastructure.loki
+      rules:
+        - alert: NQLabsLokiIngestionFailing
+          expr: increase(loki_distributor_lines_received_total{status="error"}[10m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Loki ingestion errors"
+            description: "Loki distributor is reporting ingestion errors on {{ $labels.instance }}."
+

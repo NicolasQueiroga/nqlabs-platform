@@ -172,3 +172,89 @@ data:
 
       # ── Security ───────────────────────────────────────────────────────
       # Secrets managed by OpenBao + nqlabs-1password
+      - name: OpenBao
+        group: Security
+        url: http://openbao-active.openbao.svc.cluster.local:8200/v1/sys/health
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Falco
+        group: Security
+        url: http://falco-falcosidekick.falco.svc.cluster.local:2803/health
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Kyverno
+        group: Security
+        url: http://kyverno-svc.kyverno.svc.cluster.local:8000/health
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Velero
+        group: Security
+        url: http://velero.velero.svc.cluster.local:8085/metrics
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: External Secrets
+        group: Security
+        url: http://external-secrets.external-secrets.svc.cluster.local:8081/healthz
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Cert Manager
+        group: Security
+        url: http://cert-manager.cert-manager.svc.cluster.local:9402/metrics
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      # ── Infrastructure ─────────────────────────────────────────────────
+      - name: Cilium Agent
+        group: Infrastructure
+        url: http://cilium-envoy.kube-system.svc.cluster.local:9964/metrics
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: CoreDNS
+        group: Infrastructure
+        url: http://coredns-dns.dns.svc.cluster.local:9153/metrics
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Loki
+        group: Infrastructure
+        url: http://loki-gateway.monitoring.svc.cluster.local:8080/ready
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: CNPG (Authentik PG)
+        group: Infrastructure
+        url: http://authentik-pg-rw.authentik.svc.cluster.local:5432
+        interval: 1m
+        client:
+          network: tcp
+        conditions:
+          - "[CONNECTED] == true"
+
+      - name: Redpanda
+        group: Infrastructure
+        url: http://redpanda.redpanda.svc.cluster.local:9644/v1/cluster/health
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Tailscale Operator
+        group: Infrastructure
+        url: http://operator.tailscale.svc.cluster.local:8080/healthz
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"

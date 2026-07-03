@@ -1,0 +1,21 @@
+# CAPI (Cluster API) PodMonitor — scrape controller metrics on port 8443.
+# The capi-webhook-service only exposes 443 (webhook), not metrics.
+# A PodMonitor is needed to scrape the metrics port directly.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: cluster-api
+  namespace: capi-system
+  labels:
+    app.kubernetes.io/name: cluster-api
+    app.kubernetes.io/part-of: nqlabs-platform
+spec:
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/provider: cluster-api
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+      scheme: https
+      insecureSkipVerify: true

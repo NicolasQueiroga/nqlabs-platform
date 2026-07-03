@@ -199,6 +199,11 @@ prometheus:
 # ── Alertmanager ────────────────────────────────────────────────────────────
 alertmanager:
   alertmanagerSpec:
+    alertmanagerConfigSelector:
+      matchLabels:
+        alertmanagerConfig: nqlabs
+    alertmanagerConfigNamespaceSelector:
+      any: true
     storage:
       volumeClaimTemplate:
         spec:

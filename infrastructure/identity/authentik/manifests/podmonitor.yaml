@@ -1,0 +1,19 @@
+# Authentik PodMonitor — scrape server + worker metrics on port 9300.
+# The authentik-server Service only exposes 80/443, not the metrics port,
+# so a PodMonitor is needed instead of a ServiceMonitor.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: authentik
+  namespace: authentik
+  labels:
+    app.kubernetes.io/name: authentik
+    app.kubernetes.io/part-of: nqlabs-platform
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: authentik
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics

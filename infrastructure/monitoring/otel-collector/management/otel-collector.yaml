@@ -60,18 +60,16 @@ metadata:
     app.kubernetes.io/name: otel-collector
     app.kubernetes.io/part-of: nqlabs-platform
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app.kubernetes.io/name: otel-collector
   ports:
     - name: otlp-grpc
       port: 4317
       targetPort: otlp-grpc
-      nodePort: 31417
     - name: otlp-http
       port: 4318
       targetPort: otlp-http
-      nodePort: 31418
     - name: metrics
       port: 8888
       targetPort: metrics

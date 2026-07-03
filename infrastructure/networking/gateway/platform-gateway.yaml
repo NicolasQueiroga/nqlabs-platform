@@ -125,3 +125,28 @@ spec:
           requestRedirect:
             scheme: https
             statusCode: 301
+---
+# Restrict gateway ingress to tailnet IPs only (100.64.0.0/10).
+# The gateway LoadBalancer IP (192.168.15.195) is on the LAN and accessible
+# from any local machine. This CiliumNetworkPolicy ensures only traffic from
+# the Tailscale tailnet (100.64.0.0/10) can reach the gateway pods.
+# LAN traffic without tailnet is blocked.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: platform-gateway-tailnet-only
+  namespace: platform
+spec:
+  endpointSelector:
+    matchLabels:
+      io.kubernetes.pod.namespace: platform
+      gateway.networking.k8s.io/gateway-name: platform-gateway
+  ingress:
+    - fromCIDR:
+        - 100.64.0.0/10
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "443"
+              protocol: TCP

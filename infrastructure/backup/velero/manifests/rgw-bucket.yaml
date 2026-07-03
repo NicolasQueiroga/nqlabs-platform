@@ -29,5 +29,5 @@ type: Opaque
 stringData:
   cloud: |
     [default]
-    aws_access_key_id=ALXE7L23SN8PNHEFTFF2
-    aws_secret_access_key=hVAKjAJcDaqWHxYyUGJszzN7x9z5D70vkfaUcLwR
+    aws_access_key_id=YMOOWTW6HPWHKWPKNEJX
+    aws_secret_access_key=M6nDMqw5dVMPOVWSPbM2aJZIfXc0mCKvzYgpbaHw

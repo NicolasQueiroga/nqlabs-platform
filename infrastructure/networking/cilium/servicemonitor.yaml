@@ -1,0 +1,54 @@
+# Cilium + Hubble ServiceMonitors — scrape Cilium agent and Hubble metrics.
+# Cilium agent metrics on port 9879 (health), Hubble metrics on port 9965.
+# Both are exposed via services in kube-system.
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cilium-agent
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: cilium
+    app.kubernetes.io/part-of: nqlabs-platform
+spec:
+  selector:
+    matchLabels:
+      k8s-app: cilium
+  endpoints:
+    - port: health
+      interval: 30s
+      path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: hubble-metrics
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: hubble
+    app.kubernetes.io/part-of: nqlabs-platform
+spec:
+  selector:
+    matchLabels:
+      k8s-app: cilium
+  endpoints:
+    - port: hubble-metrics
+      interval: 30s
+      path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cilium-envoy
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: cilium-envoy
+    app.kubernetes.io/part-of: nqlabs-platform
+spec:
+  selector:
+    matchLabels:
+      k8s-app: cilium
+  endpoints:
+    - port: envoy-metrics
+      interval: 30s
+      path: /metrics

@@ -35,8 +35,8 @@ metadata:
     cnpg.io/reload: "true"
 type: Opaque
 stringData:
-  ACCESS_KEY_ID: SLMSOG1GQIB1S1WD1Q70
-  SECRET_ACCESS_KEY: 3ZJrhqgyMIx9U0BzNGNdfz2ODJJqhoy1z72oR6DH
+  ACCESS_KEY_ID: A1XAEJMFO1IUS428IYWN
+  SECRET_ACCESS_KEY: rKOnB5eOKCsDM5yRB9wyma0iL5edC78gC7Dkcfc8
 ---
 # Scheduled backup: daily at 02:00 UTC, keep 7 backups.
 apiVersion: postgresql.cnpg.io/v1

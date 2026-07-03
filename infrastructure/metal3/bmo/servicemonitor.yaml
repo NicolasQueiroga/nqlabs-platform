@@ -1,0 +1,19 @@
+# BMO (Bare Metal Operator) ServiceMonitor — scrape controller metrics on port 8443.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: baremetal-operator
+  namespace: baremetal-operator-system
+  labels:
+    app.kubernetes.io/name: baremetal-operator
+    app.kubernetes.io/part-of: nqlabs-platform
+spec:
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  endpoints:
+    - port: https
+      interval: 30s
+      path: /metrics
+      scheme: https
+      insecureSkipVerify: true
