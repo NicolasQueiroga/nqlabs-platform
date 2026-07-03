@@ -1,9 +1,9 @@
 # GatewayClass + CiliumGatewayClassConfig — restrict gateway LB to tailnet IPs.
 #
 # The Cilium Helm chart creates a GatewayClass without parametersRef, so we
-# disable it (gatewayAPI.gatewayClass.create: false in values.yaml) and manage
-# our own GatewayClass here with a parametersRef pointing to the
-# CiliumGatewayClassConfig.
+# use gatewayAPI.gatewayClass.create: "auto" in values.yaml (Helm creates it
+# if missing but doesn't delete it). We manage the GatewayClass here with a
+# parametersRef pointing to the CiliumGatewayClassConfig.
 #
 # The CiliumGatewayClassConfig sets loadBalancerSourceRanges on the
 # auto-created LoadBalancer service. Only traffic from Tailscale tailnet
@@ -12,6 +12,9 @@
 #
 # Requires bpf.lbSourceRangeAllTypes: true in Cilium values for source range
 # filtering to work with externalTrafficPolicy=Cluster.
+#
+# Helm ownership labels are included so Helm upgrades don't fail with
+# "invalid ownership metadata" when adopting the GatewayClass.
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
