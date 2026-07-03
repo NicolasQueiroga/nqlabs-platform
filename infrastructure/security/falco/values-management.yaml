@@ -1,7 +1,12 @@
 # Management-only Falco integration.
 #
 # Staging/production run Falco + metrics, but only management has the central
-# Alertmanager runtime. Falcosidekick forwards warning+ events there.
+# Alertmanager runtime. Falcosidekick forwards warning+ events to Alertmanager
+# and directly to Discord (for immediate visibility of critical events).
+#
+# The Discord webhook URL is injected via extraEnv from an ExternalSecret
+# (falcosidekick-discord-webhook) that pulls from 1Password. This avoids
+# committing the webhook URL to git.
 falcosidekick:
   enabled: true
   serviceMonitor:
@@ -15,4 +20,12 @@ falcosidekick:
       endpoint: /api/v2/alerts
       minimumpriority: warning
       extralabels: source:falco,cluster:nqlabs-management
-
+    discord:
+      webhookurl: ""
+      minimumpriority: critical
+  extraEnv:
+    - name: DISCORD_WEBHOOKURL
+      valueFrom:
+        secretKeyRef:
+          name: falcosidekick-discord-webhook
+          key: webhook_url
