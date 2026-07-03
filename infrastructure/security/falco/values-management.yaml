@@ -23,9 +23,9 @@ falcosidekick:
     discord:
       webhookurl: ""
       minimumpriority: critical
-  extraEnv:
-    - name: DISCORD_WEBHOOKURL
-      valueFrom:
-        secretKeyRef:
-          name: falcosidekick-discord-webhook
-          key: webhook_url
+    extraEnv:
+      - name: DISCORD_WEBHOOKURL
+        valueFrom:
+          secretKeyRef:
+            name: falcosidekick-discord-webhook
+            key: webhook_url
