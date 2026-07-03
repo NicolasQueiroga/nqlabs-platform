@@ -106,7 +106,7 @@ spec:
               curl -sL \
                 -H 'Host: auth.platform.nqlabs.network' \
                 -H 'X-Forwarded-Proto: https' \
-                http://authentik-server.authentik.svc.cluster.local:80/application/saml/ceph-dashboard-saml/metadata/ \
+                http://authentik-server.authentik.svc.cluster.local:80/application/saml/ceph/metadata/ \
                 > /tmp/idp-metadata.xml
 
               if [ ! -s /tmp/idp-metadata.xml ] || ! grep -q 'EntityDescriptor' /tmp/idp-metadata.xml; then
