@@ -43,4 +43,5 @@ spec:
   service:
     loadBalancerSourceRanges:
       - 100.64.0.0/10
+      - 192.168.15.0/24
     loadBalancerSourceRangesPolicy: Allow
