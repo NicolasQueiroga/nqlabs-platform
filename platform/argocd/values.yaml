@@ -77,6 +77,90 @@ configs:
         - '.spec.data[]?.remoteRef.nullBytePolicy'
         - '.spec.target.deletionPolicy'
 
+    # ── Custom health checks ──────────────────────────────────────────
+    # ArgoCD v3.4.x doesn't ship health checks for several CRD types used
+    # by the platform. Without explicit health checks, resources show
+    # "Unknown" health and the overall app health gets stuck at "Degraded"
+    # after any transient issue. These Lua scripts give ArgoCD explicit
+    # health evaluation logic for the key infrastructure CRDs.
+
+    # CephCluster — phase=Ready & health=HEALTH_OK → Healthy
+    resource.customizations.health.ceph.rook.io_CephCluster: |
+      hs = {}
+      if obj.status ~= nil then
+        if obj.status.phase == "Ready" then
+          if obj.status.ceph ~= nil and obj.status.ceph.health == "HEALTH_OK" then
+            hs.status = "Healthy"
+          elseif obj.status.ceph ~= nil and obj.status.ceph.health == "HEALTH_WARN" then
+            hs.status = "Degraded"
+            hs.message = obj.status.ceph.health
+          else
+            hs.status = "Progressing"
+            hs.message = "Ceph cluster is " .. (obj.status.phase or "unknown")
+          end
+        else
+          hs.status = "Progressing"
+          hs.message = "Ceph cluster phase: " .. (obj.status.phase or "unknown")
+        end
+      else
+        hs.status = "Progressing"
+        hs.message = "Waiting for CephCluster status"
+      end
+      return hs
+
+    # CephBlockPool — phase=Ready → Healthy
+    resource.customizations.health.ceph.rook.io_CephBlockPool: |
+      hs = {}
+      if obj.status ~= nil and obj.status.phase == "Ready" then
+        hs.status = "Healthy"
+      else
+        hs.status = "Progressing"
+        hs.message = "Waiting for CephBlockPool to be Ready"
+      end
+      return hs
+
+    # CephObjectStore — phase=Ready → Healthy
+    resource.customizations.health.ceph.rook.io_CephObjectStore: |
+      hs = {}
+      if obj.status ~= nil and obj.status.phase == "Ready" then
+        hs.status = "Healthy"
+      else
+        hs.status = "Progressing"
+        hs.message = "Waiting for CephObjectStore to be Ready"
+      end
+      return hs
+
+    # ObjectBucketClaim — phase=Bound → Healthy
+    resource.customizations.health.objectbucket.io_ObjectBucketClaim: |
+      hs = {}
+      if obj.status ~= nil and obj.status.phase == "Bound" then
+        hs.status = "Healthy"
+      else
+        hs.status = "Progressing"
+        hs.message = "Waiting for ObjectBucketClaim to be Bound"
+      end
+      return hs
+
+    # ClusterSecretStore — check Ready condition
+    resource.customizations.health.external-secrets.io_ClusterSecretStore: |
+      hs = {}
+      if obj.status ~= nil and obj.status.conditions ~= nil then
+        for i, c in ipairs(obj.status.conditions) do
+          if c.type == "Ready" then
+            if c.status == "True" then
+              hs.status = "Healthy"
+            else
+              hs.status = "Degraded"
+              hs.message = c.message or "ClusterSecretStore not Ready"
+            end
+            return hs
+          end
+        end
+      end
+      hs.status = "Progressing"
+      hs.message = "Waiting for ClusterSecretStore status"
+      return hs
+
   # RBAC — map Authentik groups to ArgoCD roles.
   rbac:
     # No access by default; access is granted only via group membership.

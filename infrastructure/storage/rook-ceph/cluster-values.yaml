@@ -20,13 +20,14 @@ cephClusterSpec:
     count: 3
     allowMultiplePerNode: false
 
-  # Keep the monitor disk-space warning meaningful for the 32GB Talos /var
+  # Keep the monitor disk-space warning meaningful for the 30GB Talos /var
   # volumes used in this lab. Ceph's default 30% warning is too conservative
   # here and triggers while the nodes still have ~13-14GiB free; critical
-  # thresholds remain unchanged.
+  # thresholds remain unchanged. Lowered to 10% because at 15% the warning
+  # was still triggering with 4.7G available (85% used) on 30G disks.
   cephConfig:
     mon:
-      mon_data_avail_warn: "15"
+      mon_data_avail_warn: "10"
 
   # 1 MGR (active/standby not needed for 3-node lab)
   mgr:
