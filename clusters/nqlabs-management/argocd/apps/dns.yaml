@@ -24,7 +24,7 @@ spec:
       targetRevision: HEAD
       path: infrastructure/dns
       directory:
-        include: "network-policies.yaml,manifests/httproute.yaml"
+        include: "{network-policies.yaml,manifests/httproute.yaml}"
   destination:
     server: https://kubernetes.default.svc
     namespace: dns
