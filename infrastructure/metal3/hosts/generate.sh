@@ -63,6 +63,12 @@ grep -v '^#' "${INVENTORY}" | grep -v '^$' | grep -v '^name,' | while IFS=, read
         bmc_secret="$bmc_credentials"
     fi
 
+    # Check if host has BMC (physical NUCs without BMC use "none")
+    has_bmc=true
+    if [ "$bmc_address" = "none" ] || [ -z "$bmc_address" ]; then
+        has_bmc=false
+    fi
+
     # Convert booleans to lowercase
     accepted_lower=$(echo "$accepted" | tr '[:upper:]' '[:lower:]')
     online_lower=$(echo "$online" | tr '[:upper:]' '[:lower:]')
@@ -80,8 +86,18 @@ grep -v '^#' "${INVENTORY}" | grep -v '^$' | grep -v '^name,' | while IFS=, read
         external_prov=""
     fi
 
+    # Build BMC section (skip for physical hosts without BMC)
+    if [ "$has_bmc" = "true" ]; then
+        bmc_section="  bmc:
+    address: ${bmc_address}
+    credentialsName: ${bmc_secret}
+    disableCertificateVerification: true"
+    else
+        bmc_section=""
+    fi
+
     cat > "${output_file}" << EOF
-# BareMetalHost: ${name} (${provider} ${vmid})
+# BareMetalHost: ${name} (${provider})
 #
 # Generated from inventory.csv — do not edit directly.
 # To change: edit inventory.csv and run ./generate.sh
@@ -107,11 +123,8 @@ spec:
   bootMACAddress: ${mac}
   bootMode: UEFI
   hardwareProfile: unknown
-  bmc:
-    address: ${bmc_address}
-    credentialsName: ${bmc_secret}
-    disableCertificateVerification: true
-${external_prov}
+${bmc_section:+${bmc_section}
+}${external_prov}
 EOF
 
     echo "Generated: ${name}.yaml"

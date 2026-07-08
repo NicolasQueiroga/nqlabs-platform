@@ -1,0 +1,19 @@
+machine:
+  network:
+    interfaces:
+      - interface: eno1
+        addresses:
+          - 10.0.20.12/24
+        routes:
+          - network: 0.0.0.0/0
+            gateway: 10.0.20.1
+        vip:
+          ip: 10.0.20.9
+  certSANs:
+    - 10.0.20.12
+    - 10.0.20.9
+---
+apiVersion: v1alpha1
+kind: HostnameConfig
+auto: off
+hostname: stg-cp-03

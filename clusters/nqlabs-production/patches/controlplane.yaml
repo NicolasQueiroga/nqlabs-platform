@@ -1,18 +1,21 @@
+# Common Talos control-plane patch for nqlabs-production (Intel NUC hardware).
+#
+# Applied during `talosctl gen config --config-patch-control-plane`.
+# Per-node settings (IP, hostname, certSANs) are in bootstrap/talos/patch-prd-cp-XX.yaml.
+#
+# Hardware assumptions (verify on first boot):
+#   - Disk: /dev/nvme0n1 (NVMe SSD)
+#   - NIC: eno1 (Intel I219-V — common on Intel NUCs)
+#   - No BMC/IPMI/Redfish — manual USB boot provisioning
+
 machine:
   install:
-    disk: /dev/sda
+    disk: /dev/nvme0n1
   network:
     interfaces:
-      - interface: ens18
-        dhcp: false
-        addresses:
-          - 192.168.15.33/24
-        routes:
-          - network: 0.0.0.0/0
-            gateway: 192.168.15.1
-    nameservers:
-      - 192.168.15.1
-      - 1.1.1.1
+      - interface: eno1
+  certSANs:
+    - 10.0.30.9
 cluster:
   allowSchedulingOnControlPlanes: true
   network:

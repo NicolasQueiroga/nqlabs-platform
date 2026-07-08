@@ -32,8 +32,12 @@ name,vmid,mac,bmc_address,cluster,role,provider,accepted,online,cores,memory,bmc
 mgmt-01,101,BC:24:11:15:00:10,redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/101,nqlabs-management,control-plane,proxmox,false,true,8,38912,proxmox-shared
 mgmt-02,102,BC:24:11:15:00:11,redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/102,nqlabs-management,control-plane,proxmox,false,true,8,38912,proxmox-shared
 mgmt-03,103,BC:24:11:15:00:12,redfish-virtualmedia+https://192.168.15.20:8443/redfish/v1/Systems/103,nqlabs-management,control-plane,proxmox,false,true,8,38912,proxmox-shared
-# staging-cp-01 — Add when physical hardware is ready:
-#   staging-cp-01,<mac>,redfish+https://<bmc-ip>/redfish/v1/Systems/0,nqlabs-staging,control-plane,physical,true,true,<cores>,<memory>,staging-cp-01-bmc
-#
-# production-cp-01 — Add when physical hardware is ready:
-#   production-cp-01,<mac>,redfish+https://<bmc-ip>/redfish/v1/Systems/0,nqlabs-production,control-plane,physical,true,true,<cores>,<memory>,production-cp-01-bmc
+# Physical NUCs — no BMC (manual USB boot provisioning).
+# Replace placeholder MACs with real ones when NUCs arrive.
+# bmc_address=none and bmc_credentials=none → generate.sh skips BMC section.
+stg-cp-01,physical,DE:AD:BE:EF:00:01,none,nqlabs-staging,control-plane,physical,false,true,4,16384,none
+stg-cp-02,physical,DE:AD:BE:EF:00:02,none,nqlabs-staging,control-plane,physical,false,true,4,16384,none
+stg-cp-03,physical,DE:AD:BE:EF:00:03,none,nqlabs-staging,control-plane,physical,false,true,4,16384,none
+prd-cp-01,physical,DE:AD:BE:EF:00:04,none,nqlabs-production,control-plane,physical,false,true,4,16384,none
+prd-cp-02,physical,DE:AD:BE:EF:00:05,none,nqlabs-production,control-plane,physical,false,true,4,16384,none
+prd-cp-03,physical,DE:AD:BE:EF:00:06,none,nqlabs-production,control-plane,physical,false,true,4,16384,none

@@ -1,0 +1,27 @@
+# BareMetalHost: prd-cp-02 (physical)
+#
+# Generated from inventory.csv — do not edit directly.
+# To change: edit inventory.csv and run ./generate.sh
+#
+# Cluster: nqlabs-production
+# Role: control-plane
+# MAC: DE:AD:BE:EF:00:05
+# BMC: none
+# Credentials: none
+
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  name: prd-cp-02
+  namespace: metal3
+  labels:
+    cluster: nqlabs-production
+    role: control-plane
+    provider: physical
+spec:
+  online: true
+  bootMACAddress: DE:AD:BE:EF:00:05
+  bootMode: UEFI
+  hardwareProfile: unknown
+  externallyProvisioned: true
