@@ -61,11 +61,6 @@ grafana:
       # Break-glass: use kubectl port-forward to access Grafana directly.
       oauth_auto_login: true
       disable_login_form: true
-      # Allow email-based user lookup so OIDC users from previous Grafana
-      # versions (pre-v13) can still log in. Without this, Grafana v13's user
-      # sync system can't link the OIDC sub claim to existing users and fails
-      # with "user not found". See https://github.com/grafana/grafana/issues/111139
-      oauth_allow_insecure_email_lookup: true
     "auth.generic_oauth":
       enabled: true
       name: Authentik
