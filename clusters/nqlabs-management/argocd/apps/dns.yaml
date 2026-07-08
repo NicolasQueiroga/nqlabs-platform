@@ -24,7 +24,7 @@ spec:
       targetRevision: HEAD
       path: infrastructure/dns
       directory:
-        include: "{network-policies.yaml,httproute.yaml}"
+        include: "network-policies.yaml"
   destination:
     server: https://kubernetes.default.svc
     namespace: dns
@@ -43,7 +43,6 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/enforce-version: latest
-        gateway-access: "true"
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
@@ -90,7 +89,6 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/enforce-version: latest
-        gateway-access: "true"
     retry:
       limit: 5
     syncOptions:
@@ -131,7 +129,6 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/enforce-version: latest
-        gateway-access: "true"
     retry:
       limit: 5
     syncOptions:

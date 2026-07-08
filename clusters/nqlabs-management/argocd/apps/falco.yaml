@@ -27,7 +27,7 @@ spec:
       targetRevision: HEAD
       path: infrastructure/security/falco
       directory:
-        include: "{falcosidekick-discord-externalsecret.yaml,httproute.yaml,network-policies.yaml}"
+        include: "falcosidekick-discord-externalsecret.yaml"
   destination:
     server: https://kubernetes.default.svc
     namespace: falco
@@ -39,7 +39,6 @@ spec:
       labels:
         pod-security.kubernetes.io/enforce: privileged
         pod-security.kubernetes.io/enforce-version: latest
-        gateway-access: "true"
     retry:
       limit: 5
     syncOptions:

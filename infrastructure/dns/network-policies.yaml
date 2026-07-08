@@ -87,26 +87,3 @@ spec:
         - port: 7979
           protocol: TCP
 
----
-# Allow Authentik proxy to reach external-dns UI (port 7979)
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: dns-allow-authentik-proxy
-  namespace: dns
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/name: external-dns
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: authentik
-      ports:
-        - port: 7979
-          protocol: TCP
