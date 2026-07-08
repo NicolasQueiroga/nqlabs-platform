@@ -1,6 +1,10 @@
-# CAPI (Cluster API) PodMonitor — scrape controller metrics on port 8443.
-# The capi-webhook-service only exposes 443 (webhook), not metrics.
-# A PodMonitor is needed to scrape the metrics port directly.
+# CAPI (Cluster API) PodMonitors — scrape controller metrics on port 8443.
+# The webhook services only expose 443 (webhook), not metrics.
+# PodMonitors are needed to scrape the metrics port directly.
+# All CAPI providers use HTTPS with self-signed certs on the metrics port.
+
+---
+# CAPI core — cluster-api provider
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
@@ -13,6 +17,50 @@ spec:
   selector:
     matchLabels:
       cluster.x-k8s.io/provider: cluster-api
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+      scheme: https
+      tlsConfig:
+        insecureSkipVerify: true
+
+---
+# CABPT — Talos bootstrap provider
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: cabpt
+  namespace: cabpt-system
+  labels:
+    app.kubernetes.io/name: cabpt
+    app.kubernetes.io/part-of: nqlabs-platform
+spec:
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/provider: bootstrap-talos
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+      scheme: https
+      tlsConfig:
+        insecureSkipVerify: true
+
+---
+# CACPPT — Talos control plane provider
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: cacppt
+  namespace: cacppt-system
+  labels:
+    app.kubernetes.io/name: cacppt
+    app.kubernetes.io/part-of: nqlabs-platform
+spec:
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/provider: control-plane-talos
   podMetricsEndpoints:
     - port: metrics
       interval: 30s
