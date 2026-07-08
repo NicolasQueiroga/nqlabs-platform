@@ -27,7 +27,7 @@ spec:
       targetRevision: HEAD
       path: infrastructure/security/falco
       directory:
-        include: "{falcosidekick-discord-externalsecret.yaml,manifests/httproute.yaml,manifests/network-policies.yaml}"
+        include: "{falcosidekick-discord-externalsecret.yaml,httproute.yaml,network-policies.yaml}"
   destination:
     server: https://kubernetes.default.svc
     namespace: falco

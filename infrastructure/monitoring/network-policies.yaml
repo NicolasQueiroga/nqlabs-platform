@@ -134,8 +134,6 @@ spec:
           protocol: TCP
         - port: 9093
           protocol: TCP
-        - port: 3200
-          protocol: TCP
         - port: 9115
           protocol: TCP
 ---
