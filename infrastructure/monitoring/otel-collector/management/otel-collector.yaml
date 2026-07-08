@@ -160,8 +160,8 @@ metadata:
     app.kubernetes.io/name: otel-collector
     app.kubernetes.io/part-of: nqlabs-platform
 ---
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: otel-collector-allow-private-otlp
   namespace: monitoring
@@ -169,19 +169,18 @@ metadata:
     app.kubernetes.io/name: otel-collector
     app.kubernetes.io/part-of: nqlabs-platform
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/name: otel-collector
-  policyTypes:
-    - Ingress
   ingress:
-    - ports:
-        - protocol: TCP
-          port: 4317
-        - protocol: TCP
-          port: 4318
-        - protocol: TCP
-          port: 13133
+    - toPorts:
+        - ports:
+            - port: "4317"
+              protocol: TCP
+            - port: "4318"
+              protocol: TCP
+            - port: "13133"
+              protocol: TCP
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

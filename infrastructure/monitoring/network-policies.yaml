@@ -5,62 +5,59 @@
 #   - Platform Gateway (namespaces with gateway-access label) → UIs
 #   - Prometheus egress to all namespaces (scraping)
 ---
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: monitoring-deny-ingress
   namespace: monitoring
 spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints: []
 ---
 # Allow intra-namespace traffic within monitoring.
 # Promtail → Loki gateway, Grafana → Prometheus/Loki, Prometheus → Alertmanager.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: monitoring-allow-intra-namespace
   namespace: monitoring
 spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
+  endpointSelector: {}
   ingress:
-    - from:
-        - podSelector: {}
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
 ---
 # Allow Gateway (namespaces with gateway-access label) to reach monitoring UIs.
 # Also allow traffic from the Cilium Envoy gateway proxy, which runs with
 # hostNetwork: true in kube-system. Its traffic appears as the node IP, not
 # from a pod in any namespace, so namespaceSelector alone doesn't match.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: monitoring-allow-gateway
   namespace: monitoring
 spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
+  endpointSelector: {}
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              gateway-access: "true"
-        - ipBlock:
-            cidr: 192.168.15.0/24
-      ports:
-        - port: 80
-          protocol: TCP
-        - port: 3000
-          protocol: TCP
-        - port: 8080
-          protocol: TCP
-        - port: 9090
-          protocol: TCP
-        - port: 9093
-          protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            gateway-access: "true"
+    - fromCIDR:
+        - 192.168.15.0/24
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "3000"
+              protocol: TCP
+            - port: "8080"
+              protocol: TCP
+            - port: "9090"
+              protocol: TCP
+            - port: "9093"
+              protocol: TCP
 ---
 # Allow Cilium Gateway API proxy (reserved "ingress" identity) to reach monitoring UIs.
 # The Cilium envoy connects directly to pod IPs on container ports (not service ports),
@@ -90,64 +87,58 @@ spec:
               protocol: TCP
 ---
 # Allow Falco sidekick to post warning+ events into Alertmanager.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: monitoring-allow-falco-alertmanager
   namespace: monitoring
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/name: alertmanager
-  policyTypes:
-    - Ingress
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: falco
-      ports:
-        - port: 9093
-          protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": falco
+      toPorts:
+        - ports:
+            - port: "9093"
+              protocol: TCP
 ---
 # Allow the embedded Authentik proxy outpost to reach protected monitoring UIs
 # after login. Prometheus/Alertmanager/Thanos already share gateway-allowed
 # ports; Pyroscope needs 4040 explicitly.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: monitoring-allow-authentik-proxy
   namespace: monitoring
 spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
+  endpointSelector: {}
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: authentik
-      ports:
-        - port: 4040
-          protocol: TCP
-        - port: 9090
-          protocol: TCP
-        - port: 9093
-          protocol: TCP
-        - port: 9115
-          protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": authentik
+      toPorts:
+        - ports:
+            - port: "4040"
+              protocol: TCP
+            - port: "9090"
+              protocol: TCP
+            - port: "9093"
+              protocol: TCP
+            - port: "9115"
+              protocol: TCP
 ---
 # Allow Prometheus to scrape all pods in all namespaces (egress)
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: monitoring-allow-prometheus-egress
   namespace: monitoring
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/name: prometheus
-  policyTypes:
-    - Egress
   egress:
     - {}

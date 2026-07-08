@@ -13,20 +13,19 @@
 # namespace; their ingress is restricted to the authentik server/worker only.
 # Valkey ingress is restricted to authentik server/worker only.
 ---
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: authentik-default-deny
   namespace: authentik
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
-    - Egress
-  ingress: []
-  egress: []
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints: []
+  egress:
+    - toEndpoints: []
 ---
 # DNS egress for all pods in authentik namespace.
 # Use a CiliumNetworkPolicy here because DNS traffic goes to the kube-dns
@@ -66,40 +65,39 @@ spec:
               - matchPattern: "*"
 ---
 # Allow authentik-server and authentik-worker to reach each other.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: authentik-allow-internal
   namespace: authentik
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/instance: authentik
-  policyTypes:
-    - Ingress
-    - Egress
   ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/instance: authentik
-      ports:
-        - protocol: TCP
-          port: 80
-        - protocol: TCP
-          port: 9000
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": authentik
+            app.kubernetes.io/instance: authentik
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "9000"
+              protocol: TCP
   egress:
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/instance: authentik
-      ports:
-        - protocol: TCP
-          port: 80
-        - protocol: TCP
-          port: 9000
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": authentik
+            app.kubernetes.io/instance: authentik
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "9000"
+              protocol: TCP
 ---
 # Allow the Cilium Gateway to reach authentik-server.
 # cilium-envoy runs with hostNetwork=true so it has no pod IP and no
@@ -128,253 +126,239 @@ spec:
               protocol: TCP
 ---
 # Allow Prometheus (monitoring namespace) to scrape authentik-server metrics.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: authentik-allow-prometheus
   namespace: authentik
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/component: server
       app.kubernetes.io/instance: authentik
-  policyTypes:
-    - Ingress
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: monitoring
-          podSelector:
-            matchLabels:
-              app.kubernetes.io/name: prometheus
-      ports:
-        - protocol: TCP
-          port: 80
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+            app.kubernetes.io/name: prometheus
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
 ---
 # Allow monitoring namespace pods to reach authentik-server over HTTP.
 # Required for Gatus OIDC discovery and future blackbox/health checks.
 # Service port 80 targets container port 9000, so the NetworkPolicy must
 # allow the pod port (9000), not the Service port (80).
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: authentik-allow-monitoring-http
   namespace: authentik
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/component: server
       app.kubernetes.io/instance: authentik
-  policyTypes:
-    - Ingress
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: monitoring
-      ports:
-        - protocol: TCP
-          port: 9000
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+      toPorts:
+        - ports:
+            - port: "9000"
+              protocol: TCP
 ---
 # Allow rook-ceph namespace pods to reach authentik-server over HTTP.
 # Required for the Ceph SAML bootstrap Job to download IdP metadata.
 # Service port 80 targets container port 9000, so the NetworkPolicy must
 # allow the pod port (9000), not the Service port (80).
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: authentik-allow-rook-ceph-http
   namespace: authentik
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/component: server
       app.kubernetes.io/instance: authentik
-  policyTypes:
-    - Ingress
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: rook-ceph
-      ports:
-        - protocol: TCP
-          port: 9000
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": rook-ceph
+      toPorts:
+        - ports:
+            - port: "9000"
+              protocol: TCP
 ---
 # Allow authentik server/worker to reach Valkey (cache + Celery broker).
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: authentik-allow-to-valkey
   namespace: authentik
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/name: valkey
       app.kubernetes.io/part-of: authentik
-  policyTypes:
-    - Ingress
   ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/instance: authentik
-      ports:
-        - protocol: TCP
-          port: 6379
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": authentik
+            app.kubernetes.io/instance: authentik
+      toPorts:
+        - ports:
+            - port: "6379"
+              protocol: TCP
 ---
 # Allow authentik server/worker to reach CNPG Postgres.
 # Also allow the CNPG operator (cnpg-system) to reach the instance manager
 # HTTP port (8000) for health checks and switchover operations.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: authentik-allow-to-postgres
   namespace: authentik
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       cnpg.io/cluster: authentik-pg
-  policyTypes:
-    - Ingress
   ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/instance: authentik
-      ports:
-        - protocol: TCP
-          port: 5432
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: cnpg-system
-      ports:
-        - protocol: TCP
-          port: 8000
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: monitoring
-      ports:
-        - protocol: TCP
-          port: 9187
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": authentik
+            app.kubernetes.io/instance: authentik
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": cnpg-system
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+      toPorts:
+        - ports:
+            - port: "9187"
+              protocol: TCP
 ---
 # Allow the embedded proxy outpost in authentik-server to reach the protected
 # backend UIs it reverse-proxies after login.
 # Ceph Dashboard is no longer proxied here; it uses native SAML SSO instead.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: authentik-egress-proxy-backends
   namespace: authentik
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/component: server
       app.kubernetes.io/instance: authentik
-  policyTypes:
-    - Egress
   egress:
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: monitoring
-      ports:
-        - protocol: TCP
-          port: 4040
-        - protocol: TCP
-          port: 9090
-        - protocol: TCP
-          port: 9093
-        - protocol: TCP
-          port: 9115
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: argo-rollouts
-      ports:
-        - protocol: TCP
-          port: 3100
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-      ports:
-        - protocol: TCP
-          port: 80
-        - protocol: TCP
-          port: 8081
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+      toPorts:
+        - ports:
+            - port: "4040"
+              protocol: TCP
+            - port: "9090"
+              protocol: TCP
+            - port: "9093"
+              protocol: TCP
+            - port: "9115"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": argo-rollouts
+      toPorts:
+        - ports:
+            - port: "3100"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": kube-system
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "8081"
+              protocol: TCP
 ---
 # Allow OpenBao to reach authentik-server for OIDC discovery and token exchange.
 # Service port 80 targets container port 9000, so the NetworkPolicy must
 # allow the pod port (9000), not the Service port (80).
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: authentik-allow-openbao-http
   namespace: authentik
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/component: server
       app.kubernetes.io/instance: authentik
-  policyTypes:
-    - Ingress
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: openbao
-      ports:
-        - protocol: TCP
-          port: 9000
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": openbao
+      toPorts:
+        - ports:
+            - port: "9000"
+              protocol: TCP
 ---
 # Allow authentik server/worker egress to Valkey and Postgres within namespace.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: authentik-egress-data-layer
   namespace: authentik
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/instance: authentik
-  policyTypes:
-    - Egress
   egress:
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: valkey
-              app.kubernetes.io/part-of: authentik
-      ports:
-        - protocol: TCP
-          port: 6379
-    - to:
-        - podSelector:
-            matchLabels:
-              cnpg.io/cluster: authentik-pg
-      ports:
-        - protocol: TCP
-          port: 5432
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": authentik
+            app.kubernetes.io/name: valkey
+            app.kubernetes.io/part-of: authentik
+      toPorts:
+        - ports:
+            - port: "6379"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": authentik
+            cnpg.io/cluster: authentik-pg
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP
 ---
 # Allow authentik app pods to query the Kubernetes API when outpost service
 # health monitoring checks ClusterIP-backed dependencies.

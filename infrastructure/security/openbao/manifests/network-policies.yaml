@@ -9,20 +9,19 @@
 #   - monitoring → openbao (8200) — Prometheus metrics scrape
 #   - DNS egress for all pods
 ---
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: openbao-default-deny
   namespace: openbao
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
-    - Egress
-  ingress: []
-  egress: []
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints: []
+  egress:
+    - toEndpoints: []
 ---
 # DNS egress for all pods in openbao namespace.
 apiVersion: cilium.io/v2
@@ -70,27 +69,25 @@ spec:
               protocol: TCP
 ---
 # Allow ExternalSecrets operator to reach OpenBao API for secret reads.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: openbao-allow-external-secrets
   namespace: openbao
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/name: openbao
-  policyTypes:
-    - Ingress
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: external-secrets
-      ports:
-        - port: 8200
-          protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": external-secrets
+      toPorts:
+        - ports:
+            - port: "8200"
+              protocol: TCP
 ---
 # Allow OpenBao to call Authentik for OIDC discovery and token exchange.
 apiVersion: cilium.io/v2
@@ -116,40 +113,37 @@ spec:
 ---
 # Raft HA replication — openbao pods communicate on port 8201 for
 # leader election and log replication.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: openbao-allow-raft
   namespace: openbao
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/name: openbao
-  policyTypes:
-    - Ingress
-    - Egress
   ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: openbao
-      ports:
-        - port: 8200
-          protocol: TCP
-        - port: 8201
-          protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: openbao
+      toPorts:
+        - ports:
+            - port: "8200"
+              protocol: TCP
+            - port: "8201"
+              protocol: TCP
   egress:
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: openbao
-      ports:
-        - port: 8200
-          protocol: TCP
-        - port: 8201
-          protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: openbao
+      toPorts:
+        - ports:
+            - port: "8200"
+              protocol: TCP
+            - port: "8201"
+              protocol: TCP
 ---
 # Allow OpenBao to reach the kube-apiserver for TokenReview (Kubernetes
 # auth method) and service registration.
@@ -175,24 +169,22 @@ spec:
               protocol: TCP
 ---
 # Allow Prometheus to scrape OpenBao metrics on port 8200.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: openbao-allow-prometheus
   namespace: openbao
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/name: openbao
-  policyTypes:
-    - Ingress
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: monitoring
-      ports:
-        - port: 8200
-          protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+      toPorts:
+        - ports:
+            - port: "8200"
+              protocol: TCP

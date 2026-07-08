@@ -4,86 +4,79 @@
 #   - CoreDNS: port 53 (UDP + TCP) from all namespaces (DNS resolution)
 #   - etcd: port 2379 from CoreDNS + external-dns only
 ---
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: dns-deny-ingress
   namespace: dns
 spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints: []
 ---
 # Allow DNS queries to CoreDNS (port 53 UDP + TCP from anywhere in cluster)
 # CoreDNS Helm chart labels pods with app.kubernetes.io/name: coredns
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: dns-allow-coredns
   namespace: dns
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app.kubernetes.io/name: coredns
-  policyTypes:
-    - Ingress
   ingress:
-    - ports:
-        - port: 53
-          protocol: UDP
-        - port: 53
-          protocol: TCP
+    - toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
 ---
 # Allow etcd client access from CoreDNS and external-dns (port 2379)
 # Both run in the dns namespace, so podSelector (without namespaceSelector)
 # matches pods in the same namespace.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: dns-allow-etcd-client
   namespace: dns
 spec:
-  podSelector:
+  endpointSelector:
     matchLabels:
       app: etcd-dns
-  policyTypes:
-    - Ingress
   ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: coredns
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: external-dns
-      ports:
-        - port: 2379
-          protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: coredns
+        - matchLabels:
+            app.kubernetes.io/name: external-dns
+      toPorts:
+        - ports:
+            - port: "2379"
+              protocol: TCP
 ---
 # Allow Prometheus in monitoring namespace to scrape dns namespace metrics.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: dns-allow-monitoring-metrics
   namespace: dns
 spec:
-  podSelector:
+  endpointSelector:
     matchExpressions:
       - key: app.kubernetes.io/name
         operator: In
         values:
           - coredns
           - external-dns
-  policyTypes:
-    - Ingress
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: monitoring
-      ports:
-        - port: 9153
-          protocol: TCP
-        - port: 7979
-          protocol: TCP
-
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+      toPorts:
+        - ports:
+            - port: "9153"
+              protocol: TCP
+            - port: "7979"
+              protocol: TCP

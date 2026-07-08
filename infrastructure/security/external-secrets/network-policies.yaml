@@ -4,25 +4,24 @@
 # API-server admission traffic to the webhook is allowed by a CiliumNetworkPolicy
 # below using Cilium node identities instead of broad LAN CIDRs. Egress remains
 # unrestricted because ESO must reach 1Password APIs and Kubernetes APIs.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: external-secrets-deny-ingress
   namespace: external-secrets
 spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
+  endpointSelector: {}
   ingress:
-    - from:
-        - podSelector: {}
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: monitoring
-      ports:
-        - port: 8080
-          protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": external-secrets
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -47,4 +46,3 @@ spec:
         - ports:
             - port: "10250"
               protocol: TCP
-
