@@ -55,7 +55,7 @@ on:
         type: boolean
         default: false
       kafka:
-        description: Enable Kafka/Redpanda event streaming (topics provisioned via app.yaml)
+        description: Enable Kafka event streaming (topics provisioned via app.yaml)
         required: false
         type: boolean
         default: false
@@ -187,7 +187,7 @@ jobs:
           extras=""
           if [ "$DB" = "true" ]; then extras="$extras\n- PostgreSQL database (CNPG + PgBouncer pooler, WAL backup to Ceph RGW)"; fi
           if [ "$REDIS" = "true" ]; then extras="$extras\n- Valkey (Redis) cache with persistent storage"; fi
-          if [ "$KAFKA" = "true" ]; then extras="$extras\n- Kafka event streaming via Redpanda (add topics to kafka.topics in app.yaml)"; fi
+          if [ "$KAFKA" = "true" ]; then extras="$extras\n- Kafka event streaming (add topics to kafka.topics in app.yaml)"; fi
 
           body=$(cat <<BODY
           Scaffolds platform descriptors for **${NAME}** (team: ${TEAM}, repo ${REPO}, image ${IMG}).

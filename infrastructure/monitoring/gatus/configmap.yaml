@@ -245,13 +245,6 @@ data:
         conditions:
           - "[CONNECTED] == true"
 
-      - name: Redpanda
-        group: Infrastructure
-        url: http://redpanda.redpanda.svc.cluster.local:9644/v1/cluster/health
-        interval: 1m
-        conditions:
-          - "[STATUS] == 200"
-
       - name: Tailscale Operator
         group: Infrastructure
         url: http://operator.tailscale.svc.cluster.local:8080/healthz

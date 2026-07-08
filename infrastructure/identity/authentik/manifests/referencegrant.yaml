@@ -1,4 +1,4 @@
-# Allow HTTPRoutes in the monitoring, argo-rollouts, rook-ceph, and redpanda
+# Allow HTTPRoutes in the monitoring, argo-rollouts, and rook-ceph
 # namespaces to reference the authentik-server Service as a backend (forward-auth
 # via the embedded outpost). Gateway API requires a ReferenceGrant for
 # cross-namespace backendRefs.
@@ -18,9 +18,6 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       namespace: rook-ceph
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      namespace: redpanda
   to:
     - group: ""
       kind: Service

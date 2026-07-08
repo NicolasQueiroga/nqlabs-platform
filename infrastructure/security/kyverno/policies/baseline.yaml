@@ -3,7 +3,7 @@
 # block non-compliant resources and surface violations in PolicyReports.
 #
 # Namespace exclusions: kube-system, falco, tailscale, local-path-storage,
-# velero, monitoring, dns, rook-ceph, redpanda, openbao, metal3,
+# velero, monitoring, dns, rook-ceph, openbao, metal3,
 # ironic-standalone-operator-system, baremetal-operator-system,
 # capi-system, capm3-system, cabpt-system, cacppt-system — system/infra
 # namespaces that may need exceptions. Add/remove namespaces from the
@@ -43,7 +43,6 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
-                - redpanda
                 - openbao
                 - metal3
                 - ironic-standalone-operator-system
@@ -90,8 +89,6 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
-                - openbao
-                - redpanda
                 - openbao
                 - metal3
                 - ironic-standalone-operator-system
@@ -145,7 +142,6 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
-                - redpanda
                 - openbao
                 - metal3
                 - ironic-standalone-operator-system
@@ -161,7 +157,7 @@ spec:
         pattern:
           spec:
             containers:
-              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/library/* | docker.io/cloudflare/* | docker.io/louislam/* | docker.io/grafana/* | docker.io/bitnami/* | docker.io/otel/* | docker.io/coredns/* | docker.io/velero/* | docker.io/falcosecurity/* | docker.io/curlimages/* | curlimages/* | cr.l5d.io/* | argoproj.github.io/* | reg.kyverno.io/* | ecr-public.aws.com/* | gcr.io/* | docker.redpanda.com/*"
+              - image: "ghcr.io/* | registry.k8s.io/* | quay.io/* | docker.io/library/* | docker.io/cloudflare/* | docker.io/louislam/* | docker.io/grafana/* | docker.io/bitnami/* | docker.io/otel/* | docker.io/coredns/* | docker.io/velero/* | docker.io/falcosecurity/* | docker.io/curlimages/* | curlimages/* | cr.l5d.io/* | argoproj.github.io/* | reg.kyverno.io/* | ecr-public.aws.com/* | gcr.io/* "
 ---
 # --- require-run-as-nonroot ---
 # Tightened from optional pattern to anyPattern — now requires runAsNonRoot: true
@@ -194,7 +190,6 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
-                - redpanda
                 - openbao
                 - metal3
                 - ironic-standalone-operator-system
@@ -245,7 +240,6 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
-                - redpanda
                 - openbao
                 - metal3
                 - ironic-standalone-operator-system
@@ -294,8 +288,6 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
-                - openbao
-                - redpanda
                 - openbao
                 - metal3
                 - ironic-standalone-operator-system
@@ -356,7 +348,6 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
-                - redpanda
                 - openbao
                 - metal3
                 - ironic-standalone-operator-system
@@ -404,7 +395,6 @@ spec:
                 - monitoring
                 - dns
                 - rook-ceph
-                - redpanda
                 - openbao
                 - metal3
                 - ironic-standalone-operator-system

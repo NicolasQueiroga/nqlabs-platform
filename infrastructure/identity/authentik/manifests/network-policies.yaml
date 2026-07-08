@@ -6,7 +6,7 @@
 #   - authentik-worker → authentik-valkey (6379) — Celery queue
 #   - authentik-server → authentik-pg-rw (5432) — database
 #   - authentik-worker → authentik-pg-rw (5432) — database
-#   - authentik-server → monitoring / argo-rollouts / hubble-ui / openbao / redpanda — proxy backends
+#   - authentik-server → monitoring / argo-rollouts / hubble-ui / openbao — proxy backends
 #   - monitoring namespace → authentik-server (metrics) — Prometheus scrape
 #
 # CNPG pods (authentik-pg-rw) are managed by the CNPG operator in the same
@@ -318,13 +318,6 @@ spec:
           port: 80
         - protocol: TCP
           port: 8081
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: redpanda
-      ports:
-        - protocol: TCP
-          port: 8080
 ---
 # Allow OpenBao to reach authentik-server for OIDC discovery and token exchange.
 # Service port 80 targets container port 9000, so the NetworkPolicy must

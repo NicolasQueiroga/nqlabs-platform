@@ -153,17 +153,6 @@ spec:
             summary: "Ironic is down"
             description: "Ironic service is not responding — bare metal provisioning is unavailable."
 
-    - name: nqlabs.infrastructure.redpanda
-      rules:
-        - alert: NQLabsRedpandaClusterDegraded
-          expr: redpanda_kafka_cluster_partition_under_replicated_replica > 0
-          for: 5m
-          labels:
-            severity: warning
-          annotations:
-            summary: "Redpanda cluster has under-replicated partitions"
-            description: "Redpanda cluster has under-replicated partitions — data may be at risk."
-
     - name: nqlabs.infrastructure.loki
       rules:
         - alert: NQLabsLokiIngestionFailing

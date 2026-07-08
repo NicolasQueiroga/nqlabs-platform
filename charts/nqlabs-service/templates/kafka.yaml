@@ -2,7 +2,7 @@
 {{- $svcName := include "nqlabs-service.name" . -}}
 {{- $fullname := include "nqlabs-service.fullname" . -}}
 {{- $namespace := .Release.Namespace -}}
-{{- $brokers := .Values.kafka.brokers | default "redpanda.redpanda.svc.cluster.local:9092" -}}
+{{- $brokers := .Values.kafka.brokers | default "kafka.kafka.svc.cluster.local:9092" -}}
 {{- $saslSecretName := printf "%s-kafka-sasl" $fullname -}}
 # ExternalSecret — Kafka SASL credentials for this service.
 # The secret store key is: <service>/<environment>/kafka with properties
@@ -38,7 +38,7 @@ spec:
 ---
 # Topic provisioner Job — runs on deploy to create/ensure the service's topics.
 # Idempotent: re-running it is safe; existing topics are left unchanged.
-# Uses rpk (Redpanda CLI) with SASL auth.
+# Uses rpk (Kafka CLI) with SASL auth.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -67,7 +67,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: rpk
-          image: docker.io/redpandadata/redpanda:v25.1.5
+          image: docker.io/bitnami/kafka:3.9
           imagePullPolicy: IfNotPresent
           command:
             - sh
@@ -113,7 +113,7 @@ spec:
                 - ALL
 
 ---
-# CiliumNetworkPolicy — allow this service's pods to reach Redpanda.
+# CiliumNetworkPolicy — allow this service's pods to reach Kafka.
 # Kafka API port 9092 only. Producer/consumer traffic is scoped to this service.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -132,8 +132,8 @@ spec:
   egress:
     - toEndpoints:
         - matchLabels:
-            "k8s:io.kubernetes.pod.namespace": redpanda
-            app.kubernetes.io/name: redpanda
+            "k8s:io.kubernetes.pod.namespace": kafka
+            app.kubernetes.io/name: kafka
       toPorts:
         - ports:
             - port: "9092"
