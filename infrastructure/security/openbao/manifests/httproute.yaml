@@ -1,2 +1,41 @@
-# OpenBao UI HTTPRoute removed — internal-only service, no external exposure.
-# OpenBao uses token-based auth (no OIDC/SAML), so gateway exposure is a security risk.
+# HTTPRoute for OpenBao UI/API via the platform gateway.
+#
+# Hostname: openbao.platform.nqlabs.network
+# TLS terminated at the gateway (Let's Encrypt wildcard).
+# Backend: openbao-ui:8200 (HTTP) — direct access for OIDC login flow.
+#
+# The OIDC auth method requires the OpenBao login page to be directly
+# accessible so users can click "OIDC" and be redirected to Authentik
+# for authentication. Routing through the Authentik proxy provider
+# would intercept the login page and prevent the OIDC flow.
+#
+# The gateway-access label on the openbao namespace is applied via
+# managedNamespaceMetadata in the ArgoCD Application spec.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: openbao
+  namespace: openbao
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    external-dns.alpha.kubernetes.io/hostname: openbao.platform.nqlabs.network
+spec:
+  parentRefs:
+    - name: platform-gateway
+      namespace: platform
+      sectionName: https
+  hostnames:
+    - openbao.platform.nqlabs.network
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: openbao-ui
+          namespace: openbao
+          port: 8200
+      timeouts:
+        request: 300s
+        backendRequest: 300s

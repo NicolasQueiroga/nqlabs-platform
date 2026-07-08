@@ -45,6 +45,26 @@ metadata:
     gateway-access: "true"
 
 ---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: falco
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/enforce-version: latest
+    gateway-access: "true"
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dns
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/enforce-version: latest
+    gateway-access: "true"
+
+---
 # Wildcard cert for the platform Gateway.
 # Issued by Let's Encrypt via Cloudflare DNS-01 so tailnet devices trust HTTPS
 # without installing the NQLabs internal CA.

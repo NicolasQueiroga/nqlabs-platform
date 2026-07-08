@@ -300,6 +300,10 @@ spec:
           port: 9090
         - protocol: TCP
           port: 9093
+        - protocol: TCP
+          port: 3200
+        - protocol: TCP
+          port: 9115
     - to:
         - namespaceSelector:
             matchLabels:
@@ -323,6 +327,20 @@ spec:
       ports:
         - protocol: TCP
           port: 8080
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: falco
+      ports:
+        - protocol: TCP
+          port: 2801
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: dns
+      ports:
+        - protocol: TCP
+          port: 7979
 ---
 # Allow OpenBao to reach authentik-server for OIDC discovery and token exchange.
 # Service port 80 targets container port 9000, so the NetworkPolicy must

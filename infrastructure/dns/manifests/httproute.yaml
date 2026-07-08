@@ -1,23 +1,23 @@
-# Tempo HTTPRoute — exposed via Authentik proxy for trace UI access.
+# External-DNS UI HTTPRoute — exposed via Authentik proxy.
 #
-# Hostname: tempo.platform.nqlabs.network
-# Backend: authentik-server:80 (Authentik embedded outpost proxies to tempo:3200)
+# Hostname: dns.platform.nqlabs.network
+# Backend: authentik-server:80 (Authentik embedded outpost proxies to external-dns:7979)
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: tempo
-  namespace: monitoring
+  name: external-dns
+  namespace: dns
   annotations:
     argocd.argoproj.io/sync-wave: "4"
-    external-dns.alpha.kubernetes.io/hostname: tempo.platform.nqlabs.network
+    external-dns.alpha.kubernetes.io/hostname: dns.platform.nqlabs.network
 spec:
   parentRefs:
     - name: platform-gateway
       namespace: platform
       sectionName: https
   hostnames:
-    - tempo.platform.nqlabs.network
+    - dns.platform.nqlabs.network
   rules:
     - matches:
         - path:
