@@ -30,9 +30,12 @@ metadata:
   namespace: openbao
   annotations:
     argocd.argoproj.io/sync-wave: "4"
-    # Don't auto-sync this Job — it needs the root token which is only
-    # available after manual init + unseal. Run manually.
-    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    # Do NOT auto-sync this Job — it needs the root token which is only
+    # available after manual init + unseal. ArgoCD should create the Job
+    # template but NOT run it. Run manually:
+    #   kubectl -n openbao create job --from=job/openbao-bootstrap-config \
+    #     openbao-bootstrap-config-manual
+    argocd.argoproj.io/sync-options: Skip=true
 spec:
   template:
     metadata:
