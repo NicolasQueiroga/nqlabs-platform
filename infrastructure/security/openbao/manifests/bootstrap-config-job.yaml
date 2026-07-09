@@ -1,0 +1,208 @@
+# Bootstrap Config Job — OpenBao Kubernetes auth, KV, PKI setup
+#
+# Idempotent Job that configures OpenBao after initialization/unseal:
+#   - Enables Kubernetes auth at kubernetes-management/ path
+#   - Configures auth WITHOUT token_reviewer_jwt (uses local pod SA token,
+#     which auto-rotates — setting token_reviewer_jwt with a manual SA token
+#     causes recurring Degraded status when the token expires)
+#   - Creates eso role for ESO (external-secrets SA in external-secrets ns)
+#   - Creates cert-manager role for cert-manager SA
+#   - Enables KV v2 at kv/ path
+#   - Enables PKI at pki/ path and generates root CA
+#   - Stores CA cert in KV for the openbao-pki-ca ExternalSecret
+#   - Restores default policy with lookup-self + renew-self
+#
+# Run after OpenBao init + unseal:
+#   kubectl -n openbao create job --from=job/openbao-bootstrap-config \
+#     openbao-bootstrap-config-manual \
+#     --env=BAO_TOKEN=<root-token>
+#
+# Or with a pre-created secret:
+#   kubectl -n openbao create secret generic openbao-bootstrap-token \
+#     --from-literal=token=<root-token>
+#   kubectl -n openbao create job --from=job/openbao-bootstrap-config \
+#     openbao-bootstrap-config-manual
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: openbao-bootstrap-config
+  namespace: openbao
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    # Don't auto-sync this Job — it needs the root token which is only
+    # available after manual init + unseal. Run manually.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  template:
+    metadata:
+      annotations:
+        # Sidecar injection not needed for one-shot Job.
+        sidecar.istio.io/inject: "false"
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: openbao
+      containers:
+        - name: bootstrap
+          image: quay.io/openbao/openbao:2.5.2
+          env:
+            - name: BAO_ADDR
+              value: "http://openbao.openbao.svc:8200"
+            # Root token — provide via env or secret (see header comment).
+            - name: BAO_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: openbao-bootstrap-token
+                  key: token
+                  optional: true
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              echo "=== OpenBao Bootstrap Config ==="
+
+              # Wait for OpenBao to be unsealed and responsive.
+              echo "Waiting for OpenBao to be responsive..."
+              until bao status 2>&1 | grep -q "Sealed.*false"; do
+                echo "  OpenBao sealed or unreachable, retrying..."
+                sleep 5
+              done
+              echo "OpenBao is unsealed."
+
+              # ── KV v2 ──────────────────────────────────────────────
+              echo ">>> Enabling KV v2 at kv/ ..."
+              bao secrets enable -path=kv -version=2 kv 2>/dev/null || \
+                echo "  kv/ already enabled (OK)"
+
+              # ── Kubernetes auth ─────────────────────────────────────
+              echo ">>> Enabling Kubernetes auth at kubernetes-management/ ..."
+              bao auth enable -path=kubernetes-management kubernetes 2>/dev/null || \
+                echo "  kubernetes-management/ already enabled (OK)"
+
+              echo ">>> Configuring Kubernetes auth (NO token_reviewer_jwt)..."
+              # CRITICAL: Do NOT set token_reviewer_jwt. OpenBao will use its
+              # local pod SA token (auto-rotated by Kubernetes). Setting
+              # token_reviewer_jwt with a manually-created SA token causes
+              # recurring Degraded status when that token expires (default 1h).
+              bao write auth/kubernetes-management/config \
+                kubernetes_host="https://kubernetes.default.svc:443" \
+                disable_iss_validation=true \
+                disable_local_ca_jwt=false
+
+              echo ">>> Creating eso role for ESO..."
+              bao write auth/kubernetes-management/role/eso \
+                bound_service_account_names="external-secrets" \
+                bound_service_account_namespaces="external-secrets" \
+                policies="eso" \
+                ttl="1h"
+
+              echo ">>> Creating cert-manager role..."
+              bao write auth/kubernetes-management/role/cert-manager \
+                bound_service_account_names="cert-manager" \
+                bound_service_account_namespaces="cert-manager" \
+                policies="cert-manager" \
+                ttl="1h"
+
+              # ── Policies ─────────────────────────────────────────────
+              echo ">>> Writing policies..."
+
+              # default policy must include lookup-self + renew-self
+              # (required for ESO token validation).
+              bao policy write default - <<'EOF'
+              path "auth/token/lookup-self" {
+                capabilities = ["read"]
+              }
+              path "auth/token/renew-self" {
+                capabilities = ["update"]
+              }
+              EOF
+
+              # ESO policy: read/list KV v2
+              bao policy write eso - <<'EOF'
+              path "kv/data/*" {
+                capabilities = ["read"]
+              }
+              path "kv/metadata/*" {
+                capabilities = ["list", "read"]
+              }
+              EOF
+
+              # cert-manager policy: issue + sign certs via PKI
+              bao policy write cert-manager - <<'EOF'
+              path "pki/issue/*" {
+                capabilities = ["create", "update"]
+              }
+              path "pki/sign/*" {
+                capabilities = ["create", "update"]
+              }
+              path "pki/ca" {
+                capabilities = ["read"]
+              }
+              path "pki/crl" {
+                capabilities = ["read"]
+              }
+              EOF
+
+              # admin policy: full access
+              bao policy write admin - <<'EOF'
+              path "*" {
+                capabilities = ["create", "read", "update", "delete", "list"]
+              }
+              EOF
+
+              # sre-read policy: KV read-only
+              bao policy write sre-read - <<'EOF'
+              path "kv/data/*" {
+                capabilities = ["read"]
+              }
+              path "kv/metadata/*" {
+                capabilities = ["list", "read"]
+              }
+              EOF
+
+              # ── PKI ──────────────────────────────────────────────────
+              echo ">>> Enabling PKI at pki/ ..."
+              bao secrets enable -path=pki -max-lease-ttl=87600h pki 2>/dev/null || \
+                echo "  pki/ already enabled (OK)"
+
+              # Generate root CA if not already present.
+              if ! bao read pki/cert/ca >/dev/null 2>&1; then
+                echo ">>> Generating PKI root CA..."
+                bao write pki/root/generate/internal \
+                  common_name="nqlabs.internal" \
+                  ttl=87600h > /tmp/pki-root.json
+
+                # Store CA cert in KV for ExternalSecret.
+                CA_CERT=$(bao read -field=certificate pki/cert/ca)
+                bao kv put kv/openbao-pki ca="$CA_CERT"
+                echo "  CA cert stored in kv/openbao-pki"
+              else
+                echo "  PKI root CA already exists (OK)"
+              fi
+
+              # Configure PKI URLs.
+              bao write pki/config/urls \
+                issuing_certificates="http://openbao.openbao.svc:8200/v1/pki/ca" \
+                crl_distribution_points="http://openbao.openbao.svc:8200/v1/pki/crl"
+
+              # Create role for cert-manager to issue certs.
+              bao write pki/roles/nqlabs-internal \
+                allowed_domains="nqlabs.internal,svc.cluster.local" \
+                allow_subdomains=true \
+                allow_bare_domains=true \
+                max_ttl=720h \
+                ttl=720h
+
+              # ── Verify ───────────────────────────────────────────────
+              echo ""
+              echo "=== Verification ==="
+              echo "Auth methods:"
+              bao auth list
+              echo ""
+              echo "Secret engines:"
+              bao secrets list
+              echo ""
+              echo "Kubernetes auth config:"
+              bao read auth/kubernetes-management/config
+              echo ""
+              echo "=== Bootstrap complete ==="

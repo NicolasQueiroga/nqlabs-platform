@@ -70,14 +70,30 @@ the root token. The bootstrap-token ExternalSecret will sync it to the
 
 ### 4. Run the bootstrap config Job
 
+The bootstrap config Job is idempotent and safe to re-run after any re-init.
+It configures Kubernetes auth (WITHOUT `token_reviewer_jwt`), KV v2, PKI,
+policies, and roles.
+
 ```bash
+# Create a secret with the root token
+kubectl -n openbao create secret generic openbao-bootstrap-token \
+  --from-literal=token=<root-token>
+
+# Run the Job
 kubectl -n openbao create job --from=job/openbao-bootstrap-config openbao-bootstrap-config-manual
 kubectl -n openbao logs job/openbao-bootstrap-config-manual -f
+
+# Clean up the token secret after verification
+kubectl -n openbao delete secret openbao-bootstrap-token
 ```
 
-The Job outputs:
-- AppRole credentials for staging and production clusters
-- Verification commands
+The Job configures:
+- KV v2 at `kv/`
+- Kubernetes auth at `kubernetes-management/` (no `token_reviewer_jwt`)
+- `eso` and `cert-manager` roles
+- `default`, `eso`, `cert-manager`, `admin`, `sre-read` policies
+- PKI at `pki/` with root CA
+- CA cert stored in KV for the `openbao-pki-ca` ExternalSecret
 
 ### 5. Bootstrap remote clusters
 
@@ -221,13 +237,13 @@ Certificate, and `nqlabs-internal-ca` ClusterIssuer from
 
 Update the OpenBao TLS Certificate `issuerRef` to `nqlabs-openbao-pki`.
 
-### 3. Remove bootstrap Job and ExternalSecret
+### 3. Revoke root token (optional)
 
-Remove:
-- `infrastructure/security/openbao/manifests/bootstrap-config-job.yaml`
-- `infrastructure/security/openbao/manifests/bootstrap-token-externalsecret.yaml`
+The bootstrap config Job remains in the repo for future re-inits.
+Do NOT remove it — it configures Kubernetes auth correctly without
+`token_reviewer_jwt`, preventing recurring Degraded status.
 
-Revoke the root token:
+Revoke the root token after bootstrap is verified:
 
 ```bash
 bao token revoke -self
@@ -290,6 +306,43 @@ Likely causes:
 - AppRole secret expired (remote clusters)
 - KV path doesn't exist (seed the secret)
 - Network policy blocking ESO → OpenBao
+
+### ClusterSecretStore nqlabs-openbao Ready=False (unable to create client)
+
+**Most common cause:** `token_reviewer_jwt` expired. After OpenBao re-init,
+if the Kubernetes auth config was set with a manually-created SA token
+(`kubectl create token -n openbao openbao --duration=1h`), that token
+expires after 1 hour. OpenBao can't validate ESO login tokens → CSS goes
+`Ready: False` → ArgoCD app shows Degraded.
+
+**Fix (durable):** Clear `token_reviewer_jwt` so OpenBao uses its local
+pod's projected SA token (auto-rotated by Kubernetes):
+
+```bash
+kubectl exec -n openbao openbao-0 -- bao write auth/kubernetes-management/config \
+  kubernetes_host="https://kubernetes.default.svc:443" \
+  disable_iss_validation=true \
+  disable_local_ca_jwt=false \
+  token_reviewer_jwt=""
+
+# Force ESO to re-validate
+kubectl annotate clustersecretstore nqlabs-openbao force-sync=$(date +%s) --overwrite
+```
+
+**Fix (emergency, non-durable):** Re-set with a fresh 1h token (will break
+again after 1h):
+
+```bash
+OPENBAO_SA_TOKEN=$(kubectl create token -n openbao openbao --duration=1h)
+kubectl exec -n openbao openbao-0 -- bao write auth/kubernetes-management/config \
+  kubernetes_host="https://kubernetes.default.svc:443" \
+  token_reviewer_jwt="$OPENBAO_SA_TOKEN" \
+  disable_iss_validation=true
+```
+
+**Do NOT set `token_reviewer_jwt` with a short-lived SA token.** The
+bootstrap config Job (`infrastructure/security/openbao/manifests/bootstrap-config-job.yaml`)
+configures auth correctly without `token_reviewer_jwt`.
 
 ### cert-manager can't issue cert from nqlabs-openbao-pki
 
