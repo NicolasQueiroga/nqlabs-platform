@@ -1,0 +1,56 @@
+# metrics-server for nqlabs-management.
+#
+# Provides the Kubernetes Metrics API so kubectl top and HPAs work.
+# Multi-source pattern:
+#   source 1 — Helm chart from upstream metrics-server repo
+#   source 2 — our values file from nqlabs-platform repo (referenced as $values)
+#   source 3 — CiliumNetworkPolicy from nqlabs-platform repo (include pattern)
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metrics-server
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # wave 0: infrastructure layer — same as cert-manager, local-path
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: platform
+
+  sources:
+    # Helm chart from upstream
+    - repoURL: https://kubernetes-sigs.github.io/metrics-server/
+      chart: metrics-server
+      targetRevision: "3.13.0"
+      helm:
+        releaseName: metrics-server
+        valueFiles:
+          - $values/infrastructure/monitoring/metrics-server/values.yaml
+
+    # Our values file — referenced as $values above
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+
+    # CiliumNetworkPolicy for metrics-server
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/monitoring/metrics-server
+      directory:
+        include: "network-policies.yaml"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

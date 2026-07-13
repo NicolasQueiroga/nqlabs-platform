@@ -14,10 +14,11 @@ spec:
   bucketName: velero
   storageClassName: ceph-bucket
 ---
-# S3 credentials for the local (RGW) Velero BSL.
-# If the OBC is reprovisioned (new user), update these values.
-apiVersion: v1
-kind: Secret
+# ExternalSecret — S3 credentials for the local (RGW) Velero BSL.
+# Synced from 1Password item "velero-rgw-credentials".
+# If the OBC is reprovisioned (new user), update the 1Password item.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
 metadata:
   name: velero-rgw-credentials
   namespace: velero
@@ -25,9 +26,25 @@ metadata:
     app.kubernetes.io/name: velero
     app.kubernetes.io/component: backup
     app.kubernetes.io/part-of: nqlabs-platform
-type: Opaque
-stringData:
-  cloud: |
-    [default]
-    aws_access_key_id=YMOOWTW6HPWHKWPKNEJX
-    aws_secret_access_key=M6nDMqw5dVMPOVWSPbM2aJZIfXc0mCKvzYgpbaHw
+spec:
+  refreshPolicy: CreatedOnce
+  secretStoreRef:
+    name: nqlabs-1password
+    kind: ClusterSecretStore
+  target:
+    name: velero-rgw-credentials
+    template:
+      type: Opaque
+      templateType: ApplicationProperties
+      data:
+        cloud: |
+          [default]
+          aws_access_key_id={{ .aws_access_key_id }}
+          aws_secret_access_key={{ .aws_secret_access_key }}
+  data:
+    - secretKey: aws_access_key_id
+      remoteRef:
+        key: "velero-rgw-credentials/aws_access_key_id"
+    - secretKey: aws_secret_access_key
+      remoteRef:
+        key: "velero-rgw-credentials/aws_secret_access_key"

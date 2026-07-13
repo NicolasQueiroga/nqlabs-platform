@@ -3120,15 +3120,28 @@ metadata:
 # contains username and password files, BMO uses HTTP Basic Auth.
 # If the directory doesn't exist, BMO defaults to noauth.
 # This Secret is mounted at /opt/metal3/auth/ironic/ in the BMO pod.
-apiVersion: v1
-kind: Secret
+# Credentials synced from 1Password item "ironic-auth" via ExternalSecret.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
 metadata:
   name: ironic-auth
   namespace: baremetal-operator-system
-type: Opaque
-stringData:
-  username: ironic
-  password: "0ZX7CkZIX40-z6pSfHAvlKw3qNHrKDcl"
+spec:
+  refreshPolicy: CreatedOnce
+  secretStoreRef:
+    name: nqlabs-1password
+    kind: ClusterSecretStore
+  target:
+    name: ironic-auth
+    template:
+      type: Opaque
+  data:
+    - secretKey: username
+      remoteRef:
+        key: "ironic-auth/username"
+    - secretKey: password
+      remoteRef:
+        key: "ironic-auth/password"
 ---
 apiVersion: v1
 kind: Service

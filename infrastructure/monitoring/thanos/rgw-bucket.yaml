@@ -14,11 +14,11 @@ spec:
   bucketName: thanos
   storageClassName: ceph-bucket
 ---
-# Thanos object-store config pointing at the internal Ceph RGW endpoint.
-# Credentials are the OBC-generated S3 user for the thanos bucket.
-# If the OBC is reprovisioned (new user), update these values.
-apiVersion: v1
-kind: Secret
+# ExternalSecret — Thanos object-store config pointing at the internal Ceph RGW.
+# Credentials synced from 1Password item "thanos-objstore".
+# If the OBC is reprovisioned (new user), update the 1Password item.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
 metadata:
   name: thanos-objstore
   namespace: monitoring
@@ -26,13 +26,29 @@ metadata:
     app.kubernetes.io/name: thanos
     app.kubernetes.io/component: objstore
     app.kubernetes.io/part-of: nqlabs-platform
-stringData:
-  objstore.yml: |
-    type: S3
-    config:
-      bucket: thanos
-      endpoint: rook-ceph-rgw-platform-object-store.rook-ceph.svc:80
-      access_key: UJPLS2J8SEP6C4Y7VAPB
-      secret_key: 6eHsGcIg8js5lChoU95DSs7Sq9AKDUjbIHSK8Hjv
-      insecure: true
-      signature_version2: false
+spec:
+  refreshPolicy: CreatedOnce
+  secretStoreRef:
+    name: nqlabs-1password
+    kind: ClusterSecretStore
+  target:
+    name: thanos-objstore
+    template:
+      type: Opaque
+      data:
+        objstore.yml: |
+          type: S3
+          config:
+            bucket: thanos
+            endpoint: rook-ceph-rgw-platform-object-store.rook-ceph.svc:80
+            access_key: {{ .access_key }}
+            secret_key: {{ .secret_key }}
+            insecure: true
+            signature_version2: false
+  data:
+    - secretKey: access_key
+      remoteRef:
+        key: "thanos-objstore/access_key"
+    - secretKey: secret_key
+      remoteRef:
+        key: "thanos-objstore/secret_key"

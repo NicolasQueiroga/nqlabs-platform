@@ -40,9 +40,20 @@ spec:
   # BMO uses the same credentials to connect to the Ironic API.
   apiCredentialsName: ironic-api-credentials
 
-  # SSH key for accessing the Ironic Python Agent ramdisk (debugging)
-  # deployRamdisk:
-  #   sshKey: "ssh-ed25519 AAAAC3..."
+  # Disable the IPA ramdisk downloader init container.
+  # The downloader's get-resource.sh has a caching bug: stale ETag symlinks
+  # cause a 304 Not Modified, then mv fails because the headers file is in
+  # TMPDIR not /shared/html/images/. Providing direct IPA URLs bypasses the
+  # buggy script entirely.
+  deployRamdisk:
+    disableDownloader: true
+
+  # Provide IPA images directly from upstream — no downloader needed.
+  images:
+    agentImages:
+      - architecture: x86_64
+        initramfs: "https://tarballs.opendev.org/openstack/ironic-python-agent/dib/files/ironic-python-agent.initramfs"
+        kernel: "https://tarballs.opendev.org/openstack/ironic-python-agent/dib/files/ironic-python-agent.kernel"
 
   # No dedicated networking — use host cluster networking.
   # Virtual media only (no PXE boot, no DHCP, no TFTP).

@@ -3,8 +3,9 @@
 # WAL archiving + scheduled backups to Ceph RGW (S3-compatible, in-cluster).
 # The `authentik-pg` bucket is provisioned by the OBC below.
 #
-# S3 credentials are the OBC-generated RGW user for the authentik-pg bucket.
-# If the OBC is reprovisioned (new user), update these values.
+# S3 credentials are synced from 1Password item "authentik-pg-backup-s3"
+# via ExternalSecret. If the OBC is reprovisioned (new user), update the
+# 1Password item.
 # Backup schedule: daily at 02:00 UTC. Retention: 7 days.
 # WAL files are archived continuously, enabling point-in-time recovery (PITR).
 ---
@@ -22,9 +23,10 @@ spec:
   bucketName: authentik-pg
   storageClassName: ceph-bucket
 ---
-# S3 credentials for CNPG backup + WAL archiving on RGW.
-apiVersion: v1
-kind: Secret
+# ExternalSecret — S3 credentials for CNPG backup + WAL archiving on RGW.
+# Synced from 1Password item "authentik-pg-backup-s3".
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
 metadata:
   name: authentik-pg-backup-s3
   namespace: authentik
@@ -32,11 +34,24 @@ metadata:
     app.kubernetes.io/name: authentik-pg
     app.kubernetes.io/component: backup
     app.kubernetes.io/part-of: nqlabs-platform
-    cnpg.io/reload: "true"
-type: Opaque
-stringData:
-  ACCESS_KEY_ID: A1XAEJMFO1IUS428IYWN
-  SECRET_ACCESS_KEY: rKOnB5eOKCsDM5yRB9wyma0iL5edC78gC7Dkcfc8
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  refreshPolicy: CreatedOnce
+  secretStoreRef:
+    name: nqlabs-1password
+    kind: ClusterSecretStore
+  target:
+    name: authentik-pg-backup-s3
+    template:
+      type: Opaque
+  data:
+    - secretKey: ACCESS_KEY_ID
+      remoteRef:
+        key: "authentik-pg-backup-s3/ACCESS_KEY_ID"
+    - secretKey: SECRET_ACCESS_KEY
+      remoteRef:
+        key: "authentik-pg-backup-s3/SECRET_ACCESS_KEY"
 ---
 # Scheduled backup: daily at 02:00 UTC, keep 7 backups.
 apiVersion: postgresql.cnpg.io/v1
