@@ -1,0 +1,58 @@
+# Default-deny ingress CNPs for CAPI/Metal3 namespaces managed by this app.
+# Kept here (not in platform/security/) to avoid ArgoCD SharedResourceWarning
+# — the cluster-api app owns the Namespace resources for these namespaces.
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-ingress
+  namespace: cabpt-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector: {}
+  ingress: []
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-ingress
+  namespace: cacppt-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector: {}
+  ingress: []
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-ingress
+  namespace: capi-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector: {}
+  ingress: []
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-ingress
+  namespace: capm3-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector: {}
+  ingress: []
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-ingress
+  namespace: cluster-api-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector: {}
+  ingress: []

@@ -2,6 +2,11 @@
 # These prevent any pod in the namespace from receiving incoming traffic unless
 # explicitly allowed by another CNP. Applied at sync-wave 0 so allow rules
 # (also at wave 0) can be added alongside without blocking.
+#
+# CAPI/Metal3 namespaces (cabpt-system, cacppt-system, capi-system, capm3-system,
+# cluster-api-system) are managed by the cluster-api app — their CNPs are in
+# infrastructure/metal3/cluster-api/network-policies.yaml to avoid
+# ArgoCD SharedResourceWarning.
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -84,62 +89,7 @@ apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
   name: deny-ingress
-  namespace: cabpt-system
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  endpointSelector: {}
-  ingress: []
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-ingress
-  namespace: cacppt-system
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  endpointSelector: {}
-  ingress: []
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-ingress
-  namespace: capi-system
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  endpointSelector: {}
-  ingress: []
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-ingress
-  namespace: capm3-system
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  endpointSelector: {}
-  ingress: []
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-ingress
   namespace: ironic-standalone-operator-system
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  endpointSelector: {}
-  ingress: []
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-ingress
-  namespace: cluster-api-system
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 spec:
