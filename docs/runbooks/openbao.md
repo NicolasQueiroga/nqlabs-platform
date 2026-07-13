@@ -68,32 +68,81 @@ Create 1Password item `openbao-bootstrap` with field `credential` containing
 the root token. The bootstrap-token ExternalSecret will sync it to the
 `openbao` namespace.
 
-### 4. Run the bootstrap config Job
+### 4. Configure Kubernetes auth (manual, after unseal)
 
-The bootstrap config Job is idempotent and safe to re-run after any re-init.
-It configures Kubernetes auth (WITHOUT `token_reviewer_jwt`), KV v2, PKI,
-policies, and roles.
+After init + unseal, configure Kubernetes auth so ESO can connect.
+**Do NOT set `token_reviewer_jwt`** — let OpenBao use its local pod SA token
+(auto-rotated by Kubernetes, never expires).
 
 ```bash
-# Create a secret with the root token
-kubectl -n openbao create secret generic openbao-bootstrap-token \
-  --from-literal=token=<root-token>
+ROOT_TOKEN=$(op item get openbao-bootstrap --vault NQLabs --field credential --reveal)
 
-# Run the Job
-kubectl -n openbao create job --from=job/openbao-bootstrap-config openbao-bootstrap-config-manual
-kubectl -n openbao logs job/openbao-bootstrap-config-manual -f
+# Enable Kubernetes auth
+kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
+  bao auth enable -path=kubernetes-management kubernetes 2>/dev/null || true
 
-# Clean up the token secret after verification
-kubectl -n openbao delete secret openbao-bootstrap-token
+# Configure auth (NO token_reviewer_jwt)
+kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
+  bao write auth/kubernetes-management/config \
+    kubernetes_host="https://kubernetes.default.svc:443" \
+    disable_iss_validation=true \
+    disable_local_ca_jwt=false
+
+# Create eso role
+kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
+  bao write auth/kubernetes-management/role/eso \
+    bound_service_account_names="external-secrets" \
+    bound_service_account_namespaces="external-secrets" \
+    policies="eso" ttl="1h"
+
+# Create cert-manager role
+kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
+  bao write auth/kubernetes-management/role/cert-manager \
+    bound_service_account_names="cert-manager" \
+    bound_service_account_namespaces="cert-manager" \
+    policies="cert-manager" ttl="1h"
+
+# Enable KV v2
+kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
+  bao secrets enable -path=kv -version=2 kv 2>/dev/null || true
+
+# Write policies
+kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
+  bao policy write default - <<'EOF'
+path "auth/token/lookup-self" { capabilities = ["read"] }
+path "auth/token/renew-self" { capabilities = ["update"] }
+EOF
+
+kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
+  bao policy write eso - <<'EOF'
+path "kv/data/*" { capabilities = ["read"] }
+path "kv/metadata/*" { capabilities = ["list", "read"] }
+EOF
+
+kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
+  bao policy write cert-manager - <<'EOF'
+path "pki/issue/*" { capabilities = ["create", "update"] }
+path "pki/sign/*" { capabilities = ["create", "update"] }
+path "pki/ca" { capabilities = ["read"] }
+path "pki/crl" { capabilities = ["read"] }
+EOF
+
+# Enable PKI + generate root CA
+kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
+  bao secrets enable -path=pki -max-lease-ttl=87600h pki 2>/dev/null || true
+
+kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
+  bao write pki/root/generate/internal common_name="nqlabs.internal" ttl=87600h
+
+# Store CA cert in KV
+CA_CERT=$(kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
+  bao read -field=certificate pki/cert/ca)
+kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
+  bao kv put kv/openbao-pki ca="$CA_CERT"
+
+# Force ESO re-validate
+kubectl annotate clustersecretstore nqlabs-openbao force-sync=$(date +%s) --overwrite
 ```
-
-The Job configures:
-- KV v2 at `kv/`
-- Kubernetes auth at `kubernetes-management/` (no `token_reviewer_jwt`)
-- `eso` and `cert-manager` roles
-- `default`, `eso`, `cert-manager`, `admin`, `sre-read` policies
-- PKI at `pki/` with root CA
-- CA cert stored in KV for the `openbao-pki-ca` ExternalSecret
 
 ### 5. Bootstrap remote clusters
 
@@ -341,7 +390,7 @@ kubectl exec -n openbao openbao-0 -- bao write auth/kubernetes-management/config
 ```
 
 **Do NOT set `token_reviewer_jwt` with a short-lived SA token.** The
-bootstrap config Job (`infrastructure/security/openbao/manifests/bootstrap-config-job.yaml`)
+bootstrap config runbook (see step 4 above)
 configures auth correctly without `token_reviewer_jwt`.
 
 ### cert-manager can't issue cert from nqlabs-openbao-pki
@@ -356,5 +405,5 @@ kubectl get secret openbao-pki-ca -n cert-manager
 Likely causes:
 - OpenBao sealed
 - cert-manager SA not bound in OpenBao Kubernetes auth
-- PKI CA not yet generated (bootstrap Job not run)
+- PKI CA not yet generated (step 4 not run)
 - caBundleSecretRef secret missing or stale
