@@ -3,12 +3,8 @@
 # Chart: openbao/openbao (https://openbao.github.io/openbao-helm)
 #
 # HA mode with Raft integrated storage on ceph-block.
-# Internal TLS via cert-manager (nqlabs-internal-ca for bootstrap,
-# then nqlabs-openbao-pki after PKI migration).
-# Manual unseal (Shamir) — see docs/runbooks/openbao.md.
-#
-# 1Password used for bootstrap only: root token, recovery keys, unseal keys.
-# All operational secrets migrate to OpenBao kv-v2 via ESO.
+# Auto-unseal via sidecar (Shamir keys from 1Password → ESO → K8s Secret).
+# See docs/runbooks/openbao.md.
 
 # Disable injector and CSI — platform uses ESO, not agent injection.
 injector:
@@ -75,11 +71,77 @@ server:
     storageClass: ceph-block
     accessMode: ReadWriteOnce
 
-  extraVolumes: []
+  # Volume shared between main container and auto-unseal sidecar.
+  # Populated by ExternalSecret openbao-unseal-keys (from 1Password).
+  volumes:
+    - name: unseal-keys
+      secret:
+        secretName: openbao-unseal-keys
 
-  # OnDelete: manual unseal required after pod restart.
-  # Prevents automatic restarts leaving OpenBao sealed.
-  updateStrategyType: OnDelete
+  volumeMounts:
+    - name: unseal-keys
+      mountPath: /openbao-unseal
+
+  # Auto-unseal sidecar: reads Shamir keys from mounted Secret, unseals
+  # OpenBao on startup, monitors and re-unseals if re-sealed.
+  # Keys come from 1Password via ESO (nqlabs-1password store) — NOT from
+  # OpenBao itself (chicken-and-egg: can't sync from OpenBao when sealed).
+  extraContainers:
+    - name: auto-unseal
+      image: quay.io/openbao/openbao:2.5.2
+      env:
+        - name: BAO_ADDR
+          value: http://127.0.0.1:8200
+      volumeMounts:
+        - name: unseal-keys
+          mountPath: /openbao-unseal
+          readOnly: true
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          memory: 64Mi
+      command:
+        - /bin/sh
+        - -ec
+        - |
+          echo "auto-unseal: waiting for OpenBao API..."
+          until bao status 2>/dev/null | grep -q "Seal Type"; do
+            sleep 2
+          done
+          echo "auto-unseal: API responsive."
+
+          # Check if initialized
+          INITIALIZED=$(bao status 2>/dev/null | grep "^Initialized" | awk '{print $2}')
+          if [ "$INITIALIZED" = "false" ]; then
+            echo "auto-unseal: OpenBao not initialized. Waiting for manual init..."
+            while true; do sleep 60; done
+          fi
+
+          unseal_if_needed() {
+            SEALED=$(bao status 2>/dev/null | grep "^Sealed" | awk '{print $2}')
+            if [ "$SEALED" = "true" ]; then
+              echo "auto-unseal: sealed. Unsealing with 3 of 5 keys..."
+              bao operator unseal "$(cat /openbao-unseal/unseal_key_1)" 2>/dev/null
+              bao operator unseal "$(cat /openbao-unseal/unseal_key_2)" 2>/dev/null
+              bao operator unseal "$(cat /openbao-unseal/unseal_key_3)" 2>/dev/null
+              echo "auto-unseal: done."
+            fi
+          }
+
+          # Initial unseal
+          unseal_if_needed
+
+          # Monitor loop — re-unseal if re-sealed
+          echo "auto-unseal: monitoring..."
+          while true; do
+            sleep 30
+            unseal_if_needed
+          done
+
+  # RollingUpdate: auto-unseal sidecar handles unseal on restart.
+  updateStrategyType: RollingUpdate
 
   # Resource requests for Kyverno require-resource-requests policy.
   resources:
