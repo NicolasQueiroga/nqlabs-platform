@@ -1,0 +1,42 @@
+# Snapshot controller + VolumeSnapshot CRDs.
+#
+# Installs the external-snapshotter controller and all 3 VolumeSnapshot CRDs
+# (VolumeSnapshot, VolumeSnapshotContent, VolumeSnapshotClass).
+# Required before rook-ceph-cluster can create a VolumeSnapshotClass.
+#
+# sync-wave -1: CRDs must exist before rook-ceph (wave 0) and
+# rook-ceph-cluster (wave 1) attempt to create VolumeSnapshotClass resources.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: snapshot-controller
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: platform
+  sources:
+    - repoURL: https://piraeus.io/helm-charts/
+      chart: snapshot-controller
+      targetRevision: "5.1.1"
+      helm:
+        releaseName: snapshot-controller
+        valueFiles:
+          - $values/infrastructure/storage/snapshot-controller/values.yaml
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true

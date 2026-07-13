@@ -12,7 +12,7 @@ metadata:
 spec:
   background: false
   webhookConfiguration:
-    failurePolicy: Ignore
+    failurePolicy: Fail
   rules:
     - name: verify-ghcr-nqlabs
       match:

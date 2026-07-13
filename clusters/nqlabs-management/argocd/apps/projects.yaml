@@ -42,6 +42,7 @@ spec:
     - https://charts.rook.io/release
     - https://ceph.github.io/ceph-csi-operator
     - https://openbao.github.io/openbao-helm
+    - https://piraeus.io/helm-charts/
 
   # Platform apps are trusted and may target any namespace on the management
   # cluster (in-cluster) or the registered environment clusters.

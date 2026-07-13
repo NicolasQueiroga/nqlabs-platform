@@ -1,0 +1,13 @@
+# Piraeus snapshot-controller values for nqlabs-management.
+#
+# Installs CRDs + controller. Webhook disabled (not needed for basic
+# snapshot functionality on a single-cluster lab).
+
+# The chart bundles all 3 VolumeSnapshot CRDs.
+installCRDs: true
+
+controller:
+  replicas: 1
+
+webhook:
+  enabled: false
