@@ -80,7 +80,9 @@ spec:
             - port: "8083"
               protocol: TCP
 ---
-# Internal: argocd-server + application-controller + applicationset-controller → redis (6379)
+# Internal: argocd-server + application-controller + applicationset-controller
+# + repo-server → redis (6379)
+# repo-server needs Redis for git repo metadata caching.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -103,6 +105,9 @@ spec:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: argocd
             app.kubernetes.io/name: argocd-applicationset-controller
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: argocd
+            app.kubernetes.io/name: argocd-repo-server
       toPorts:
         - ports:
             - port: "6379"
