@@ -54,6 +54,7 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
 
   # The kube-apiserver injects caBundle into the APIService spec after
   # creation. ArgoCD sees this as a diff and marks it OutOfSync. Ignore
