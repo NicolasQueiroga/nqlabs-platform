@@ -15,6 +15,11 @@
 #   argocd-application-controller → kube-apiserver (443, 6443)
 #   All components → kube-dns (53)
 #
+# IMPORTANT: Cilium 1.19.4 with VXLAN tunnel mode drops cross-node traffic
+# when toPorts is specified on egress toEndpoints rules. Therefore, ALL
+# egress rules in this file omit toPorts. Ingress rules retain toPorts
+# (they work fine — the issue is only on the egress/VXLAN path).
+#
 # The default-deny is applied LAST (sync-wave 1) so that allow rules are
 # in place first — avoiding a brief window where all traffic is blocked.
 apiVersion: cilium.io/v2
@@ -75,7 +80,7 @@ spec:
             - port: "8083"
               protocol: TCP
 ---
-# Internal: argocd-server → redis (6379)
+# Internal: argocd-server + application-controller + applicationset-controller → redis (6379)
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -128,9 +133,9 @@ spec:
             - port: "8081"
               protocol: TCP
 ---
-# Internal egress: all argocd pods → redis (6379), repo-server (8081), server (8080)
-# Required because the default-deny blocks all egress — ingress rules alone
-# are not enough; the client pods also need explicit egress rules.
+# Egress: all argocd pods → internal services (redis, repo-server, server)
+# NO toPorts — Cilium 1.19.4 with VXLAN tunnel mode drops cross-node traffic
+# when toPorts is specified on egress toEndpoints rules.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -143,26 +148,21 @@ spec:
     matchLabels:
       app.kubernetes.io/part-of: argocd
   egress:
-    # All argocd pods → redis (6379)
-    # NO toPorts — Cilium drops cross-node VXLAN traffic when toPorts is
-    # specified on egress toEndpoints rules. This is a Cilium 1.19.4
-    # behavior with VXLAN tunnel mode.
     - toEndpoints:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: argocd
             app.kubernetes.io/name: argocd-redis
-    # All argocd pods → repo-server (8081)
     - toEndpoints:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: argocd
             app.kubernetes.io/name: argocd-repo-server
-    # All argocd pods → server (8080) — for API calls
     - toEndpoints:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: argocd
             app.kubernetes.io/name: argocd-server
 ---
-# Egress: all argocd pods → kube-dns
+# Egress: all argocd pods → kube-dns and CoreDNS
+# NO toPorts — same Cilium VXLAN toPorts bug.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -179,14 +179,15 @@ spec:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: kube-system
             k8s-app: kube-dns
-      toPorts:
-        - ports:
-            - port: "53"
-              protocol: UDP
-            - port: "53"
-              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: dns
+            app.kubernetes.io/name: coredns-dns
 ---
-# Egress: argocd-server + repo-server → git (github.com:443)
+# Egress: all argocd pods → external services (git, container registries, etc.)
+# Uses toEntities: world instead of toFQDNs because toFQDNs requires the Cilium
+# DNS proxy which doesn't work reliably with the VXLAN toPorts bug.
+# NO toPorts — same Cilium VXLAN toPorts bug.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -199,21 +200,11 @@ spec:
     matchLabels:
       app.kubernetes.io/part-of: argocd
   egress:
-    - toFQDNs:
-        - matchName: github.com
-        - matchPattern: "*.github.com"
-      toPorts:
-        - ports:
-            - port: "443"
-              protocol: TCP
-    - toFQDNs:
-        - matchPattern: "*.githubusercontent.com"
-      toPorts:
-        - ports:
-            - port: "443"
-              protocol: TCP
+    - toEntities:
+        - world
 ---
 # Egress: application-controller → kube-apiserver
+# NO toPorts — same Cilium VXLAN toPorts bug.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -228,14 +219,16 @@ spec:
   egress:
     - toEntities:
         - kube-apiserver
-      toPorts:
-        - ports:
-            - port: "443"
-              protocol: TCP
-            - port: "6443"
-              protocol: TCP
+    - toEntities:
+        - host
+    - toEntities:
+        - remote-node
 ---
 # Egress: argocd-server → OIDC provider (Authentik) for SSO
+# Uses toEntities: cluster for gateway hairpin (Cilium Gateway DNATs traffic
+# to a dynamic listener port, so toPorts: 443 won't match).
+# Also allows direct to Authentik pods.
+# NO toPorts — same Cilium VXLAN toPorts bug.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -248,18 +241,10 @@ spec:
     matchLabels:
       app.kubernetes.io/name: argocd-server
   egress:
-    # Authentik via gateway (external URL) or internal service
     - toEndpoints:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: authentik
             app.kubernetes.io/component: server
-      toPorts:
-        - ports:
-            - port: "80"
-              protocol: TCP
-    # Also allow toEntities: cluster for gateway hairpin.
-    # NO toPorts restriction — Cilium Gateway DNATs traffic to a dynamic
-    # listener port, so toPorts: 443 won't match and l7policy returns 403.
     - toEntities:
         - cluster
 ---
