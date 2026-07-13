@@ -56,12 +56,16 @@ spec:
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
 
-  # The kube-apiserver injects caBundle into the APIService spec after
-  # creation. ArgoCD sees this as a diff and marks it OutOfSync. Ignore
-  # the caBundle field to avoid perpetual OOS.
+  # cert-manager CA injector manages two fields on the APIService that
+  # differ from the Helm-rendered manifest:
+  #   1. /spec/caBundle — injected by cert-manager (not in Helm template)
+  #   2. /spec/insecureSkipTLSVerify — cert-manager removes this field
+  #      when it injects the caBundle; Helm renders it as false
+  # Both are standard cert-manager behavior. Ignore both to avoid OOS.
   ignoreDifferences:
     - group: apiregistration.k8s.io
       kind: APIService
       name: v1beta1.metrics.k8s.io
       jsonPointers:
         - /spec/caBundle
+        - /spec/insecureSkipTLSVerify
