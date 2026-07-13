@@ -1,0 +1,247 @@
+# CiliumNetworkPolicies for the argocd namespace.
+#
+# ArgoCD components communicate internally:
+#   argocd-server → argocd-repo-server (8081), argocd-redis (6379)
+#   argocd-application-controller → argocd-redis (6379), argocd-repo-server (8081)
+#   argocd-applicationset-controller → argocd-redis (6379)
+#
+# External ingress:
+#   Gateway → argocd-server (8080) — UI/API
+#   Gateway → argocd-applicationset-controller (7000) — webhook
+#   Monitoring/Prometheus → argocd-server (8083) — metrics
+#
+# Egress:
+#   argocd-server, argocd-repo-server → git (github.com:443)
+#   argocd-application-controller → kube-apiserver (443, 6443)
+#   All components → kube-dns (53)
+#
+# The default-deny is applied LAST (sync-wave 1) so that allow rules are
+# in place first — avoiding a brief window where all traffic is blocked.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: argocd-allow-gateway
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-server
+  ingress:
+    - fromEntities:
+        - ingress
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: argocd-allow-webhook
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-applicationset-controller
+  ingress:
+    - fromEntities:
+        - ingress
+      toPorts:
+        - ports:
+            - port: "7000"
+              protocol: TCP
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: argocd-allow-monitoring
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-server
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: monitoring
+      toPorts:
+        - ports:
+            - port: "8083"
+              protocol: TCP
+---
+# Internal: argocd-server → redis (6379)
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: argocd-allow-redis-ingress
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-redis
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: argocd
+            app.kubernetes.io/name: argocd-server
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: argocd
+            app.kubernetes.io/name: argocd-application-controller
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: argocd
+            app.kubernetes.io/name: argocd-applicationset-controller
+      toPorts:
+        - ports:
+            - port: "6379"
+              protocol: TCP
+---
+# Internal: argocd-server + application-controller → repo-server (8081)
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: argocd-allow-repo-server-ingress
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-repo-server
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: argocd
+            app.kubernetes.io/name: argocd-server
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: argocd
+            app.kubernetes.io/name: argocd-application-controller
+      toPorts:
+        - ports:
+            - port: "8081"
+              protocol: TCP
+---
+# Egress: all argocd pods → kube-dns
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: argocd-allow-dns-egress
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: argocd
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+---
+# Egress: argocd-server + repo-server → git (github.com:443)
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: argocd-allow-git-egress
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: argocd
+  egress:
+    - toFQDNs:
+        - matchName: github.com
+        - matchPattern: "*.github.com"
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+    - toFQDNs:
+        - matchPattern: "*.githubusercontent.com"
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+---
+# Egress: application-controller → kube-apiserver
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: argocd-allow-apiserver-egress
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-application-controller
+  egress:
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "6443"
+              protocol: TCP
+---
+# Egress: argocd-server → OIDC provider (Authentik) for SSO
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: argocd-allow-oidc-egress
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-server
+  egress:
+    # Authentik via gateway (external URL) or internal service
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: authentik
+            app.kubernetes.io/component: server
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+    # Also allow toEntities: cluster for gateway hairpin
+    - toEntities:
+        - cluster
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+---
+# Default-deny (applied LAST so allow rules are in place first)
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: argocd-default-deny
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints: []
+  egress:
+    - toEndpoints: []

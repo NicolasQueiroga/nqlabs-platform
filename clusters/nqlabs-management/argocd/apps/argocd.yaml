@@ -29,6 +29,11 @@ spec:
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
       ref: values
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: platform/argocd/manifests
+      directory:
+        include: "*.yaml"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
