@@ -128,6 +128,49 @@ spec:
             - port: "8081"
               protocol: TCP
 ---
+# Internal egress: all argocd pods → redis (6379), repo-server (8081), server (8080)
+# Required because the default-deny blocks all egress — ingress rules alone
+# are not enough; the client pods also need explicit egress rules.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: argocd-allow-internal-egress
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: argocd
+  egress:
+    # All argocd pods → redis (6379)
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: argocd
+            app.kubernetes.io/name: argocd-redis
+      toPorts:
+        - ports:
+            - port: "6379"
+              protocol: TCP
+    # All argocd pods → repo-server (8081)
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: argocd
+            app.kubernetes.io/name: argocd-repo-server
+      toPorts:
+        - ports:
+            - port: "8081"
+              protocol: TCP
+    # All argocd pods → server (8080) — for API calls
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: argocd
+            app.kubernetes.io/name: argocd-server
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+---
 # Egress: all argocd pods → kube-dns
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
