@@ -145,6 +145,13 @@ cephObjectStores:
         port: 80
         instances: 2
         priorityClassName: system-cluster-critical
+        placement:
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchLabels:
+                    app: rook-ceph-rgw
+                topologyKey: kubernetes.io/hostname
         resources:
           requests:
             cpu: 250m

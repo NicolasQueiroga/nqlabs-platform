@@ -30,6 +30,8 @@ spec:
       # caBundle at runtime. selfHeal=true would revert these mutations,
       # causing perpetual sync conflicts.
       selfHeal: false
+    retry:
+      limit: 5
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/enforce: baseline

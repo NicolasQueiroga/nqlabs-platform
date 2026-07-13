@@ -141,4 +141,12 @@ spec:
     matchLabels:
       app.kubernetes.io/name: prometheus
   egress:
-    - {}
+    # Scrape all pods in all namespaces
+    - toEndpoints: []
+    # Scrape node exporters (host network)
+    - toEntities:
+        - host
+        - remote-node
+    # Blackbox probes to external endpoints
+    - toEntities:
+        - world

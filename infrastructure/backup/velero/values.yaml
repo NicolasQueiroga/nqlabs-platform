@@ -26,6 +26,8 @@ credentials:
   existingSecret: velero-credentials
 configuration:
   defaultVolumesToFsBackup: true
+  repositoryMaintenanceJob:
+    keepLatestMaintenanceJobs: 3
   backupStorageLocation:
     - name: local
       provider: aws
