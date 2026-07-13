@@ -57,6 +57,7 @@ KV_ITEMS=(
   "velero-azure:storage-key"
   "velero-rgw-credentials:aws_access_key_id aws_secret_access_key"
   "cloudflared-tunnel:token"
+  "openbao-oidc:client_secret"
 )
 
 log() { printf '\033[1;34m[openbao-bootstrap]\033[0m %s\n' "$*"; }
