@@ -144,32 +144,23 @@ spec:
       app.kubernetes.io/part-of: argocd
   egress:
     # All argocd pods → redis (6379)
+    # NO toPorts — Cilium drops cross-node VXLAN traffic when toPorts is
+    # specified on egress toEndpoints rules. This is a Cilium 1.19.4
+    # behavior with VXLAN tunnel mode.
     - toEndpoints:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: argocd
             app.kubernetes.io/name: argocd-redis
-      toPorts:
-        - ports:
-            - port: "6379"
-              protocol: TCP
     # All argocd pods → repo-server (8081)
     - toEndpoints:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: argocd
             app.kubernetes.io/name: argocd-repo-server
-      toPorts:
-        - ports:
-            - port: "8081"
-              protocol: TCP
     # All argocd pods → server (8080) — for API calls
     - toEndpoints:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: argocd
             app.kubernetes.io/name: argocd-server
-      toPorts:
-        - ports:
-            - port: "8080"
-              protocol: TCP
 ---
 # Egress: all argocd pods → kube-dns
 apiVersion: cilium.io/v2
