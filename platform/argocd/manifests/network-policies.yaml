@@ -223,13 +223,11 @@ spec:
         - ports:
             - port: "80"
               protocol: TCP
-    # Also allow toEntities: cluster for gateway hairpin
+    # Also allow toEntities: cluster for gateway hairpin.
+    # NO toPorts restriction — Cilium Gateway DNATs traffic to a dynamic
+    # listener port, so toPorts: 443 won't match and l7policy returns 403.
     - toEntities:
         - cluster
-      toPorts:
-        - ports:
-            - port: "443"
-              protocol: TCP
 ---
 # Default-deny (applied LAST so allow rules are in place first)
 apiVersion: cilium.io/v2
