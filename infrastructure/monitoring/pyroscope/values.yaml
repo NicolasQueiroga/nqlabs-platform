@@ -67,8 +67,8 @@ alloy:
         type: RuntimeDefault
     resources:
       requests:
-        cpu: 25m
-        memory: 64Mi
+        cpu: 100m
+        memory: 128Mi
       limits:
         memory: 256Mi
   configReloader:
