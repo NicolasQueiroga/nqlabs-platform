@@ -35,7 +35,6 @@ spec:
     name: velero-rgw-credentials
     template:
       type: Opaque
-      templateType: ApplicationProperties
       data:
         cloud: |
           [default]
