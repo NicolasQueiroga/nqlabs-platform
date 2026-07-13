@@ -1,39 +1,10 @@
 # PSA enforce labels for namespaces without their own ArgoCD app.
 #
-# These namespaces are either built-in (default, kube-public, kube-node-lease,
-# kube-system) or created by upstream provider manifests that don't include
-# PSA labels (cabpt-system, cacppt-system, capi-system, cilium-secrets).
+# Only namespaces that are NOT managed by any other ArgoCD app belong here.
+# CAPI namespaces have PSA labels set directly in their vendored component
+# manifests under infrastructure/metal3/cluster-api/.
 #
-# capm3-system is NOT included here — it already has `restricted` PSA labels
-# from the vendored CAPI infrastructure-components.yaml. Overriding via SSA
-# would cause a managed-field conflict.
-#
-# Applied via the namespace-default-deny ArgoCD app with ServerSideApply,
-# so labels are merged onto existing Namespace resources without conflict.
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: cabpt-system
-  labels:
-    pod-security.kubernetes.io/enforce: privileged
-    pod-security.kubernetes.io/enforce-version: latest
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: cacppt-system
-  labels:
-    pod-security.kubernetes.io/enforce: privileged
-    pod-security.kubernetes.io/enforce-version: latest
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: capi-system
-  labels:
-    pod-security.kubernetes.io/enforce: privileged
-    pod-security.kubernetes.io/enforce-version: latest
+# Applied via the namespace-default-deny ArgoCD app with ServerSideApply.
 ---
 apiVersion: v1
 kind: Namespace
