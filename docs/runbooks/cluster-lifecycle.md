@@ -13,7 +13,7 @@ replace VM nodes after validation; they do not unlock separate platform capabili
 
 - Git is the source of truth for intended topology, patches, runbooks, and inventory.
 - Generated Talos secrets, machine configs, `talosconfig`, and kubeconfigs are never
-  committed. They live under `clusters/<cluster>/generated/` and in 1Password.
+  committed. They live under `clusters/<cluster>/generated/` and in OpenBao.
 - A machine belongs to exactly one Kubernetes cluster at a time.
 - Moving a machine between clusters means drain/reset/re-provision. Do not casually
   point an existing node at another control plane.
@@ -57,7 +57,7 @@ Before creating a cluster, fill these values in the cluster README and IP plan:
 | Gateway IP | unique per cluster if it exposes HTTP(S) |
 | DNS role | authoritative DNS, workload ingress, none |
 | ArgoCD relationship | local root or registered to management ArgoCD |
-| 1Password item | Talos secrets item name |
+| OpenBao item | Talos secrets item name |
 
 ## Create a new cluster from zero
 
@@ -101,7 +101,7 @@ mkdir -p clusters/$cluster/{patches,generated}
 talosctl gen secrets -o clusters/$cluster/generated/secrets.yaml
 ```
 
-Immediately store `clusters/$cluster/generated/secrets.yaml` in 1Password.
+Immediately store `clusters/$cluster/generated/secrets.yaml` in OpenBao.
 Recommended item naming:
 
 ```text

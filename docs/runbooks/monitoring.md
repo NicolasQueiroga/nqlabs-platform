@@ -34,7 +34,7 @@ Velero scheduled backup failures.
 
 ## Grafana credentials
 
-Grafana admin credentials are stored in 1Password item `grafana`:
+Grafana admin credentials are stored in OpenBao KV path `grafana`:
 
 | Field | Kubernetes key |
 |-------|----------------|
@@ -148,7 +148,7 @@ Alertmanager sends NQLabs alerts to Discord through an `AlertmanagerConfig`.
 Secret flow:
 
 ```text
-1Password item alertmanager-discord / webhook_url
+OpenBao KV path alertmanager-discord / webhook_url
   → ExternalSecret/monitoring/alertmanager-discord-webhook
   → Secret/monitoring/alertmanager-discord-webhook
   → AlertmanagerConfig/monitoring/discord
@@ -276,7 +276,7 @@ The mature target is:
 ```text
 Internal Blackbox Exporter
 + external/client-side probe location
-+ Uptime Kuma as a human-friendly status dashboard
++ Gatus as a human-friendly status dashboard
 ```
 
 Do not rely only on an uptime tool running inside the same cluster. If the cluster

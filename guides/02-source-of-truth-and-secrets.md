@@ -62,7 +62,7 @@ Memorize this list:
 - `.env` files
 - private keys
 - TLS private material
-- 1Password service account tokens / credentials
+- OpenBao service account tokens / credentials
 - ArgoCD repository credentials
 
 The `.gitignore` exists to help, but `.gitignore` is not a substitute for judgment.
@@ -72,7 +72,7 @@ The `.gitignore` exists to help, but `.gitignore` is not a substitute for judgme
 The current Phase 0 secret flow is:
 
 ```text
-1Password item/field
+OpenBao item/field
         ↓
 ExternalSecret manifest in git
         ↓
@@ -86,10 +86,10 @@ Helm chart / controller / workload consumes the Secret
 The important distinction:
 
 - Git contains **references** such as `grafana/password` or `tailscale-key/credential`.
-- 1Password contains the **secret values**.
+- OpenBao contains the **secret values**.
 
-For this platform, ESO uses the 1Password SDK provider with a service account token.
-There is no 1Password Connect server in Phase 0.
+For this platform, ESO uses the OpenBao SDK provider with a service account token.
+There is no OpenBao Connect server in Phase 0.
 
 ## Declared vs generated state
 

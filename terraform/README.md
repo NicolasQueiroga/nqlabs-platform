@@ -76,7 +76,7 @@ Managed Redis/Valkey. The in-cluster path uses the chart with `redis.enabled=tru
 
 ### `modules/cloud-kafka`
 
-Managed Kafka. The in-cluster path uses Redpanda (chart with `kafka.enabled=true`).
+Managed Kafka. The in-cluster path uses Strimzi/Kafka (Redpanda removed) (chart with `kafka.enabled=true`).
 
 | Sub-module | Provider | What it creates |
 |---|---|---|

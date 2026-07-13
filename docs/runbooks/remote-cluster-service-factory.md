@@ -55,7 +55,7 @@ kubectl -n argocd patch secret <cluster-secret> \
 
 > Declarative option: register via an ExternalSecret that materializes the cluster
 > Secret (labelled `argocd.argoproj.io/secret-type: cluster`) with a fixed `name`,
-> pulling `server`/`caData`/`bearerToken` from 1Password. Keeps the name guaranteed
+> pulling `server`/`caData`/`bearerToken` from OpenBao. Keeps the name guaranteed
 > by git.
 
 ## Migration note (applying this change to a live system)

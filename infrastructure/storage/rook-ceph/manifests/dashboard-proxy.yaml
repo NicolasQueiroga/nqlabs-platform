@@ -45,7 +45,7 @@ metadata:
   name: ceph-dashboard-proxy
   namespace: rook-ceph
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: ceph-dashboard-proxy

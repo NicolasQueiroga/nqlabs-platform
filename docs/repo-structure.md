@@ -51,13 +51,13 @@ Per-cluster bootstrap + the management app-of-apps.
 - `clusters/nqlabs-{staging,production}/` — Talos control-plane patches and the
   remote foundation (Cilium LB IPAM, gateway).
 
-Talos `generated/` material is gitignored; secrets live in 1Password, never in git.
+Talos `generated/` material is gitignored; secrets live in OpenBao, never in git.
 
 ## `infrastructure/`
 
 Platform capabilities managed by ArgoCD Applications (not application services):
 `networking/` (Cilium, Gateway API, **Tailscale** operator/connector/coredns),
-`dns/`, `security/` (cert-manager, External Secrets + the 1Password ClusterSecretStore),
+`dns/`, `security/` (cert-manager, External Secrets + the OpenBao ClusterSecretStore),
 `monitoring/`, `delivery/` (Argo Rollouts), `storage/`, `identity/`, `observability/`.
 
 Rule of thumb: *if it is needed to run the platform itself, it belongs in `infrastructure/`.*

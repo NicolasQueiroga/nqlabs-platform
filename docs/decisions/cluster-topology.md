@@ -46,7 +46,7 @@ Likely services:
 - ArgoCD
 - Grafana / central dashboards
 - Prometheus / Alertmanager or central observability aggregation
-- Uptime Kuma / external probes
+- Gatus / external probes
 - Harbor
 - OpenBao
 - Authentik or Keycloak

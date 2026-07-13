@@ -14,7 +14,7 @@
 crds:
   enabled: true   # Install CRDs with the chart
 
-replicaCount: 2
+replicaCount: 1
 
 podDisruptionBudget:
   enabled: true
@@ -43,7 +43,7 @@ resources:
 
 # cainjector — injects CA certificates into webhooks
 cainjector:
-  replicaCount: 2
+  replicaCount: 1
   resources:
     requests:
       cpu: 25m
@@ -53,7 +53,7 @@ cainjector:
 
 # webhook — validates cert-manager resources at admission time
 webhook:
-  replicaCount: 2
+  replicaCount: 1
   podDisruptionBudget:
     enabled: true
     maxUnavailable: 1

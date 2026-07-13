@@ -49,7 +49,7 @@ These guides follow a few educational principles:
 6. [ArgoCD and GitOps reconciliation](./06-argocd-gitops-reconciliation.md)
 7. [Service factory and demo app](./07-service-factory-and-demo-app.md)
 8. cert-manager and trust chains *(coming)*
-9. External Secrets and 1Password SDK *(coming)*
+9. External Secrets and OpenBao SDK *(coming)*
 10. DNS, internal domains, and Tailscale access *(coming)*
 11. Observability: Prometheus, Grafana, Loki, and Hubble *(coming)*
 

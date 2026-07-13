@@ -65,19 +65,19 @@ cephClusterSpec:
   resources:
     mon:
       requests:
-        cpu: 250m
+        cpu: 100m
         memory: 512Mi
       limits:
         memory: 1Gi
     mgr:
       requests:
-        cpu: 250m
+        cpu: 100m
         memory: 512Mi
       limits:
         memory: 1Gi
     osd:
       requests:
-        cpu: 500m
+        cpu: 250m
         memory: 1Gi
       limits:
         memory: 2Gi
@@ -154,7 +154,7 @@ cephObjectStores:
                 topologyKey: kubernetes.io/hostname
         resources:
           requests:
-            cpu: 250m
+            cpu: 100m
             memory: 512Mi
           limits:
             memory: 1Gi

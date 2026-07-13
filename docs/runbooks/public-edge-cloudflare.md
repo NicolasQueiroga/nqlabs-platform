@@ -14,7 +14,7 @@ public `*.io` HTTPRoute when `routes.public.enabled` (default off, requires revi
 
 1. **Create the tunnel** (Cloudflare dashboard → Zero Trust → Networks → Tunnels):
    - create a tunnel `nqlabs`, copy its **token**.
-2. **Store the token** in 1Password (NQLabs vault) as item `cloudflared-tunnel`,
+2. **Store the token** in OpenBao KV (NQLabs vault) as item `cloudflared-tunnel`,
    field `token`. (The ExternalSecret reads `cloudflared-tunnel/token`.)
 3. **Public hostname registry**: update/review
    `infrastructure/networking/cloudflared/public-hostnames.md` first. This is the

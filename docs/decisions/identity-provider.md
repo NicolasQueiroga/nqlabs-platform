@@ -82,7 +82,7 @@ migrated from later if that ever becomes the case.
 
 ## Secrets
 
-Generated once and stored in 1Password (NQLabs vault), consumed via ExternalSecrets:
+Generated once and stored in OpenBao (NQLabs vault), consumed via ExternalSecrets:
 
 - `authentik` — `secret_key`, `bootstrap_password`, `bootstrap_token`
 - `authentik-postgres` — `password`

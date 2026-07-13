@@ -255,10 +255,10 @@ Requires a scoped Cloudflare API token stored in 1Password.
 
 Secrets must NEVER be committed to git in plaintext.
 
-**Backend: 1Password SDK provider → future OpenBao**
+**Backend: OpenBao KV → future OpenBao**
 
 Nick is on a personal 1Password plan, so 1Password Connect is not available. ESO uses
-the 1Password SDK provider with a service account token instead. This keeps secret
+the OpenBao KV with a service account token instead. This keeps secret
 values out of git while avoiding a Connect server bootstrap dependency.
 
 **Bootstrap strategy:** For initial cluster secrets (Talos keys, onepassword service
@@ -269,7 +269,7 @@ ExternalSecrets in git that reference 1Password items/fields.
 - [x] Install **External Secrets Operator** via ArgoCD — v2.6.0
 - [x] 1Password Connect not needed — using **1Password SDK** (service account token, personal plan compatible)
   - Service account token bootstrapped as `onepassword-service-account-token` secret in `external-secrets` ns
-- [x] Create `ClusterSecretStore` — `nqlabs-1password` (onepasswordSDK provider, vault: NQLabs)
+- [x] Create `ClusterSecretStore` — `nqlabs-openbao` (onepasswordSDK provider, vault: NQLabs)
 - [x] Migrate Tailscale OAuth to ExternalSecret — `tailscale-operator-oauth` (SecretSynced: True)
 - [x] Validate: ExternalSecret resources sync correctly — operator-oauth secret owned by ESO
 - [x] Document secret management patterns in `docs/runbooks/secrets.md`
@@ -339,7 +339,7 @@ Tailscale is the access layer for `nqlabs.network` services.
   - demo staging and demo production
 - [x] Add alerts for endpoint down, endpoint slow, and TLS expiry
 - [ ] Add external/client-side probe location for true user-path monitoring
-- [ ] Add Uptime Kuma as a human-friendly status dashboard
+- [ ] Add Gatus as a human-friendly status dashboard
 
 ---
 
@@ -352,7 +352,7 @@ Immediate next focus:
 
 ```text
 external/client-side endpoint probing
-  → Uptime Kuma status dashboard
+  → Gatus status dashboard
   → GitHub repository rules / branch protection
   → multi-cluster namespace strategy finalization
 ```
@@ -374,7 +374,7 @@ external/client-side endpoint probing
       - [x] Mac lab namespace strategy: `<service>-staging` / `<service>-production`
       - [ ] Multi-cluster namespace strategy: same service namespace name in separate staging/production clusters
 - [ ] Add external/client-side endpoint probing
-- [x] Add Uptime Kuma status dashboard
+- [x] Add Gatus status dashboard
 - [ ] Add full GitHub Actions/repository rules/branch protection plan and implementation
 - [ ] Define final multi-repo application delivery model
       - Application/product code lives in app-owned repositories, not this platform repo
@@ -418,7 +418,7 @@ workstation; the desktop becomes the always-on infrastructure host.
       - [x] Install/bootstrap ArgoCD on `nqlabs-management` without applying desktop-lab root
       - [x] Create/apply constrained management ArgoCD root (`projects.yaml` + `argocd.yaml`)
       - [x] Add `local-path-provisioner` to management root and validate default StorageClass
-      - [x] Install External Secrets Operator on management and validate `nqlabs-1password` ClusterSecretStore
+      - [x] Install External Secrets Operator on management and validate `nqlabs-openbao` ClusterSecretStore
       - [x] Install cert-manager on management and validate Cloudflare ExternalSecret + ClusterIssuers
       - [x] Install management DNS stack and validate CoreDNS LB `192.168.15.194`
       - [x] Install management Gateway and validate HTTPS ArgoCD route on LB `192.168.15.195`
@@ -427,7 +427,7 @@ workstation; the desktop becomes the always-on infrastructure host.
       - [ ] Configure management ArgoCD to manage staging/production clusters
 - [x] Re-run full ArgoCD app-of-apps bootstrap on desktop lab
 - [ ] Re-run app-of-apps bootstrap / cluster registration for the multi-cluster desktop topology
-- [x] Validate DNS, Gateway, TLS, service factory, Blackbox probes, Discord alerts, release automation, and Uptime Kuma on desktop-lab
+- [x] Validate DNS, Gateway, TLS, service factory, Blackbox probes, Discord alerts, release automation, and Gatus on desktop-lab
 - [ ] Validate DNS, Gateway, TLS, service factory, probes, alerts, and release automation across the three-cluster desktop topology
 - [ ] Document differences between Mac lab and desktop lab
 
@@ -548,7 +548,7 @@ storage architecture can exist. Start with Ceph and avoid a Longhorn→Ceph migr
 ### Problem: Backup and Disaster Recovery
 
 - [ ] Install **Velero** for workload backup
-- [ ] Configure backup destination (S3-compatible: Backblaze B2, MinIO, or AWS S3)
+- [ ] Configure backup destination (S3-compatible: Backblaze B2, Ceph RGW, or AWS S3)
 - [ ] Define backup schedules for all stateful workloads
 - [ ] Test restore procedure (this is mandatory — unverified backups are not backups)
 - [ ] Document DR runbook
@@ -698,7 +698,7 @@ None. All decisions locked. ✓
 | Ingress | Cilium Gateway API | Modern Gateway API spec, zero extra components, native to CNI |
 | Cert Management | cert-manager + Cloudflare DNS-01 + internal CA fallback | Publicly trusted certs for owned private `.network`; `.io` waits for public edge |
 | Secrets Operator | External Secrets Operator | Decouples secrets from manifests |
-| Secrets Backend (now) | 1Password SDK provider | Personal-plan compatible; service account token bootstrapped once |
+| Secrets Backend (now) | OpenBao KV | Personal-plan compatible; service account token bootstrapped once |
 | Secrets Backend (future) | **OpenBao** | Self-hosted OSS Vault fork; after desktop multi-cluster baseline is stable |
 | Metrics | kube-prometheus-stack | Standard (Prometheus + Grafana + Alertmanager) |
 | Logging | Loki + Promtail | Grafana-native, lightweight |
@@ -726,4 +726,4 @@ None. All decisions locked. ✓
 
 ---
 
-*Last updated: desktop-lab operationally live on Proxmox — GitOps, DNS, Let's Encrypt TLS for `.network`, Tailscale-only HAProxy edge, secrets, Gateway, metrics, logging, Rollouts, ArgoCD project boundaries, service factory/demo app, Blackbox endpoint probes, Discord alerting, Uptime Kuma, service release automation, production release validation, private image pull support, Terraform service onboarding, and service-environment namespace/CiliumNetworkPolicy isolation scaffolding online. Next architectural target: build `nqlabs-management`, `nqlabs-staging`, and `nqlabs-production` plus security/operations layers on the desktop; NUCs later add/replace nodes in that same architecture.*
+*Last updated: desktop-lab operationally live on Proxmox — GitOps, DNS, Let's Encrypt TLS for `.network`, Tailscale-only HAProxy edge, secrets, Gateway, metrics, logging, Rollouts, ArgoCD project boundaries, service factory/demo app, Blackbox endpoint probes, Discord alerting, Gatus, service release automation, production release validation, private image pull support, Terraform service onboarding, and service-environment namespace/CiliumNetworkPolicy isolation scaffolding online. Next architectural target: build `nqlabs-management`, `nqlabs-staging`, and `nqlabs-production` plus security/operations layers on the desktop; NUCs later add/replace nodes in that same architecture.*

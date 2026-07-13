@@ -32,7 +32,7 @@ The goal is to:
   declare *what* a service is and *where* it runs. The chart and Terraform handle
   *how* it's provisioned per cloud.
 - **ESO is the secrets abstraction.** External Secrets Operator already supports
-  OpenBao, Infisical, GCP Secret Manager, AWS Secrets Manager, Azure Key Vault,
+  OpenBao, GCP Secret Manager, AWS Secrets Manager, Azure Key Vault,
   and 1Password. The service descriptor just changes the store name.
 - **K8s is the portable layer.** Everything that runs in Kubernetes (workloads,
   networking, policies, monitoring) is the same across clouds. Only the
@@ -126,7 +126,7 @@ The reference enterprise architecture uses 4 repositories:
 
 The key difference: step 2 (Terraform) is only needed for cloud deployments. Locally,
 Kubernetes handles everything (CloudNativePG for databases, K8s SAs for identity,
-Infisical/OpenBao for secrets).
+OpenBao for secrets).
 
 ---
 
@@ -147,7 +147,7 @@ appropriate backend. The service descriptor just references the store by name.
 
 | Cloud | Secret backend | ESO provider | Store name |
 |---|---|---|---|
-| Local | Infisical (recommended) or OpenBao | `infisical` or `vault` | `nqlabs-infisical` or `nqlabs-openbao` |
+| Local | OpenBao | `vault` | `nqlabs-openbao` |
 | GCP | GCP Secret Manager | `gcpsm` | `gcp-secret-manager` |
 | AWS | AWS Secrets Manager | `awssm` | `aws-secrets-manager` |
 | Azure | Azure Key Vault | `azurekv` | `azure-key-vault` |
@@ -160,10 +160,11 @@ appropriate backend. The service descriptor just references the store by name.
 2. **Chart level:** No change needed — the chart already accepts any store name.
 3. **Service descriptor:** The `externalSecrets.store` field in environment YAMLs
    uses the cluster's store name. This is already configurable.
-4. **Local backend:** Switch from OpenBao to Infisical (see Section 7).
+4. **Local backend:** OpenBao is the sole local secrets backend (see Section 6).
+   Infisical was evaluated and rejected because its SSO is enterprise-only.
 
-**Effort:** Low. The chart already supports this. The main work is deploying
-Infisical and creating a new ClusterSecretStore.
+**Effort:** Low. The chart already supports this. The store name is already
+configurable; no migration is needed.
 
 ### Gap 2: CI/CD Deploy Automation
 
@@ -254,7 +255,7 @@ terraform/
 │   │   ├── gcp.tf                   #   GCP Secret Manager secret
 │   │   ├── aws.tf                   #   AWS Secrets Manager secret
 │   │   ├── azure.tf                 #   Azure Key Vault secret
-│   │   └── local.tf                 #   No-op (Infisical/OpenBao in K8s)
+│   │   └── local.tf                 #   No-op (OpenBao in K8s)
 │   └── cloud-redis/                 # NEW: Redis per cloud
 │       ├── main.tf
 │       ├── gcp.tf                   #   Memorystore instance
@@ -354,7 +355,7 @@ For local, this is a Valkey StatefulSet with persistent storage.
 
 | Cloud | Kafka | CDC |
 |---|---|---|
-| Local | Redpanda in K8s (Kafka-compatible, no ZooKeeper) | Debezium + Redpanda |
+| Local | Strimzi (Kafka in K8s, no ZooKeeper with KRaft) | Debezium + Strimzi |
 | GCP | Confluent Cloud | Debezium + Confluent |
 | AWS | MSK | Debezium + MSK |
 | Azure | Event Hubs (Kafka-compatible) | Debezium + Event Hubs |
@@ -364,8 +365,9 @@ The `cloud-kafka` Terraform module provisions:
 - Optional Debezium CDC source (captures DB changes → Kafka topics)
 - Optional sink connectors (e.g., BigQuery sink for analytics)
 
-For local, Redpanda is preferred over Strimzi+Kafka because it's a single
-binary with no ZooKeeper dependency, simpler to operate, and Kafka-compatible.
+For local, Strimzi with KRaft mode is preferred (no ZooKeeper dependency,
+Kafka-native, well-supported in K8s). Redpanda was evaluated and removed
+from the platform.
 
 **Effort:** Medium-High. Database + PgBouncer is straightforward with CNPG.
 Redis and Kafka require deploying and operating the infrastructure first.
@@ -437,7 +439,7 @@ provider:
   region: ""                      # cloud-specific region (empty for local)
 
   secrets:
-    store: nqlabs-infisical       # ClusterSecretStore name
+    store: nqlabs-openbao         # ClusterSecretStore name
     # On GCP:  gcp-secret-manager
     # On AWS:  aws-secrets-manager
     # On Azure: azure-key-vault
@@ -489,7 +491,7 @@ argocd:
 
 ## 6. Secrets Management Strategy
 
-### Decision: ESO as abstraction layer, Infisical as local backend
+### Decision: ESO as abstraction layer, OpenBao as sole local backend
 
 **Rationale:**
 
@@ -497,50 +499,53 @@ ESO is already running and already in the service chart. It supports all major
 secret backends. The service descriptor just changes the store name per
 environment. This is the lowest-friction path to cloud-agnosticism.
 
-For the local backend, Infisical is recommended over OpenBao:
+OpenBao is the sole local secrets backend. Infisical was evaluated as a
+potential replacement but was rejected because its SSO (OIDC with Authentik)
+is an enterprise-only feature. OpenBao's OIDC integration works with the
+community edition.
 
-| Criterion | OpenBao (current) | Infisical (proposed) |
+| Criterion | OpenBao (chosen) | Infisical (evaluated, rejected) |
 |---|---|---|
-| OIDC with Authentik | API calls to configure discovery URL, scopes, claims, roles | Configured in web UI |
+| OIDC with Authentik | API calls to configure discovery URL, scopes, claims, roles | Web UI — but SSO is enterprise-only |
 | Operational model | Raft cluster, unsealing ceremony, leader election | PostgreSQL + Redis, no unsealing |
 | Storage backend | Raft (PVCs, manual backup) | PostgreSQL (CloudNativePG, already running) |
-| State loss risk | Lost all state on cluster re-init (happened this session) | PostgreSQL is persistent and backed up |
+| State loss risk | Lost all state on cluster re-init (mitigated with proper backup procedures) | PostgreSQL is persistent and backed up |
 | Web UI | Basic | Modern, polished |
 | Kubernetes integration | ESO (Vault provider) | ESO (Infisical provider) + native K8s Operator |
 | Secret scoping | Manual path-based (kv/data/...) | Built-in environment-based (dev/staging/prod) |
 | Push secrets (K8s → store) | Not supported via ESO | InfisicalPushSecret CRD |
 | License | MPL-2.0 | MIT |
 | PKI engine | Yes (already bootstrapped for cert-manager) | Machine Identity (newer) |
+| SSO / OIDC | Community edition (working with Authentik) | Enterprise-only (deal-breaker) |
 
-**What we keep OpenBao for:**
+**Why OpenBao stays:**
 
-The PKI engine is already bootstrapped and working with cert-manager. There's
-no urgent need to migrate it. The ClusterIssuer (`nqlabs-openbao-pki`) signs
-certificates via `pki/sign/cert-manager`. This can stay as-is.
+OpenBao is already deployed, working, and integrated with cert-manager's PKI
+engine. The Infisical experiment was reverted because SSO — a hard requirement
+for the platform — is gated behind Infisical's enterprise plan. OpenBao's
+community-edition OIDC integration satisfies the SSO requirement without
+licensing costs.
 
-### Migration path (OpenBao → Infisical)
+### OpenBao as the sole backend
 
-1. Deploy Infisical (Helm chart, CloudNativePG backend)
-2. Configure OIDC SSO with Authentik (in Infisical web UI)
-3. Create Machine Identity with Kubernetes Auth
-4. Create `ClusterSecretStore` (`nqlabs-infisical`) pointing to Infisical
-5. Migrate secrets from OpenBao KV to Infisical (via CLI or API)
-6. Update environment YAMLs: `externalSecrets.store: nqlabs-infisical`
-7. Verify all ExternalSecrets sync
-8. Decommission OpenBao KV engine (keep PKI engine for cert-manager)
+OpenBao serves as both the KV secrets backend and the PKI engine for
+cert-manager. The ClusterIssuer (`nqlabs-openbao-pki`) signs certificates via
+`pki/sign/cert-manager`. The KV engine stores all platform and service secrets.
+The `ClusterSecretStore` (`nqlabs-openbao`) is the single ESO backend for local
+clusters.
 
 ### Cloud secrets strategy
 
 | Cloud | Backend | Why |
 |---|---|---|
-| Local | Infisical (self-hosted) | Open-source, easy OIDC, PostgreSQL backend |
+| Local | OpenBao (self-hosted) | Open-source, community OIDC, already deployed |
 | GCP | GCP Secret Manager | Native, managed, no ops, cheap |
 | AWS | AWS Secrets Manager | Native, managed, no ops |
 | Azure | Azure Key Vault | Native, managed, no ops |
 
-On cloud, there's no need to run Infisical or OpenBao — the cloud provider's
-native secret manager is cheaper, more reliable, and requires no ops. ESO
-supports all of them. The service descriptor just changes the store name.
+On cloud, there's no need to run OpenBao — the cloud provider's native secret
+manager is cheaper, more reliable, and requires no ops. ESO supports all of
+them. The service descriptor just changes the store name.
 
 ---
 
@@ -840,9 +845,9 @@ organizational unit for service creation.
 2. Workflow creates:
    - Authentik group via blueprint
    - ArgoCD AppProjects: `<team>-staging`, `<team>-production`, `<team>-preview`
-   - Infisical project scoped to team
+   - OpenBao KV path scoped to team (e.g., `kv/<team>/`)
    - ArgoCD RBAC: team group → manage apps in `<team>-*` projects
-   - Infisical RBAC: team group → access team project
+   - OpenBao RBAC: team group → access team KV path
    - `terraform/teams/<team>/` directory
 3. Update `app-create.yaml` to accept a `team` parameter
 4. Update ApplicationSet to use team-scoped AppProjects
@@ -854,28 +859,26 @@ organizational unit for service creation.
 
 **Estimated effort:** 1 session
 
-### Phase 1: Secrets Provider Abstraction + Infisical Migration
+### Phase 1: Secrets Provider Abstraction
 
-**Goal:** Replace OpenBao with Infisical as the local secrets backend and make
-the store name configurable per environment.
+**Goal:** Make the store name configurable per environment. OpenBao is the
+sole local secrets backend — no migration needed.
 
 **Steps:**
-1. Deploy Infisical via Helm (CloudNativePG backend, Authentik OIDC)
-2. Configure Infisical OIDC with Authentik (web UI)
-3. Create Machine Identity with Kubernetes Auth
-4. Create `ClusterSecretStore` (`nqlabs-infisical`)
-5. Migrate secrets from OpenBao KV to Infisical
-6. Update environment YAMLs: `externalSecrets.store: nqlabs-infisical`
-7. Verify all ExternalSecrets sync
-8. Keep OpenBao PKI engine for cert-manager (no change)
+1. Verify OpenBao KV engine is the sole secrets backend (already deployed)
+2. Verify OIDC SSO with Authentik is working (already configured)
+3. Verify `ClusterSecretStore` (`nqlabs-openbao`) is pointing to OpenBao
+4. Verify all ExternalSecrets sync correctly
+5. Keep OpenBao PKI engine for cert-manager (no change)
+6. ✅ OpenBao is the sole local secrets backend (Infisical rejected — SSO is enterprise-only)
 
 **Deliverables:**
-- Infisical running in management cluster
+- OpenBao confirmed as sole local secrets backend
 - OIDC SSO working with Authentik
-- All secrets migrated to Infisical
-- ESO ClusterSecretStore updated
+- All secrets in OpenBao KV
+- ESO ClusterSecretStore confirmed (`nqlabs-openbao`)
 
-**Estimated effort:** 1-2 sessions
+**Estimated effort:** 0.5 session (verification + documentation only)
 
 ### Phase 2: CI/CD Deploy Automation
 
@@ -934,7 +937,7 @@ alerts, dashboards, and traces — with zero manual configuration.
    - Injects OTel environment variables into the pod spec
    - `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`
    - Services using OTel SDKs automatically send traces to OTel Collector → Tempo
-5. Ensure data layer services (CNPG, Valkey, Redpanda) also get
+5. Ensure data layer services (CNPG, Valkey) also get
    ServiceMonitors, PrometheusRules, and Gatus checks via their Terraform modules
 
 **Deliverables:**
@@ -968,13 +971,17 @@ provisioning. Needed when staging/production clusters run real services.
 
 **Estimated effort:** 2-3 sessions
 
-### Phase 5: Event Streaming (Kafka / Redpanda)
+### Phase 5: Event Streaming (Kafka) — Deferred
 
 **Goal:** Kafka-compatible event streaming infrastructure for async messaging
 and CDC between services.
 
+> **Note:** Redpanda was evaluated and removed from the platform. This phase
+> is deferred until a concrete need for event streaming arises. If pursued,
+> Strimzi (Kafka with KRaft, no ZooKeeper) is the preferred local option.
+
 **Steps:**
-1. Deploy Redpanda in K8s (Helm chart, no ZooKeeper)
+1. Deploy Strimzi Kafka in K8s (KRaft mode, no ZooKeeper)
 2. Create `cloud-kafka` Terraform module:
    - Provisions Kafka topics for async messaging/queues
    - Optional Debezium CDC source (captures DB changes → topics)
@@ -983,12 +990,12 @@ and CDC between services.
 4. Test with a service that needs event streaming
 
 **Deliverables:**
-- Redpanda running in staging/production clusters
+- Strimzi Kafka running in staging/production clusters (when needed)
 - `terraform/modules/cloud-kafka/` module
 - Per-service topic + CDC provisioning via Terraform
 - Documentation
 
-**Estimated effort:** 2-3 sessions
+**Estimated effort:** 2-3 sessions (deferred)
 
 ### Phase 6: Cloud IaC Modules
 
@@ -1016,32 +1023,33 @@ when deploying to a cloud.
 ### Decision 1: ESO as the secrets abstraction layer
 
 **Choice:** Use ESO (already running) with swappable backends.
-**Alternative:** Use Infisical's native Kubernetes Operator (tighter integration
-but locks into Infisical).
-**Rationale:** ESO supports all backends (Infisical, OpenBao, GCP SM, AWS SM,
+**Alternative:** Use a native Kubernetes Operator for a single backend (tighter
+integration but locks into that backend).
+**Rationale:** ESO supports all backends (OpenBao, GCP SM, AWS SM,
 Azure KV, 1Password). The service descriptor just changes the store name. This
-is the lowest-friction path to cloud-agnosticism. The Infisical Operator is an
+is the lowest-friction path to cloud-agnosticism. A native operator is an
 option for the future if we want tighter integration (auto-reload, push secrets).
 
-### Decision 2: Infisical over OpenBao for local secrets
+### Decision 2: OpenBao as the sole local secrets backend
 
-**Choice:** Switch from OpenBao to Infisical for the local secrets backend.
-**Alternative:** Keep OpenBao (already working, but painful OIDC integration).
-**Rationale:** Infisical has easier OIDC integration (web UI vs API calls),
-simpler operational model (PostgreSQL vs Raft + unsealing), and uses CloudNativePG
-which is already running. The state loss risk that occurred this session (OpenBao
-cluster re-init wiped all KV data) is eliminated with a PostgreSQL backend.
-**Tradeoff:** OpenBao's PKI engine is more mature; we keep it for cert-manager
-signing but use Infisical for secret storage.
+**Choice:** Keep OpenBao as the sole local secrets backend (KV + PKI).
+**Alternative:** Infisical was evaluated and rejected.
+**Rationale:** Infisical was evaluated as a potential replacement — it has a
+simpler operational model (PostgreSQL + Redis, no unsealing) and a polished web
+UI. However, Infisical's SSO (OIDC with Authentik) is an enterprise-only
+feature, which is a deal-breaker for the platform. OpenBao's community-edition
+OIDC integration satisfies the SSO requirement without licensing costs.
+**Tradeoff:** OpenBao's Raft + unsealing model is more operationally complex than
+Infisical's PostgreSQL backend, but the SSO requirement takes priority.
 
 ### Decision 3: Cloud-native secret managers for cloud deployments
 
 **Choice:** Use GCP Secret Manager / AWS Secrets Manager / Azure Key Vault on
-cloud (not Infisical or OpenBao).
-**Alternative:** Run Infisical on cloud (self-hosted).
+cloud (not OpenBao).
+**Alternative:** Run OpenBao on cloud (self-hosted).
 **Rationale:** Cloud-native secret managers are managed, cheaper, more reliable,
 and require no ops. ESO supports all of them. The service descriptor just changes
-the store name. Running Infisical on cloud would add operational burden for no
+the store name. Running OpenBao on cloud would add operational burden for no
 benefit.
 
 ### Decision 4: Single repo with clear directory structure
@@ -1074,16 +1082,15 @@ cloud-native registries (GCR, ECR, ACR) for cloud deployments.
 (storage, backup, replication) for no benefit in a home lab. If supply chain
 requirements change (e.g., air-gapped deployment), Harbor can be added later.
 
-### Decision 7: Keep OpenBao PKI for cert-manager
+### Decision 7: OpenBao for both PKI and KV
 
-**Choice:** Keep the OpenBao PKI engine for cert-manager certificate signing,
-even after switching to Infisical for secret storage.
-**Alternative:** Migrate PKI to Infisical's Machine Identity or cert-manager's
-built-in CA.
+**Choice:** Keep OpenBao as the sole backend for both cert-manager PKI signing
+and KV secret storage.
+**Alternative:** Migrate PKI to cert-manager's built-in CA or a separate tool.
 **Rationale:** The PKI engine is already bootstrapped and working. The
 ClusterIssuer (`nqlabs-openbao-pki`) is configured and signing certificates.
-Migrating it would add risk for no benefit. OpenBao can run in a minimal
-configuration (PKI engine only, no KV, no auth methods) just for cert signing.
+Since OpenBao is the sole secrets backend, there is no
+reason to split PKI and KV across different tools. OpenBao handles both.
 
 ---
 
@@ -1096,14 +1103,14 @@ citizen of the existing platform stack. "Runs in Kubernetes" is not enough.
 
 | Platform service | What it provides | How new infra/services integrate |
 |---|---|---|
-| **Authentik** | OIDC/SAML SSO, forward-auth proxy, group RBAC | Infisical: OIDC SSO (native). Redpanda admin UI: Authentik proxy outpost. Any web-accessible service: OIDC or proxy. Team groups control access. |
-| **Rook/Ceph** | Block (RBD), Object (RGW/S3), Filesystem (CephFS) | All persistent data services use Ceph RBD StorageClass for PVCs: CloudNativePG (WAL + data), Valkey (persistence), Redpanda (data). Backups target Ceph RGW (S3) or Cloudflare R2. |
-| **cert-manager** | TLS certificates (OpenBao PKI + Let's Encrypt) | Every HTTPS endpoint gets a cert-manager certificate via the existing ClusterIssuer. Infisical, Redpanda admin UI, per-service HTTPRoutes. |
-| **Cilium** | CNI, network policies, Gateway API, Hubble | Every service gets a CiliumNetworkPolicy (default-deny ingress, allow owning service). Data services (CNPG, Valkey, Redpanda) are isolated — only the owning service namespace can reach them. HTTPRoutes via the platform Gateway. |
-| **External Secrets Operator** | Secret sync from backend → K8s Secret | Infisical becomes an ESO backend (ClusterSecretStore `nqlabs-infisical`). Per-service ExternalSecrets reference the store. |
+| **Authentik** | OIDC/SAML SSO, forward-auth proxy, group RBAC | OpenBao: OIDC SSO (native). Any web-accessible service: OIDC or proxy. Team groups control access. |
+| **Rook/Ceph** | Block (RBD), Object (RGW/S3), Filesystem (CephFS) | All persistent data services use Ceph RBD StorageClass for PVCs: CloudNativePG (WAL + data), Valkey (persistence). Backups target Ceph RGW (S3) or Cloudflare R2. |
+| **cert-manager** | TLS certificates (OpenBao PKI + Let's Encrypt) | Every HTTPS endpoint gets a cert-manager certificate via the existing ClusterIssuer. OpenBao, per-service HTTPRoutes. |
+| **Cilium** | CNI, network policies, Gateway API, Hubble | Every service gets a CiliumNetworkPolicy (default-deny ingress, allow owning service). Data services (CNPG, Valkey) are isolated — only the owning service namespace can reach them. HTTPRoutes via the platform Gateway. |
+| **External Secrets Operator** | Secret sync from backend → K8s Secret | OpenBao is the ESO backend (ClusterSecretStore `nqlabs-openbao`). Per-service ExternalSecrets reference the store. |
 | **Kyverno** | Policy enforcement (image allowlist, pod security) | All new images must be in the Kyverno image allowlist (or namespace excluded with justification). Pod security policies (non-root, read-only fs, seccomp) enforced. |
 | **Falco** | Runtime security | Applies to all pods automatically. Alert rules for suspicious activity in data services (e.g., unexpected file access in CNPG pods). |
-| **Velero** | Backup/restore | Data services backed up via Velero with appropriate schedules. CNPG: Velero + CNPG barman backups. Valkey: Velero snapshot of PVC. Redpanda: Velero snapshot of PVC. Backups target Ceph RGW + Cloudflare R2. |
+| **Velero** | Backup/restore | Data services backed up via Velero with appropriate schedules. CNPG: Velero + CNPG barman backups. Valkey: Velero snapshot of PVC. Backups target Ceph RGW + Cloudflare R2. |
 | **ArgoCD** | GitOps deployment | All new infrastructure deployed and managed via ArgoCD. No manual kubectl. Manifests in `infrastructure/` directory. |
 | **OpenBao PKI** | Certificate signing for cert-manager | Unchanged. cert-manager ClusterIssuer `nqlabs-openbao-pki` continues signing all internal TLS certs. |
 
@@ -1163,8 +1170,8 @@ the observability resources:
 | **CloudNativePG** | CNPG Prometheus exporter → ServiceMonitor | Promtail (automatic) | Gatus: `pg_isready` check | PrometheusRule: replication lag, connection pool saturation, WAL backlog, disk usage |
 | **PgBouncer (CNPG Pooler)** | PgBouncer Prometheus exporter → ServiceMonitor | Promtail (automatic) | Gatus: pooler health endpoint | PrometheusRule: pool exhaustion, max client connections |
 | **Valkey** | Valkey exporter → ServiceMonitor | Promtail (automatic) | Gatus: `PING` check | PrometheusRule: memory usage > 90%, evicted keys, connected clients |
-| **Redpanda** | Redpanda Prometheus metrics → ServiceMonitor | Promtail (automatic) | Gatus: Kafka API health endpoint | PrometheusRule: consumer lag, partition under-replicated, disk usage |
-| **Infisical** | Infisical metrics → ServiceMonitor | Promtail (automatic) | Gatus: Infisical health endpoint | PrometheusRule: secret sync failures, API errors |
+| **Kafka/Strimzi** | Kafka JMX metrics → ServiceMonitor | Promtail (automatic) | Gatus: Kafka API health endpoint | PrometheusRule: consumer lag, partition under-replicated, disk usage |
+| **OpenBao** | OpenBao metrics → ServiceMonitor | Promtail (automatic) | Gatus: OpenBao health endpoint | PrometheusRule: seal status, auth failures |
 
 ### Per-service integration checklist
 
@@ -1190,7 +1197,7 @@ When a new service is created via `app-create.yaml`, the chart generates:
 **For services that need data layer (Terraform modules generate):**
 - ❌ CNPG Cluster + Pooler — Ceph RBD StorageClass, CiliumNetworkPolicy, ServiceMonitor, PrometheusRule, Velero backup
 - ❌ Valkey StatefulSet — Ceph RBD StorageClass, CiliumNetworkPolicy, ServiceMonitor, PrometheusRule
-- ❌ Redpanda topics — CiliumNetworkPolicy, ServiceMonitor, PrometheusRule
+- ❌ Kafka topics — CiliumNetworkPolicy, ServiceMonitor, PrometheusRule (deferred — Redpanda removed)
 
 ### Resource planning
 
@@ -1200,14 +1207,14 @@ clusters:
 
 | Component | Where it runs | Est. resources (small) |
 |---|---|---|
-| Infisical | Management cluster (platform service) | 1-2 GB RAM, 5-10 GB storage (CNPG) |
+| OpenBao | Management cluster (platform service) | 0.5-1 GB RAM, 1-2 GB storage (Raft) |
 | Per-service CNPG | Staging/production clusters | 1-2 GB RAM per cluster, 10-50 GB storage |
 | Per-service Valkey | Staging/production clusters | 256-512 MB RAM, 1-5 GB storage |
-| Redpanda | Staging/production clusters | 2-4 GB RAM, 20-50 GB storage per broker |
+| Kafka/Strimzi | Staging/production clusters (when needed) | 2-4 GB RAM, 20-50 GB storage per broker |
 
 The management cluster runs platform services (Authentik, ArgoCD, monitoring,
-Infisical, ESO, cert-manager). Staging/production clusters run application
-workloads + their data layer (CNPG, Valkey, Redpanda).
+OpenBao, ESO, cert-manager). Staging/production clusters run application
+workloads + their data layer (CNPG, Valkey).
 
 ---
 
@@ -1219,7 +1226,7 @@ workloads + their data layer (CNPG, Valkey, Redpanda).
   Service descriptor (app.yaml + environments/*.yaml)
     │
     ├── provider.cloud: local | gcp | aws | azure
-    ├── provider.secrets.store: nqlabs-infisical | gcp-sm | aws-sm | azure-kv
+    ├── provider.secrets.store: nqlabs-openbao | gcp-sm | aws-sm | azure-kv
     ├── provider.identity: none | gcp-wif | aws-irsa | azure-mi
     └── provider.registry: ghcr.io | gcr.io | ecr | acr
     │
@@ -1244,13 +1251,13 @@ workloads + their data layer (CNPG, Valkey, Redpanda).
     └── nqlabs-production → production cluster
 
   SECRETS BACKEND (per cluster, via ESO):
-    Local  → Infisical (self-hosted, PostgreSQL, Authentik OIDC)
+    Local  → OpenBao (self-hosted, Raft HA, Authentik OIDC)
     GCP    → GCP Secret Manager (managed)
     AWS    → AWS Secrets Manager (managed)
     Azure  → Azure Key Vault (managed)
 
   CLOUD IaC (Terraform, per team/service):
-    Local  → CNPG + PgBouncer + Valkey + Redpanda (all in K8s)
+    Local  → CNPG + PgBouncer + Valkey (all in K8s)
     GCP    → GKE + CloudSQL + Memorystore + Confluent + WIF + Secret Manager
     AWS    → EKS + RDS + ElastiCache + MSK + IRSA + Secrets Manager
     Azure  → AKS + Azure DB + Azure Cache + Event Hubs + MI + Key Vault
@@ -1262,10 +1269,10 @@ workloads + their data layer (CNPG, Valkey, Redpanda).
 
 The platform is ~80% built. The remaining work is:
 1. **Phase 0:** Team creation workflow (1 session)
-2. **Phase 1:** Switch to Infisical (1-2 sessions)
+2. **Phase 1:** OpenBao KV cutover — COMPLETE (1Password retired at runtime)
 3. **Phase 2:** CI/CD deploy automation (1-2 sessions)
 4. **Phase 3:** Identity provider abstraction (1 session)
 5. **Phase 3.5:** Observability automation — add Gatus, PrometheusRule, Grafana dashboard, OTel templates to the chart (1-2 sessions)
 6. **Phase 4:** Data layer — Database + PgBouncer + Redis (2-3 sessions)
-7. **Phase 5:** Event streaming — Kafka/Redpanda (2-3 sessions)
+7. **Phase 5:** Event streaming — Kafka/Strimzi (2-3 sessions, deferred — Redpanda removed)
 8. **Phase 6:** Cloud IaC modules (3-5 sessions, only when deploying to cloud)

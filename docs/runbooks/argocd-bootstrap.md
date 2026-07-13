@@ -17,7 +17,7 @@ ArgoCD itself.
 - Talos cluster running and `kubectl` configured
 - `helm` CLI installed
 - `clusters/nqlabs-management/` committed and pushed to GitHub
-- 1Password service account token (see [secrets.md](secrets.md))
+- OpenBao service account token (see [secrets.md](secrets.md))
 
 ## Step 1 — Add Helm repos
 
@@ -124,9 +124,9 @@ After the Gateway and DNS stack are synced, the durable URL is:
 https://argocd.platform.nqlabs.network
 ```
 
-## Step 7 — Create the 1Password service account token secret
+## Step 7 — Create the OpenBao service account token secret
 
-ESO needs a 1Password service account token to read secrets from the `NQLabs`
+ESO needs a OpenBao service account token to read secrets from the `NQLabs`
 vault. This is the trust root for all platform secrets and must be applied
 manually before the root Application can sync ESO-dependent apps (authentik,
 velero, etc.).
@@ -135,7 +135,7 @@ velero, etc.).
 # Create the namespace first (ESO will be installed into it by GitOps)
 kubectl create namespace external-secrets
 
-# Create the bootstrap secret from 1Password CLI
+# Create the bootstrap secret from OpenBao CLI
 op item get "Service Account Auth Token: NQ Labs" \
   --account my.1password.com --fields credential --format json \
   | python3 -c "import json,sys; sys.stdout.write(json.load(sys.stdin)['value'])" \
@@ -278,7 +278,7 @@ clusters/nqlabs-management/argocd/apps/
 ├── projects.yaml                   # AppProjects (platform required before root)
 ├── argocd.yaml                     # ArgoCD self-management
 ├── cert-manager.yaml               # cert-manager + issuers/certs
-├── external-secrets-operator.yaml  # ESO + 1Password SDK config
+├── external-secrets-operator.yaml  # ESO + OpenBao SDK config
 └── ...
 ```
 

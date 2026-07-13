@@ -3,7 +3,7 @@
 Managed Kafka for cloud deployments. Three sub-modules, one per provider.
 
 For the in-cluster (home-lab) path, use the `nqlabs-service` chart with
-`kafka.enabled=true` — that provisions Redpanda topics via a PostSync Job.
+`kafka.enabled=true` — that provisions Strimzi/Kafka topics via a PostSync Job.
 These modules are the cloud equivalent.
 
 ---
@@ -122,4 +122,4 @@ module "kafka" {
 | Fully managed | Yes | Yes | Yes |
 | Kafka compatibility | Full | Full | Partial (no compacted topics) |
 | Auth | API Key (SASL_SSL) | SASL/SCRAM | SASL/PLAIN |
-| In-cluster alternative | `kafka.enabled=true` in chart (Redpanda) | same | same |
+| In-cluster alternative | `kafka.enabled=true` in chart (Strimzi/Kafka) | same | same |

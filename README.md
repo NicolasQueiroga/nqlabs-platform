@@ -44,7 +44,7 @@ If it is not in this repository, it does not exist.
 | Layer | Technology |
 |-------|-----------|
 | Secrets Operator | [External Secrets Operator](https://external-secrets.io/) |
-| Secrets Backend (Phase 0–1) | 1Password SDK provider + service account token |
+| Secrets Backend (Phase 0–1) | OpenBao KV + service account token |
 | Secrets Backend (future) | [OpenBao](https://openbao.org/) — self-hosted OSS Vault fork |
 
 ### Storage
@@ -109,7 +109,7 @@ nqlabs-platform/
 │   ├── networking/           # Cilium, Gateway API, Tailscale operator/connector/coredns
 │   ├── storage/              # local-path now, Rook/Ceph later
 │   ├── monitoring/           # Prometheus, Grafana, Alertmanager, Loki/Promtail
-│   ├── security/             # cert-manager, External Secrets + 1Password ClusterSecretStore
+│   ├── security/             # cert-manager, External Secrets + OpenBao ClusterSecretStore
 │   └── identity/             # Authentik SSO IdP (CloudNativePG + Valkey) + OIDC/forward-auth
 ├── charts/nqlabs-service/    # reusable service chart (single- or multi-workload)
 ├── apps/<app>/               # deployment contracts: environments/*.yaml + previews/*.yaml
@@ -151,7 +151,7 @@ copy commands they do not understand.
 ## Security
 
 This is a public repository. Secrets are **never** committed here.
-All sensitive values are stored in 1Password and injected at runtime
+All sensitive values are stored in OpenBao KV and injected at runtime
 via [External Secrets Operator](https://external-secrets.io/).
 
 See `.gitignore` for the full exclusion list.

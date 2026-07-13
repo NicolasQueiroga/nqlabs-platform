@@ -44,7 +44,7 @@ resources:
 
 # cert-controller — manages TLS certs for ESO webhooks
 certController:
-  replicaCount: 2
+  replicaCount: 1
   resources:
     requests:
       cpu: 25m
@@ -54,7 +54,7 @@ certController:
 
 # webhook — validates ExternalSecret/SecretStore resources at admission
 webhook:
-  replicaCount: 2
+  replicaCount: 1
   resources:
     requests:
       cpu: 25m

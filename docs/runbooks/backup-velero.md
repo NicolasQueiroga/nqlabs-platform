@@ -16,7 +16,7 @@ files. Do not relax service namespaces for this.
 | `azure` | Azure Blob `nqlabsvelero24612/velero` (Cool, LRS) | offsite DR |
 
 Credentials: local RGW creds in `velero-rgw-credentials` (OBC-managed), offsite
-creds in 1Password (`velero-aws`, `velero-azure`) assembled into `velero-credentials`.
+creds in OpenBao KV (`velero-aws`, `velero-azure`) assembled into `velero-credentials`.
 
 ## Schedules
 

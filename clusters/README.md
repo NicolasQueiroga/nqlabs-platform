@@ -3,7 +3,7 @@
 This directory contains per-cluster bootstrap intent for the NQLabs Platform.
 
 Generated Talos secrets, machine configs, kubeconfigs, and talosconfigs are ignored
-and must not be committed. Store generated secrets in 1Password and generated access
+and must not be committed. Store generated secrets in OpenBao and generated access
 files under `clusters/<cluster>/generated/` on the operator workstation.
 
 ## Clusters (live)

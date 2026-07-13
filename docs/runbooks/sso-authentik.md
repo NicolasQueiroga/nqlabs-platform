@@ -29,9 +29,9 @@ Data layer: CloudNativePG (`authentik-pg`) + Valkey (`authentik-valkey`) in the
   `infrastructure/delivery/argo-rollouts/dashboard-route/`,
   `infrastructure/identity/authentik/manifests/referencegrant.yaml`
 
-## Secrets (1Password → ESO)
+## Secrets (OpenBao → ESO)
 
-| 1Password item | Fields | Used by |
+| OpenBao item | Fields | Used by |
 |----------------|--------|---------|
 | `authentik-login` | secret_key, bootstrap_password, bootstrap_token, redis_password | Authentik server/worker |
 | `authentik-postgres` | password | CNPG cluster + Authentik |
@@ -65,7 +65,7 @@ there and map them to roles in the consuming app (ArgoCD `policy.csv`, Grafana
 
 **OIDC-native app:** add an `oauth2provider` + `application` entry to
 `blueprints/20-oidc.yaml` (fixed `client_id`, secret via `!Env` from a new
-1Password item + ESO key), then configure the app's OIDC client.
+OpenBao item + ESO key), then configure the app's OIDC client.
 
 **Non-OIDC app (forward-auth):**
 1. Add a `proxyprovider` (mode: proxy, `external_host`, `internal_host`) +

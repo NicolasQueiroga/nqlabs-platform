@@ -43,7 +43,7 @@ All three clusters run:
 - **Kyverno** (policy engine, audit mode)
 - **Falco** (runtime security, eBPF)
 - **cert-manager** (TLS certificates)
-- **External Secrets Operator** (1Password integration)
+- **External Secrets Operator** (OpenBao integration)
 - **local-path-provisioner** (storage)
 
 The management cluster additionally runs all platform services (identity,
@@ -111,7 +111,7 @@ HTTPRoutes attach to the gateway and route by hostname:
 | `prometheus.platform.nqlabs.network` | `authentik-server:80` (forward-auth) → `kube-prometheus-stack-prometheus:9090` | monitoring | Forward-auth |
 | `alertmanager.platform.nqlabs.network` | `authentik-server:80` (forward-auth) → `kube-prometheus-stack-alertmanager:9093` | monitoring | Forward-auth |
 | `rollouts.platform.nqlabs.network` | `authentik-server:80` (forward-auth) → `argo-rollouts-dashboard:3100` | argo-rollouts | Forward-auth |
-| `uptime.platform.nqlabs.network` | `authentik-server:80` (forward-auth) → `uptime-kuma:3001` | monitoring | Forward-auth |
+| `uptime.platform.nqlabs.network` | `authentik-server:80` (forward-auth) → `gatus:3001` | monitoring | Forward-auth |
 
 Config: `infrastructure/networking/gateway/platform-gateway.yaml`
 
@@ -122,7 +122,7 @@ Config: `infrastructure/networking/gateway/platform-gateway.yaml`
 | Namespace | `tailscale` |
 | Tailnet | `hen-exponential.ts.net` |
 | Operator | `tailscale/tailscale-operator` |
-| OAuth | ESO-managed (1Password → `tailscale-oauth` ExternalSecret) |
+| OAuth | ESO-managed (OpenBao → `tailscale-oauth` ExternalSecret) |
 
 Tailscale provides private network access to all cluster services. No
 platform service is exposed to the public internet — everything is reached
@@ -157,7 +157,7 @@ Config: `infrastructure/networking/tailscale/`
 |----------|-------|
 | Namespace | `cloudflared` |
 | Deployment | 2 replicas, `cloudflare/cloudflared` |
-| Tunnel token | ESO-managed (1Password) |
+| Tunnel token | ESO-managed (OpenBao) |
 
 Cloudflare Tunnel gives `*.nqlabs.io` (public domain) services a real public
 ingress without exposing a public IP. `cloudflared` dials out to Cloudflare;
@@ -284,18 +284,18 @@ Config: `infrastructure/security/cert-manager/`
 |----------|-------|
 | Namespace | `external-secrets` |
 | Chart | `external-secrets/external-secrets` v2.6.0 |
-| Backend | 1Password SDK (NQLabs vault) |
+| Backend | OpenBao KV (NQLabs vault) |
 | Auth | Service account token (one-time bootstrap) |
 | Replicas | 2 controller + webhook + cert-controller (leader election on) |
 | Observability | ServiceMonitor + sync-error alerts |
 
-ESO synchronizes secrets from 1Password into Kubernetes Secrets. The
-platform uses a single `ClusterSecretStore` named `nqlabs-1password` that
-reads from the NQLabs vault using a 1Password service account token.
+ESO synchronizes secrets from OpenBao into Kubernetes Secrets. The
+platform uses a single `ClusterSecretStore` named `nqlabs-openbao` that
+reads from the NQLabs vault using a OpenBao service account token.
 
 All platform secrets are defined as `ExternalSecret` resources that
-reference the `nqlabs-1password` store. When an ExternalSecret is created,
-ESO fetches the value from 1Password and materializes a Kubernetes Secret.
+reference the `nqlabs-openbao` store. When an ExternalSecret is created,
+ESO fetches the value from OpenBao and materializes a Kubernetes Secret.
 
 **Secrets managed by ESO:**
 - `authentik-secrets` — secret_key, bootstrap_password, bootstrap_token,
@@ -382,8 +382,8 @@ Config: `infrastructure/security/falco/values.yaml`
 | Namespace | `authentik` |
 | Chart | `authentik/authentik` |
 | URL | `auth.platform.nqlabs.network` |
-| Admin user | `nicolas` (password in 1Password: `authentik-login/bootstrap_password`; upstream `akadmin` remains break-glass only) |
-| API token | 1Password: `authentik-login/bootstrap_token` |
+| Admin user | `nicolas` (password in OpenBao: `authentik-login/bootstrap_password`; upstream `akadmin` remains break-glass only) |
+| API token | OpenBao: `authentik-login/bootstrap_token` |
 | Database | CloudNativePG (`authentik-pg`) |
 | Cache | Valkey (`authentik-valkey`) |
 
@@ -399,7 +399,7 @@ UI authenticates against it.
 | Prometheus | Forward-auth (embedded proxy outpost) | Gateway routes to Authentik outpost first; outpost validates session, redirects unauthenticated users to Authentik login, passes through authenticated users to the backend. |
 | Alertmanager | Forward-auth | Same as Prometheus. |
 | Argo Rollouts Dashboard | Forward-auth | Same as Prometheus. |
-| Uptime Kuma | Forward-auth | Same as Prometheus. |
+| Gatus | Forward-auth | Same as Prometheus. |
 
 **Groups (defined in blueprints):**
 
@@ -694,7 +694,7 @@ working — without conflating the two.
 Config: `infrastructure/monitoring/blackbox/values.yaml`,
 `infrastructure/monitoring/blackbox-probes.yaml`
 
-### Uptime Kuma (Uptime Monitoring)
+### Gatus (Uptime Monitoring)
 
 | Property | Value |
 |----------|-------|
@@ -703,11 +703,11 @@ Config: `infrastructure/monitoring/blackbox/values.yaml`,
 | Storage | local-path PVC |
 | Kind | Deployment (manifest, not chart) |
 
-Uptime Kuma provides a user-friendly uptime monitoring UI. It complements
+Gatus provides a user-friendly uptime monitoring UI. It complements
 Prometheus/blackbox probes with a visual dashboard for uptime status and
 notification configuration.
 
-Config: `infrastructure/monitoring/uptime-kuma/`
+Config: `infrastructure/monitoring/gatus/`
 
 ### Hubble (Network Observability)
 
@@ -882,22 +882,22 @@ Developer merges PR to app repo main
 
 ## 12. Secret Management
 
-All secrets are stored in 1Password and synchronized to Kubernetes by
+All secrets are stored in OpenBao and synchronized to Kubernetes by
 External Secrets Operator. No secrets exist in the Git repository.
 
 ### Flow
 
 ```
-1Password (NQLabs vault)
-  → ESO ClusterSecretStore (nqlabs-1password)
-  → ExternalSecret resources reference 1Password item fields
+OpenBao (NQLabs vault)
+  → ESO ClusterSecretStore (nqlabs-openbao)
+  → ExternalSecret resources reference OpenBao item fields
   → ESO creates Kubernetes Secrets
   → Pods consume secrets via secretKeyRef / envFromSecret
 ```
 
 ### Key secrets
 
-| 1Password item | Fields | Used by |
+| OpenBao item | Fields | Used by |
 |----------------|--------|---------|
 | `authentik` | secret_key, bootstrap_password, bootstrap_token, redis_password, postgres_password | Authentik server/worker |
 | `authentik-postgres` | password | CNPG cluster + Authentik |
@@ -936,7 +936,7 @@ Runbook: [secrets.md](../runbooks/secrets.md)
 | `loki` | monitoring | Log aggregation |
 | `promtail` | monitoring | Log shipping DaemonSet |
 | `blackbox-exporter` | monitoring | Synthetic monitoring |
-| `uptime-kuma` | monitoring | Uptime monitoring UI |
+| `gatus` | monitoring | Uptime monitoring UI |
 | `management-kyverno` | kyverno | Policy engine |
 | `management-kyverno-policies` | kyverno | ClusterPolicies |
 | `management-falco` | falco | Runtime security |
@@ -1016,7 +1016,7 @@ Runbook: [secrets.md](../runbooks/secrets.md)
 | `prometheus.platform.nqlabs.network` | Prometheus | Forward-auth |
 | `alertmanager.platform.nqlabs.network` | Alertmanager | Forward-auth |
 | `rollouts.platform.nqlabs.network` | Argo Rollouts Dashboard | Forward-auth |
-| `uptime.platform.nqlabs.network` | Uptime Kuma | Forward-auth |
+| `uptime.platform.nqlabs.network` | Gatus | Forward-auth |
 | `hubble.platform.nqlabs.network` | Hubble UI | Forward-auth |
 
 ### Key IP Addresses

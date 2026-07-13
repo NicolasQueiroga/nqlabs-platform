@@ -13,7 +13,7 @@ Expected services:
 - platform DNS / CoreDNS authority for `nqlabs.network`
 - central Grafana / observability aggregation
 - Alertmanager / notification routing
-- Uptime Kuma status dashboard
+- Gatus status dashboard
 - future Authentik, OpenBao, Harbor, Kyverno, Falco, backup orchestration
 
 ## Initial desktop VM allocation
@@ -50,12 +50,12 @@ Completed on desktop Proxmox:
 - Management-specific Cilium LB pool `192.168.15.194-195` is active and non-conflicting.
 - In-cluster DNS and Kubernetes API reachability validated with a one-shot pod.
 - ArgoCD v3.4.3 installed via Helm chart `argo-cd` 9.5.21.
-- ArgoCD admin password rotated into 1Password; initial bootstrap secret deleted.
+- ArgoCD admin password rotated into OpenBao; initial bootstrap secret deleted.
 - ArgoCD server responds HTTP 200 inside the cluster.
 - Cluster-aware management root app-of-apps applied and Healthy; it watches `clusters/nqlabs-management/argocd/apps`.
 - `local-path-provisioner` installed and `local-path` is the default StorageClass.
 - Rook/Ceph operator + cluster installed; `ceph-block` StorageClass available (non-default) for distributed block storage on `sdb` (11GB per node, 3 OSDs).
-- External Secrets Operator installed; `nqlabs-1password` ClusterSecretStore is Ready/Valid.
+- External Secrets Operator installed; `nqlabs-openbao` ClusterSecretStore is Ready/Valid.
 - cert-manager installed; Cloudflare ExternalSecret and ClusterIssuers are Ready.
 - DNS stack installed through management-specific ArgoCD wrappers:
   - `etcd-dns` Ready with local-path PVC
@@ -71,7 +71,7 @@ Completed on desktop Proxmox:
   - This preserves automatic scale; no per-app hostAliases or DNS record lists.
 - Legacy desktop-lab root remains intentionally unapplied to management; additional platform apps should be added through cluster-local wrappers or cluster-aware shared definitions.
 
-1Password items:
+OpenBao items:
 
 - `talos-nqlabs-management-secrets` — Talos cluster secrets attachment
 - `nqlabs-management-access` — talosconfig and kubeconfig attachments
