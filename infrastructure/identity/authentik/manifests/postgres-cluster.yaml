@@ -4,8 +4,9 @@
 # .spec.instances to 3 for HA once NUC nodes are added — CNPG handles
 # replication and failover.
 #
-# Runs non-root (uid 26) on local-path. CNPG mounts the PVC directly (no
-# subPath), so the Talos non-root-write restriction does not apply.
+# Runs non-root (uid 26) on ceph-block (replicated RBD, size=2). CNPG mounts
+# the PVC directly (no subPath), so the Talos non-root-write restriction
+# does not apply.
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
@@ -27,7 +28,7 @@ spec:
         name: authentik-pg-app
 
   storage:
-    storageClass: local-path
+    storageClass: ceph-block
     size: 5Gi
 
   resources:
