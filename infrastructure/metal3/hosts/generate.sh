@@ -40,7 +40,7 @@ metadata:
 spec:
   refreshPolicy: CreatedOnce
   secretStoreRef:
-    name: nqlabs-1password
+    name: nqlabs-openbao
     kind: ClusterSecretStore
   target:
     name: proxmox-bmc
@@ -49,10 +49,12 @@ spec:
   data:
     - secretKey: username
       remoteRef:
-        key: "proxmox-bmc/username"
+        key: proxmox-bmc
+        property: username
     - secretKey: password
       remoteRef:
-        key: "proxmox-bmc/password"
+        key: proxmox-bmc
+        property: password
 EOF
 
 echo "Generated: proxmox-bmc-secret.yaml"

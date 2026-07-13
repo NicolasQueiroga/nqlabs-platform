@@ -171,7 +171,7 @@ data:
           - "[STATUS] == 200"
 
       # ── Security ───────────────────────────────────────────────────────
-      # Secrets managed by OpenBao + nqlabs-1password
+      # Secrets managed by OpenBao (nqlabs-openbao ClusterSecretStore)
       - name: OpenBao
         group: Security
         url: http://openbao-active.openbao.svc.cluster.local:8200/v1/sys/health

@@ -39,7 +39,7 @@ metadata:
 spec:
   refreshPolicy: CreatedOnce
   secretStoreRef:
-    name: nqlabs-1password
+    name: nqlabs-openbao
     kind: ClusterSecretStore
   target:
     name: authentik-pg-backup-s3
@@ -48,10 +48,12 @@ spec:
   data:
     - secretKey: ACCESS_KEY_ID
       remoteRef:
-        key: "authentik-pg-backup-s3/ACCESS_KEY_ID"
+        key: authentik-pg-backup-s3
+        property: ACCESS_KEY_ID
     - secretKey: SECRET_ACCESS_KEY
       remoteRef:
-        key: "authentik-pg-backup-s3/SECRET_ACCESS_KEY"
+        key: authentik-pg-backup-s3
+        property: SECRET_ACCESS_KEY
 ---
 # Scheduled backup: daily at 02:00 UTC, keep 7 backups.
 apiVersion: postgresql.cnpg.io/v1

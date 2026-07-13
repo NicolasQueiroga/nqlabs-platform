@@ -95,11 +95,12 @@ spec:
   refreshInterval: 1h
   secretStoreRef:
     kind: ClusterSecretStore
-    name: nqlabs-1password
+    name: nqlabs-openbao
   target:
     name: cloudflared-tunnel
     creationPolicy: Owner
   data:
     - secretKey: token
       remoteRef:
-        key: "cloudflared-tunnel/token"
+        key: cloudflared-tunnel
+        property: token

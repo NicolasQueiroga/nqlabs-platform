@@ -3129,7 +3129,7 @@ metadata:
 spec:
   refreshPolicy: CreatedOnce
   secretStoreRef:
-    name: nqlabs-1password
+    name: nqlabs-openbao
     kind: ClusterSecretStore
   target:
     name: ironic-auth
@@ -3138,10 +3138,12 @@ spec:
   data:
     - secretKey: username
       remoteRef:
-        key: "ironic-auth/username"
+        key: "ironic-auth"
+        property: username
     - secretKey: password
       remoteRef:
-        key: "ironic-auth/password"
+        key: "ironic-auth"
+        property: password
 ---
 apiVersion: v1
 kind: Service

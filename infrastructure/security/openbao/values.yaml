@@ -84,8 +84,11 @@ server:
 
   # Auto-unseal sidecar: reads Shamir keys from mounted Secret, unseals
   # OpenBao on startup, monitors and re-unseals if re-sealed.
-  # Keys come from 1Password via ESO (nqlabs-1password store) — NOT from
-  # OpenBao itself (chicken-and-egg: can't sync from OpenBao when sealed).
+  # Keys come from the standalone `openbao-unseal-keys` K8s Secret, which is a
+  # bootstrap artifact (NOT ESO-managed, NOT in git). It is created by
+  # scripts/openbao-bootstrap.sh on a fresh init (and escrowed in 1Password
+  # item openbao-bootstrap for DR). This avoids the chicken-and-egg of syncing
+  # unseal keys from a sealed OpenBao.
   extraContainers:
     - name: auto-unseal
       image: quay.io/openbao/openbao:2.5.2

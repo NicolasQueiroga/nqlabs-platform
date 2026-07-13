@@ -268,7 +268,7 @@ extraObjects:
       refreshPolicy: CreatedOnce
       refreshInterval: 1h
       secretStoreRef:
-        name: nqlabs-1password
+        name: nqlabs-openbao
         kind: ClusterSecretStore
       target:
         name: argocd-oidc-secret
@@ -280,7 +280,8 @@ extraObjects:
       data:
         - secretKey: client_secret
           remoteRef:
-            key: "argocd-oidc/client_secret"
+            key: "argocd-oidc"
+            property: client_secret
 
 # Dex — not used; SSO is handled by Authentik via native oidc.config above.
 dex:

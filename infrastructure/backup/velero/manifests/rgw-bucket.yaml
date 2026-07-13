@@ -29,7 +29,7 @@ metadata:
 spec:
   refreshPolicy: CreatedOnce
   secretStoreRef:
-    name: nqlabs-1password
+    name: nqlabs-openbao
     kind: ClusterSecretStore
   target:
     name: velero-rgw-credentials
@@ -43,7 +43,9 @@ spec:
   data:
     - secretKey: aws_access_key_id
       remoteRef:
-        key: "velero-rgw-credentials/aws_access_key_id"
+        key: "velero-rgw-credentials"
+        property: aws_access_key_id
     - secretKey: aws_secret_access_key
       remoteRef:
-        key: "velero-rgw-credentials/aws_secret_access_key"
+        key: "velero-rgw-credentials"
+        property: aws_secret_access_key

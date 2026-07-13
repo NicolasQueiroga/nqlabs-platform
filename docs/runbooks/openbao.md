@@ -1,8 +1,11 @@
 # Runbook: OpenBao Secrets Backend
 
-> **Status:** Phase 1-10 full cutover. OpenBao replaces 1Password as the
-> runtime secrets backend. 1Password remains for bootstrap escrow only
-> (root token, unseal keys).
+> **Status:** Full cutover complete. OpenBao KV (`kv/`) is the ONLY runtime
+> secrets backend — every ExternalSecret uses ClusterSecretStore
+> `nqlabs-openbao`. The legacy `nqlabs-1password` ClusterSecretStore has been
+> retired. 1Password (`NQLabs` vault) is used at **bootstrap time only**:
+> to escrow the root token + unseal keys, and as the source the bootstrap
+> script reads to seed KV. Nothing reads 1Password at runtime.
 
 ## Overview
 
@@ -25,11 +28,61 @@ Remote clusters (staging, production) use AppRole auth via the gateway URL.
 
 - **OpenBao cluster:** 3 replicas, Raft integrated storage, ceph-block PVCs
 - **Namespace:** `openbao` (management cluster)
-- **Unseal:** Manual (Shamir) — unseal keys escrowed in 1Password
-- **TLS:** Internal cert from cert-manager (nqlabs-internal-ca → nqlabs-openbao-pki)
-- **Gateway:** `openbao.platform.nqlabs.network` (Let's Encrypt wildcard at gateway)
+- **Unseal:** **Automatic** — each pod has an auto-unseal sidecar that reads
+  the 5 Shamir keys from the `openbao-unseal-keys` K8s Secret and unseals on
+  startup (30s re-check loop). StatefulSet uses RollingUpdate. The
+  `openbao-unseal-keys` Secret is a standalone bootstrap artifact (NOT
+  ESO-managed, NOT in git — created by the bootstrap script). Keys are also
+  escrowed in 1Password item `openbao-bootstrap` for DR.
+- **Listener:** HTTP on :8200 (`tls_disable = 1`). TLS terminated at the
+  Cilium Gateway edge with the Let's Encrypt wildcard cert.
+- **PKI:** OpenBao does NOT serve PKI. cert-manager uses Let's Encrypt (edge)
+  and its own internal CA. OpenBao serves KV secrets only.
+- **Gateway:** `openbao.platform.nqlabs.network` (native OIDC login via Authentik)
 
-## Bootstrap (one-time)
+## Bootstrap — automated (preferred)
+
+After the management cluster and ArgoCD are up and the `openbao` app has
+synced (pods Running), a single idempotent script brings the entire secrets
+backend online. It is safe to run repeatedly and is the guarantee that
+secrets roll out automatically on any cluster (re)creation:
+
+```bash
+export KUBECONFIG=clusters/nqlabs-management/bootstrap/talos/generated/kubeconfig
+op signin            # 1Password CLI, NQLabs account
+./scripts/openbao-bootstrap.sh
+```
+
+The script:
+
+1. Waits for the OpenBao API.
+2. If OpenBao is **uninitialized**: runs `bao operator init`, escrows the new
+   root token + 5 unseal keys into 1Password item `openbao-bootstrap`, and
+   creates the standalone `openbao-unseal-keys` K8s Secret that the auto-unseal
+   sidecar consumes.
+3. Ensures all pods are unsealed (fallback — the sidecar normally handles this).
+4. Enables kv-v2 at `kv/` and the `kubernetes-management` auth method.
+5. Configures Kubernetes auth **without** `token_reviewer_jwt` (durable fix —
+   OpenBao uses its own auto-rotated pod SA token).
+6. Writes the `allow-kv-read` policy and the `eso` role (bound to the
+   `external-secrets/external-secrets` SA).
+7. Seeds every platform secret into `kv/` from 1Password (the authoritative
+   item→field map lives in `KV_ITEMS` at the top of the script).
+8. Forces ESO to re-validate the `nqlabs-openbao` ClusterSecretStore.
+
+Because ExternalSecrets retry until the store is Ready, apps that synced before
+the script ran will pick up their secrets automatically once seeding completes.
+No manual per-secret intervention is required.
+
+> When adding a new secret to the platform, add its item+fields to the
+> `KV_ITEMS` array in `scripts/openbao-bootstrap.sh` so cluster recreation
+> re-seeds it.
+
+## Bootstrap — manual (fallback reference)
+
+The steps below document what the script automates, for debugging. Note the
+script is the source of truth; some manual steps below (e.g. PKI) are no longer
+part of the platform.
 
 ### 1. Deploy OpenBao
 
@@ -127,18 +180,9 @@ path "pki/ca" { capabilities = ["read"] }
 path "pki/crl" { capabilities = ["read"] }
 EOF
 
-# Enable PKI + generate root CA
-kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
-  bao secrets enable -path=pki -max-lease-ttl=87600h pki 2>/dev/null || true
-
-kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
-  bao write pki/root/generate/internal common_name="nqlabs.internal" ttl=87600h
-
-# Store CA cert in KV
-CA_CERT=$(kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
-  bao read -field=certificate pki/cert/ca)
-kubectl exec -n openbao openbao-0 -- env BAO_TOKEN="$ROOT_TOKEN" \
-  bao kv put kv/openbao-pki ca="$CA_CERT"
+# NOTE: OpenBao no longer serves PKI. cert-manager uses Let's Encrypt (edge)
+# and its own internal CA. Do NOT enable a pki/ engine or the cert-manager
+# role — those steps have been removed from the platform.
 
 # Force ESO re-validate
 kubectl annotate clustersecretstore nqlabs-openbao force-sync=$(date +%s) --overwrite
@@ -269,14 +313,19 @@ bao operator rekey
 # Save new keys to 1Password (item: openbao-unseal-keys)
 ```
 
-## Post-migration cleanup
+## Post-migration cleanup — DONE
 
-After all clusters are verified on OpenBao:
+The management cluster cutover is complete:
 
-### 1. Retire nqlabs-1password ClusterSecretStore
+### 1. Retire nqlabs-1password ClusterSecretStore — DONE
 
-Remove `infrastructure/security/external-secrets/cluster-secret-store.yaml`
-and the `onepassword-service-account-token` Secret from all clusters.
+`infrastructure/security/external-secrets/cluster-secret-store.yaml` was
+removed from git and the `nqlabs-1password` ClusterSecretStore pruned by
+ArgoCD. The `onepassword-service-account-token` Secret in the
+`external-secrets` namespace can be deleted (no runtime consumer). The
+`openbao-unseal-keys` ExternalSecret was also retired — its target Secret was
+orphaned (ownerReference removed) into a standalone bootstrap artifact that
+the auto-unseal sidecar reads and the bootstrap script recreates.
 
 ### 2. Retire selfsigned-bootstrap and nqlabs-internal-ca issuers
 
@@ -332,14 +381,20 @@ kubectl -n openbao exec openbao-0 -- bao operator raft list-peers
 
 ### OpenBao sealed after restart
 
-OpenBao uses manual unseal (Shamir). After any pod restart, unseal with
-3 of 5 keys:
+Pods auto-unseal via the sidecar (reads `openbao-unseal-keys` Secret). If a pod
+stays sealed, check the sidecar container logs and that the
+`openbao-unseal-keys` Secret exists with 5 keys. Manual fallback (3 of 5 keys
+from 1Password item `openbao-bootstrap`):
 
 ```bash
-kubectl -n openbao exec -it openbao-0 -- bao operator unseal <key1>
-kubectl -n openbao exec -it openbao-0 -- bao operator unseal <key2>
-kubectl -n openbao exec -it openbao-0 -- bao operator unseal <key3>
+kubectl -n openbao exec -it openbao-0 -c openbao -- bao operator unseal <key1>
+kubectl -n openbao exec -it openbao-0 -c openbao -- bao operator unseal <key2>
+kubectl -n openbao exec -it openbao-0 -c openbao -- bao operator unseal <key3>
 ```
+
+If the `openbao-unseal-keys` Secret is missing entirely, re-run
+`./scripts/openbao-bootstrap.sh` (it recreates it on a fresh init, or you can
+recreate it manually from the 1Password `openbao-bootstrap` item).
 
 ### ExternalSecret stuck in SecretSynced=False
 
