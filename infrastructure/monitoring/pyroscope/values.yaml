@@ -3,7 +3,7 @@
 
 pyroscope:
   replicaCount: 1
-  disableSelfProfile: false
+  disableSelfProfile: true
   extraArgs:
     log.level: info
     pyroscopedb.max-block-duration: 30m
