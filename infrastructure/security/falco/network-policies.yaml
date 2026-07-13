@@ -1,0 +1,10 @@
+# Default-deny ingress for the falco namespace (owned by management-falco).
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-ingress
+  namespace: falco
+spec:
+  endpointSelector: {}
+  ingress: []

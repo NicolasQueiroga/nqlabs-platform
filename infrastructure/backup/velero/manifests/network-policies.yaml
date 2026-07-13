@@ -1,0 +1,10 @@
+# Default-deny ingress for the velero namespace (owned by management-velero).
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-ingress
+  namespace: velero
+spec:
+  endpointSelector: {}
+  ingress: []

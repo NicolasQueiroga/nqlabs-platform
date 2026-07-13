@@ -1,0 +1,10 @@
+# Default-deny ingress for the kyverno namespace (owned by management-kyverno).
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-ingress
+  namespace: kyverno
+spec:
+  endpointSelector: {}
+  ingress: []

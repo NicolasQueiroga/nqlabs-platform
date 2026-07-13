@@ -1,108 +1,14 @@
-# Default-deny ingress CiliumNetworkPolicies for namespaces without existing CNPs.
-# These prevent any pod in the namespace from receiving incoming traffic unless
-# explicitly allowed by another CNP. Applied at sync-wave 0 so allow rules
-# (also at wave 0) can be added alongside without blocking.
+# Default-deny ingress CiliumNetworkPolicies for namespaces with NO ArgoCD app.
 #
-# CAPI/Metal3 namespaces (cabpt-system, cacppt-system, capi-system, capm3-system,
-# cluster-api-system) are managed by the cluster-api app — their CNPs are in
-# infrastructure/metal3/cluster-api/network-policies.yaml to avoid
-# ArgoCD SharedResourceWarning.
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-ingress
-  namespace: kyverno
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  endpointSelector: {}
-  ingress: []
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-ingress
-  namespace: platform
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  endpointSelector: {}
-  ingress: []
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-ingress
-  namespace: falco
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  endpointSelector: {}
-  ingress: []
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-ingress
-  namespace: tailscale
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  endpointSelector: {}
-  ingress: []
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-ingress
-  namespace: velero
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  endpointSelector: {}
-  ingress: []
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-ingress
-  namespace: cnpg-system
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  endpointSelector: {}
-  ingress: []
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-ingress
-  namespace: baremetal-operator-system
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  endpointSelector: {}
-  ingress: []
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-ingress
-  namespace: ironic-standalone-operator-system
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  endpointSelector: {}
-  ingress: []
+# Only namespaces that are not managed by any ArgoCD app belong here.
+# All other namespaces have their deny-ingress CNP in their owning app's
+# source directory — single-owner principle, no SharedResourceWarning.
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
   name: deny-ingress
   namespace: cilium-secrets
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
 spec:
   endpointSelector: {}
   ingress: []
@@ -112,8 +18,6 @@ kind: CiliumNetworkPolicy
 metadata:
   name: deny-ingress
   namespace: default
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
 spec:
   endpointSelector: {}
   ingress: []
@@ -123,8 +27,6 @@ kind: CiliumNetworkPolicy
 metadata:
   name: deny-ingress
   namespace: kube-public
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
 spec:
   endpointSelector: {}
   ingress: []
@@ -134,19 +36,6 @@ kind: CiliumNetworkPolicy
 metadata:
   name: deny-ingress
   namespace: kube-node-lease
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  endpointSelector: {}
-  ingress: []
----
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: deny-ingress
-  namespace: local-path-storage
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
 spec:
   endpointSelector: {}
   ingress: []

@@ -1,0 +1,10 @@
+# Default-deny ingress for local-path-storage (owned by local-path-provisioner).
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-ingress
+  namespace: local-path-storage
+spec:
+  endpointSelector: {}
+  ingress: []

@@ -20,6 +20,9 @@ spec:
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
       ref: values
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/security/kyverno/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: kyverno

@@ -1,0 +1,10 @@
+# Default-deny ingress for cnpg-system (owned by cloudnative-pg).
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-ingress
+  namespace: cnpg-system
+spec:
+  endpointSelector: {}
+  ingress: []

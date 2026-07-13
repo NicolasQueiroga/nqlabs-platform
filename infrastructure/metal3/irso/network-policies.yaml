@@ -1,0 +1,10 @@
+# Default-deny ingress for ironic-standalone-operator-system (owned by metal3-irso).
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-ingress
+  namespace: ironic-standalone-operator-system
+spec:
+  endpointSelector: {}
+  ingress: []

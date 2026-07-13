@@ -33,6 +33,9 @@ spec:
     - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
       targetRevision: HEAD
       ref: values
+    - repoURL: https://github.com/NicolasQueiroga/nqlabs-platform.git
+      targetRevision: HEAD
+      path: infrastructure/storage/local-path/manifests
 
   destination:
     server: https://kubernetes.default.svc

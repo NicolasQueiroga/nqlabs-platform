@@ -1,0 +1,10 @@
+# Default-deny ingress for the platform namespace (owned by the gateway app).
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-ingress
+  namespace: platform
+spec:
+  endpointSelector: {}
+  ingress: []

@@ -1,0 +1,10 @@
+# Default-deny ingress for the tailscale namespace (owned by tailscale-config).
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-ingress
+  namespace: tailscale
+spec:
+  endpointSelector: {}
+  ingress: []

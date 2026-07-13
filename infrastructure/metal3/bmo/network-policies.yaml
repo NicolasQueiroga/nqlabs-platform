@@ -1,0 +1,10 @@
+# Default-deny ingress for baremetal-operator-system (owned by metal3-bmo).
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-ingress
+  namespace: baremetal-operator-system
+spec:
+  endpointSelector: {}
+  ingress: []
