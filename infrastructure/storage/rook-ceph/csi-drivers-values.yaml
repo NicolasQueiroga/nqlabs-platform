@@ -22,7 +22,7 @@ operatorConfig:
   create: true
   driverSpecDefaults:
     clusterName: rook-ceph
-    snapshotPolicy: autoDetect
+    snapshotPolicy: volumeSnapshot
     nodePlugin:
       tolerations:
         - key: node-role.kubernetes.io/control-plane
