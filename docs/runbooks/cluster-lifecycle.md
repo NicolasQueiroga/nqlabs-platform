@@ -185,6 +185,25 @@ Required order:
 
 Only after Cilium is healthy should ArgoCD/root GitOps be bootstrapped.
 
+### 5b. Restrict CoreDNS LB source ranges (manual, post-sync)
+
+The CoreDNS Helm chart does not template `loadBalancerSourceRanges`, so it
+must be patched manually after the Service is created. Cilium enforces the
+restriction at the data plane (requires `bpf.lbSourceRangeAllTypes: true`).
+
+```bash
+kubectl patch service coredns-dns -n dns --type=merge -p '{
+  "spec": {
+    "loadBalancerSourceRanges": [
+      "100.64.0.0/10",
+      "192.168.15.0/24"
+    ]
+  }
+}'
+```
+
+Re-run this after any Service recreation (e.g. chart upgrade, node rebuild).
+
 ### 6. Bootstrap GitOps or register with management
 
 For the temporary single desktop-lab cluster, bootstrap root ArgoCD locally.

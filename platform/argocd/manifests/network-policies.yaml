@@ -208,7 +208,10 @@ spec:
     - toEntities:
         - world
 ---
-# Egress: application-controller → kube-apiserver
+# Egress: all argocd pods → kube-apiserver
+# Uses namespace-wide selector (not just application-controller) because
+# Helm hook Jobs (e.g. argocd-redis-secret-init) have no labels and also
+# need API server access to create Secrets.
 # NO toPorts — same Cilium VXLAN toPorts bug.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -218,9 +221,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 spec:
-  endpointSelector:
-    matchLabels:
-      app.kubernetes.io/name: argocd-application-controller
+  endpointSelector: {}
   egress:
     - toEntities:
         - kube-apiserver
