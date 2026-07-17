@@ -45,24 +45,10 @@ spec:
         - matchLabels:
             "k8s:io.kubernetes.pod.namespace": kube-system
             "k8s:k8s-app": kube-dns
-      toPorts:
-        - ports:
-            - port: "53"
-              protocol: ANY
-          rules:
-            dns:
-              - matchPattern: "*"
     - toEndpoints:
         - matchLabels:
             "k8s:io.kubernetes.pod.namespace": dns
             "k8s:k8s-app": coredns
-      toPorts:
-        - ports:
-            - port: "53"
-              protocol: ANY
-          rules:
-            dns:
-              - matchPattern: "*"
 ---
 # Allow authentik-server and authentik-worker to reach each other.
 apiVersion: cilium.io/v2
@@ -92,12 +78,6 @@ spec:
         - matchLabels:
             "k8s:io.kubernetes.pod.namespace": authentik
             app.kubernetes.io/instance: authentik
-      toPorts:
-        - ports:
-            - port: "80"
-              protocol: TCP
-            - port: "9000"
-              protocol: TCP
 ---
 # Allow the Cilium Gateway to reach authentik-server.
 # cilium-envoy runs with hostNetwork=true so it has no pod IP and no
@@ -278,32 +258,12 @@ spec:
     - toEndpoints:
         - matchLabels:
             "k8s:io.kubernetes.pod.namespace": monitoring
-      toPorts:
-        - ports:
-            - port: "4040"
-              protocol: TCP
-            - port: "9090"
-              protocol: TCP
-            - port: "9093"
-              protocol: TCP
-            - port: "9115"
-              protocol: TCP
     - toEndpoints:
         - matchLabels:
             "k8s:io.kubernetes.pod.namespace": argo-rollouts
-      toPorts:
-        - ports:
-            - port: "3100"
-              protocol: TCP
     - toEndpoints:
         - matchLabels:
             "k8s:io.kubernetes.pod.namespace": kube-system
-      toPorts:
-        - ports:
-            - port: "80"
-              protocol: TCP
-            - port: "8081"
-              protocol: TCP
 ---
 # Allow OpenBao to reach authentik-server for OIDC discovery and token exchange.
 # Service port 80 targets container port 9000, so the NetworkPolicy must
@@ -347,18 +307,10 @@ spec:
             "k8s:io.kubernetes.pod.namespace": authentik
             app.kubernetes.io/name: valkey
             app.kubernetes.io/part-of: authentik
-      toPorts:
-        - ports:
-            - port: "6379"
-              protocol: TCP
     - toEndpoints:
         - matchLabels:
             "k8s:io.kubernetes.pod.namespace": authentik
             cnpg.io/cluster: authentik-pg
-      toPorts:
-        - ports:
-            - port: "5432"
-              protocol: TCP
 ---
 # Allow authentik app pods to query the Kubernetes API when outpost service
 # health monitoring checks ClusterIP-backed dependencies.
@@ -376,12 +328,6 @@ spec:
   egress:
     - toEntities:
         - kube-apiserver
-      toPorts:
-        - ports:
-            - port: "443"
-              protocol: TCP
-            - port: "6443"
-              protocol: TCP
 ---
 # Allow CNPG instance manager (authentik-pg-*) to call the Kubernetes API
 # server. In Cilium, egress to the kube-apiserver should use the
@@ -389,6 +335,8 @@ spec:
 # the kubernetes.default.svc ClusterIP, because service IP traffic to control
 # plane nodes may bypass/ignore CIDR-based policy matching in self-hosted
 # clusters.
+# NO toPorts — Cilium 1.19.4 VXLAN bug drops cross-node egress traffic
+# when toPorts is specified on egress rules.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -403,12 +351,6 @@ spec:
   egress:
     - toEntities:
         - kube-apiserver
-      toPorts:
-        - ports:
-            - port: "443"
-              protocol: TCP
-            - port: "6443"
-              protocol: TCP
 ---
 # Allow CNPG instance manager (authentik-pg-*) to archive WAL files and
 # run backups to the Ceph RGW object store in the rook-ceph namespace.

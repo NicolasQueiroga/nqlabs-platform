@@ -38,13 +38,6 @@ spec:
         - matchLabels:
             "k8s:io.kubernetes.pod.namespace": kube-system
             "k8s:k8s-app": kube-dns
-      toPorts:
-        - ports:
-            - port: "53"
-              protocol: ANY
-          rules:
-            dns:
-              - matchPattern: "*"
 ---
 # Allow Cilium Gateway to reach OpenBao UI/API.
 # OpenBao uses native OIDC (not Authentik proxy), so only the ingress
@@ -106,10 +99,6 @@ spec:
         - matchLabels:
             "k8s:io.kubernetes.pod.namespace": authentik
             "k8s:app.kubernetes.io/component": server
-      toPorts:
-        - ports:
-            - port: "9000"
-              protocol: TCP
 ---
 # Raft HA replication — openbao pods communicate on port 8201 for
 # leader election and log replication.
@@ -138,12 +127,6 @@ spec:
     - toEndpoints:
         - matchLabels:
             app.kubernetes.io/name: openbao
-      toPorts:
-        - ports:
-            - port: "8200"
-              protocol: TCP
-            - port: "8201"
-              protocol: TCP
 ---
 # Allow OpenBao to reach the kube-apiserver for TokenReview (Kubernetes
 # auth method) and service registration.
@@ -161,12 +144,6 @@ spec:
   egress:
     - toEntities:
         - kube-apiserver
-      toPorts:
-        - ports:
-            - port: "443"
-              protocol: TCP
-            - port: "6443"
-              protocol: TCP
 ---
 # Allow Prometheus to scrape OpenBao metrics on port 8200.
 apiVersion: cilium.io/v2
