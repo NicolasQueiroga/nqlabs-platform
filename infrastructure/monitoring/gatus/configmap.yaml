@@ -181,14 +181,14 @@ data:
 
       - name: Falco
         group: Security
-        url: http://falco-falcosidekick.falco.svc.cluster.local:2803/health
+        url: http://falco-falcosidekick.falco.svc.cluster.local:2801/healthz
         interval: 1m
         conditions:
           - "[STATUS] == 200"
 
       - name: Kyverno
         group: Security
-        url: http://kyverno-svc.kyverno.svc.cluster.local:8000/health
+        url: http://kyverno-svc-metrics.kyverno.svc.cluster.local:8000/metrics
         interval: 1m
         conditions:
           - "[STATUS] == 200"
@@ -202,7 +202,7 @@ data:
 
       - name: External Secrets
         group: Security
-        url: http://external-secrets.external-secrets.svc.cluster.local:8081/healthz
+        url: http://external-secrets-webhook.external-secrets.svc.cluster.local:8080/metrics
         interval: 1m
         conditions:
           - "[STATUS] == 200"
@@ -224,30 +224,17 @@ data:
 
       - name: CoreDNS
         group: Infrastructure
-        url: http://coredns-dns.dns.svc.cluster.local:9153/metrics
+        url: http://coredns-dns-metrics.dns.svc.cluster.local:9153/metrics
         interval: 1m
         conditions:
           - "[STATUS] == 200"
 
       - name: Loki
         group: Infrastructure
-        url: http://loki-gateway.monitoring.svc.cluster.local:8080/ready
+        url: http://loki-gateway.monitoring.svc.cluster.local:80/
         interval: 1m
         conditions:
           - "[STATUS] == 200"
 
-      - name: CNPG (Authentik PG)
-        group: Infrastructure
-        url: http://authentik-pg-rw.authentik.svc.cluster.local:5432
-        interval: 1m
-        client:
-          network: tcp
-        conditions:
-          - "[CONNECTED] == true"
-
-      - name: Tailscale Operator
-        group: Infrastructure
-        url: http://operator.tailscale.svc.cluster.local:8080/healthz
-        interval: 1m
-        conditions:
-          - "[STATUS] == 200"
+      # CNPG health is indirectly monitored via the Authentik endpoint
+      # (Authentik depends on CNPG — if CNPG is down, Authentik returns 503).

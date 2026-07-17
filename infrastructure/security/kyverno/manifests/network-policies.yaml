@@ -7,4 +7,23 @@ metadata:
   namespace: kyverno
 spec:
   endpointSelector: {}
-  ingress: []
+  ingress:
+    - fromEndpoints: []
+---
+# Allow monitoring namespace (Gatus health checks + Prometheus scraping) to reach
+# Kyverno metrics on port 8000.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kyverno-allow-monitoring
+  namespace: kyverno
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
