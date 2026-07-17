@@ -1,0 +1,42 @@
+# Mutate the CoreDNS LoadBalancer Service to restrict source ranges.
+#
+# The CoreDNS Helm chart does not expose loadBalancerSourceRanges in its
+# values schema. A manual `kubectl patch` was used previously but does not
+# survive Service recreation (Helm upgrades, ArgoCD syncs). This Kyverno
+# mutate policy re-injects the field on every CREATE/UPDATE so the
+# restriction persists across reconciliations.
+#
+# Allowed sources:
+#   - 100.64.0.0/10  — Tailscale (CGNAT) tailnet
+#   - 192.168.15.0/24 — LAN
+#
+# failurePolicy: Ignore so Service creation is not blocked if Kyverno is down.
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: mutate-coredns-lb-source-ranges
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    policies.kyverno.io/category: NQLabs Platform
+    policies.kyverno.io/description: >-
+      Restricts the CoreDNS LoadBalancer Service to tailnet and LAN source
+      ranges by mutating spec.loadBalancerSourceRanges on every reconciliation.
+spec:
+  webhookConfiguration:
+    failurePolicy: Ignore
+  background: true
+  rules:
+    - name: add-lb-source-ranges
+      match:
+        any:
+          - resources:
+              kinds: [Service]
+              names: [coredns-dns]
+              namespaces: [dns]
+      mutate:
+        patchStrategicMerge:
+          spec:
+            loadBalancerSourceRanges:
+              - "100.64.0.0/10"
+              - "192.168.15.0/24"

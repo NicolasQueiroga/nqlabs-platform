@@ -3128,6 +3128,7 @@ metadata:
   namespace: baremetal-operator-system
 spec:
   refreshPolicy: Periodic
+  refreshInterval: 5m
   secretStoreRef:
     name: nqlabs-openbao
     kind: ClusterSecretStore

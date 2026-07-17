@@ -38,6 +38,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
   refreshPolicy: Periodic
+  refreshInterval: 5m
   secretStoreRef:
     name: nqlabs-openbao
     kind: ClusterSecretStore

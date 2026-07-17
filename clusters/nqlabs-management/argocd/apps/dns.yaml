@@ -81,6 +81,14 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: dns
+  # Kyverno (mutate-coredns-lb-source-ranges) injects spec.loadBalancerSourceRanges
+  # after ArgoCD applies the Service. Ignore that field so ArgoCD doesn't see
+  # the Kyverno-mutated value as drift and try to revert it.
+  ignoreDifferences:
+    - group: ""
+      kind: Service
+      jsonPointers:
+        - /spec/loadBalancerSourceRanges
   syncPolicy:
     automated:
       prune: true
@@ -94,6 +102,7 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
 
 ---
 apiVersion: argoproj.io/v1alpha1
