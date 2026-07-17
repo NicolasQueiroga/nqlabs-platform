@@ -37,7 +37,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  refreshPolicy: CreatedOnce
+  refreshPolicy: Periodic
   secretStoreRef:
     name: nqlabs-openbao
     kind: ClusterSecretStore
