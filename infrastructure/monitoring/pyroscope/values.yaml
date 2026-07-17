@@ -48,6 +48,15 @@ serviceMonitor:
 
 alloy:
   enabled: true
+  controller:
+    # Override chart default podAnnotations that enable self-profiling.
+    # The chart adds profiles.grafana.com/* annotations to the Alloy pod,
+    # causing Alloy to scrape its own pprof endpoints in a feedback loop
+    # that consumes all CPU and makes the readiness probe time out.
+    podAnnotations:
+      profiles.grafana.com/cpu.scrape: "false"
+      profiles.grafana.com/goroutine.scrape: "false"
+      profiles.grafana.com/memory.scrape: "false"
   global:
     podSecurityContext:
       runAsNonRoot: true
