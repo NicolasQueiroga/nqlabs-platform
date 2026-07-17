@@ -68,6 +68,18 @@ spec:
         - .webhooks[].failurePolicy
         - .webhooks[].rules
         - .webhooks[].namespaceSelector
+    - group: kyverno.io
+      kind: ClusterPolicy
+      jqPathExpressions:
+        - .spec.admission
+        - .spec.emitWarning
+        - .spec.validationFailureAction
+        - .spec.rules[].skipBackgroundRequests
+        - .spec.rules[].validate.allowExistingViolations
+        - .spec.rules[].verifyImages[].required
+        - .spec.rules[].verifyImages[].useCache
+        - .spec.rules[].verifyImages[].verifyDigest
+        - .spec.rules[].verifyImages[].attestors[].entries[].signatureAlgorithm
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
