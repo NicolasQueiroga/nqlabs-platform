@@ -412,8 +412,9 @@ spec:
 ---
 # Allow CNPG instance manager (authentik-pg-*) to archive WAL files and
 # run backups to the Ceph RGW object store in the rook-ceph namespace.
-# The RGW Service exposes port 80, but targets the RGW pod's http port 8080;
-# NetworkPolicy is evaluated against the translated destination pod port.
+# The RGW Service exposes port 80, but targets the RGW pod's http port 8080.
+# NO toPorts — Cilium 1.19.4 VXLAN bug drops cross-node egress traffic
+# when toPorts is specified on egress toEndpoints rules.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -431,7 +432,3 @@ spec:
             "k8s:io.kubernetes.pod.namespace": rook-ceph
             app: rook-ceph-rgw
             rook_object_store: platform-object-store
-      toPorts:
-        - ports:
-            - port: "8080"
-              protocol: TCP
