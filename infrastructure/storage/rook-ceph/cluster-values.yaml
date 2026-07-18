@@ -28,6 +28,10 @@ cephClusterSpec:
   cephConfig:
     mon:
       mon_data_avail_warn: "10"
+    osd:
+      mon_osd_full_ratio: "0.95"
+      mon_osd_nearfull_ratio: "0.85"
+      mon_osd_backfillfull_ratio: "0.90"
 
   # 1 MGR (active/standby not needed for 3-node lab)
   mgr:
