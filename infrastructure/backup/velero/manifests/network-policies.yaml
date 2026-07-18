@@ -9,3 +9,21 @@ spec:
   endpointSelector: {}
   ingress:
     - fromEndpoints: []
+---
+# Allow monitoring namespace (Gatus health checks + Prometheus scraping) to
+# reach Velero metrics on port 8085.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: velero-allow-monitoring
+  namespace: velero
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+      toPorts:
+        - ports:
+            - port: "8085"
+              protocol: TCP
