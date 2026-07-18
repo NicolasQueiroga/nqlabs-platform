@@ -11,7 +11,8 @@ metadata:
   namespace: cilium-secrets
 spec:
   endpointSelector: {}
-  ingress: []
+  ingress:
+    - fromEndpoints: []
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -20,7 +21,8 @@ metadata:
   namespace: default
 spec:
   endpointSelector: {}
-  ingress: []
+  ingress:
+    - fromEndpoints: []
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -29,7 +31,8 @@ metadata:
   namespace: kube-public
 spec:
   endpointSelector: {}
-  ingress: []
+  ingress:
+    - fromEndpoints: []
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -38,4 +41,5 @@ metadata:
   namespace: kube-node-lease
 spec:
   endpointSelector: {}
-  ingress: []
+  ingress:
+    - fromEndpoints: []

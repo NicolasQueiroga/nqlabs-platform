@@ -11,7 +11,8 @@ metadata:
     argocd.argoproj.io/sync-wave: "0"
 spec:
   endpointSelector: {}
-  ingress: []
+  ingress:
+    - fromEndpoints: []
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -22,7 +23,8 @@ metadata:
     argocd.argoproj.io/sync-wave: "0"
 spec:
   endpointSelector: {}
-  ingress: []
+  ingress:
+    - fromEndpoints: []
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -33,7 +35,8 @@ metadata:
     argocd.argoproj.io/sync-wave: "0"
 spec:
   endpointSelector: {}
-  ingress: []
+  ingress:
+    - fromEndpoints: []
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -44,7 +47,8 @@ metadata:
     argocd.argoproj.io/sync-wave: "0"
 spec:
   endpointSelector: {}
-  ingress: []
+  ingress:
+    - fromEndpoints: []
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -55,4 +59,110 @@ metadata:
     argocd.argoproj.io/sync-wave: "0"
 spec:
   endpointSelector: {}
-  ingress: []
+  ingress:
+    - fromEndpoints: []
+
+---
+# Allow API server to reach admission webhooks on port 9443.
+# With Cilium kube-proxy replacement, API server traffic arrives as
+# host/remote-node/kube-apiserver entities, NOT from the LAN CIDR.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-apiserver-webhook
+  namespace: cabpt-system
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - host
+        - remote-node
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP
+
+---
+# Allow API server to reach admission webhooks on port 9443.
+# With Cilium kube-proxy replacement, API server traffic arrives as
+# host/remote-node/kube-apiserver entities, NOT from the LAN CIDR.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-apiserver-webhook
+  namespace: cacppt-system
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - host
+        - remote-node
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP
+
+---
+# Allow API server to reach admission webhooks on port 9443.
+# With Cilium kube-proxy replacement, API server traffic arrives as
+# host/remote-node/kube-apiserver entities, NOT from the LAN CIDR.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-apiserver-webhook
+  namespace: capi-system
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - host
+        - remote-node
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP
+
+---
+# Allow API server to reach admission webhooks on port 9443.
+# With Cilium kube-proxy replacement, API server traffic arrives as
+# host/remote-node/kube-apiserver entities, NOT from the LAN CIDR.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-apiserver-webhook
+  namespace: capm3-system
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - host
+        - remote-node
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP
+
+---
+# Allow API server to reach admission webhooks on port 9443.
+# With Cilium kube-proxy replacement, API server traffic arrives as
+# host/remote-node/kube-apiserver entities, NOT from the LAN CIDR.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-apiserver-webhook
+  namespace: cluster-api-system
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - host
+        - remote-node
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP

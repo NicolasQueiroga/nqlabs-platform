@@ -7,4 +7,26 @@ metadata:
   namespace: cnpg-system
 spec:
   endpointSelector: {}
-  ingress: []
+  ingress:
+    - fromEndpoints: []
+
+---
+# Allow API server to reach admission webhooks on port 9443.
+# With Cilium kube-proxy replacement, API server traffic arrives as
+# host/remote-node/kube-apiserver entities, NOT from the LAN CIDR.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-apiserver-webhook
+  namespace: cnpg-system
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - host
+        - remote-node
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP

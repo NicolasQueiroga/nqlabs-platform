@@ -19,7 +19,8 @@ spec:
   policyTypes:
     - Ingress
     - Egress
-  ingress: []
+  ingress:
+    - fromEndpoints: []
   egress: []
 ---
 # DNS egress.
