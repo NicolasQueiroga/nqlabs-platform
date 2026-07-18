@@ -1,0 +1,14 @@
+# Default-deny ingress for the rook-ceph namespace.
+#
+# Drops all ingress traffic that is not explicitly allowed by another
+# CiliumNetworkPolicy in this namespace (see network-policies.yaml for
+# intra-namespace, hostNetwork, gateway, monitoring, and Prometheus allow rules).
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: rook-ceph-deny-ingress
+  namespace: rook-ceph
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints: []

@@ -1,0 +1,13 @@
+# Default-deny ingress for the metal3 namespace.
+#
+# Drops all ingress traffic that is not explicitly allowed by another
+# CiliumNetworkPolicy in this namespace.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: metal3-deny-ingress
+  namespace: metal3
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints: []

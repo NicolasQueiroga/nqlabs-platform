@@ -60,14 +60,14 @@ server:
   # Data storage on ceph-block (RWO).
   dataStorage:
     enabled: true
-    size: 10Gi
+    size: 1Gi
     storageClass: ceph-block
     accessMode: ReadWriteOnce
 
   # Audit storage on ceph-block.
   auditStorage:
     enabled: true
-    size: 5Gi
+    size: 1Gi
     storageClass: ceph-block
     accessMode: ReadWriteOnce
 

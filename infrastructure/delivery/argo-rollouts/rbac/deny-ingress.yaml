@@ -1,0 +1,14 @@
+# Default-deny ingress for the argo-rollouts namespace.
+#
+# Drops all ingress traffic that is not explicitly allowed by another
+# CiliumNetworkPolicy in this namespace (see network-policy.yaml for
+# gateway, authentik, and monitoring allow rules).
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: argo-rollouts-deny-ingress
+  namespace: argo-rollouts
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints: []

@@ -22,6 +22,7 @@ spec:
       interval: 30s
       path: /metrics
       scheme: https
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
       tlsConfig:
         insecureSkipVerify: true
 
@@ -44,6 +45,7 @@ spec:
       interval: 30s
       path: /metrics
       scheme: https
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
       tlsConfig:
         insecureSkipVerify: true
 
@@ -66,5 +68,6 @@ spec:
       interval: 30s
       path: /metrics
       scheme: https
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
       tlsConfig:
         insecureSkipVerify: true
