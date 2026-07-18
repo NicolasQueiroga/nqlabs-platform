@@ -22,6 +22,7 @@ metadata:
     policies.kyverno.io/title: Disallow Latest Tag
     policies.kyverno.io/category: Supply Chain
 spec:
+  validationFailureAction: Enforce
   webhookConfiguration:
     failurePolicy: Ignore
   background: true
@@ -68,6 +69,7 @@ metadata:
   annotations:
     policies.kyverno.io/category: Best Practices
 spec:
+  validationFailureAction: Enforce
   webhookConfiguration:
     failurePolicy: Ignore
   background: true
@@ -121,6 +123,7 @@ metadata:
   annotations:
     policies.kyverno.io/category: Supply Chain
 spec:
+  validationFailureAction: Enforce
   webhookConfiguration:
     failurePolicy: Ignore
   background: true
@@ -169,6 +172,7 @@ metadata:
   annotations:
     policies.kyverno.io/category: Pod Security
 spec:
+  validationFailureAction: Enforce
   webhookConfiguration:
     failurePolicy: Ignore
   background: true
@@ -219,6 +223,7 @@ metadata:
   annotations:
     policies.kyverno.io/category: Pod Security
 spec:
+  validationFailureAction: Enforce
   webhookConfiguration:
     failurePolicy: Ignore
   background: true
@@ -267,6 +272,7 @@ metadata:
   annotations:
     policies.kyverno.io/category: Pod Security
 spec:
+  validationFailureAction: Enforce
   webhookConfiguration:
     failurePolicy: Ignore
   background: true
@@ -327,6 +333,7 @@ metadata:
   annotations:
     policies.kyverno.io/category: Pod Security
 spec:
+  validationFailureAction: Enforce
   webhookConfiguration:
     failurePolicy: Ignore
   background: true
@@ -374,6 +381,7 @@ metadata:
   annotations:
     policies.kyverno.io/category: Pod Security
 spec:
+  validationFailureAction: Enforce
   webhookConfiguration:
     failurePolicy: Ignore
   background: true
@@ -423,6 +431,7 @@ metadata:
   annotations:
     policies.kyverno.io/category: Pod Security
 spec:
+  validationFailureAction: Enforce
   webhookConfiguration:
     failurePolicy: Ignore
   background: true

@@ -10,6 +10,7 @@ metadata:
   annotations:
     policies.kyverno.io/category: Supply Chain
 spec:
+  validationFailureAction: Enforce
   background: false
   webhookConfiguration:
     failurePolicy: Fail

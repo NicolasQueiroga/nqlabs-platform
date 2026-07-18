@@ -9,6 +9,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
     policies.kyverno.io/category: NQLabs Platform
 spec:
+  validationFailureAction: Enforce
   webhookConfiguration:
     failurePolicy: Ignore
   background: true
@@ -53,6 +54,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
     policies.kyverno.io/category: Best Practices
 spec:
+  validationFailureAction: Enforce
   webhookConfiguration:
     failurePolicy: Ignore
   background: true
@@ -97,6 +99,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
     policies.kyverno.io/category: NQLabs Platform
 spec:
+  validationFailureAction: Enforce
   webhookConfiguration:
     failurePolicy: Ignore
   background: true
@@ -124,6 +127,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
     policies.kyverno.io/category: NQLabs Platform
 spec:
+  validationFailureAction: Enforce
   webhookConfiguration:
     failurePolicy: Ignore
   background: true
