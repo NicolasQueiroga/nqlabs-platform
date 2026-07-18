@@ -32,6 +32,7 @@ kubeScheduler:
 # ── Grafana ─────────────────────────────────────────────────────────────────
 grafana:
   enabled: true
+  replicas: 1
 
   # Grafana access is owned by Authentik, not a standalone local-admin
   # credential in 1Password. The chart may create an internal bootstrap admin
