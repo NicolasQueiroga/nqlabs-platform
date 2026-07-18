@@ -199,55 +199,21 @@ prometheus:
 
 # ── Alertmanager ────────────────────────────────────────────────────────────
 alertmanager:
-  # Global Alertmanager config — routes ALL alerts (any namespace) to Discord.
-  # Previously used AlertmanagerConfig CRD, but the Prometheus Operator injects
-  # namespace="monitoring" as a matcher on CRD-generated routes, so only alerts
-  # with namespace=monitoring were routed. The global config has no such
-  # limitation. The Discord webhook URL is read from a K8s Secret mounted
-  # via the `secrets` list below.
-  config:
-    global:
-      resolve_timeout: 5m
-    route:
-      receiver: discord
-      group_by: [alertname, severity, namespace]
-      group_wait: 30s
-      group_interval: 5m
-      repeat_interval: 4h
-      routes:
-        - receiver: "null"
-          matchers:
-            - alertname="Watchdog"
-          continue: false
-    inhibit_rules:
-      - source_matchers:
-          - severity="critical"
-        target_matchers:
-          - severity=~"warning|info"
-        equal: [alertname, namespace, instance]
-      - source_matchers:
-          - alertname=~"NQLabsNodeNotReady|KubeNodeNotReady"
-        target_matchers:
-          - severity=~"warning|critical"
-        equal: [node]
-    receivers:
-      - name: "null"
-      - name: discord
-        discord_configs:
-          - api_url_file: /etc/alertmanager/secrets/alertmanager-discord-webhook/webhook_url
-            send_resolved: true
-            username: NQLabs Alertmanager
-            title: '{{ if eq .Status "firing" }}🚨{{ else }}✅{{ end }} NQLabs {{ .CommonLabels.alertname }}'
-            message: |-
-              {{ range .Alerts }}
-              **Severity:** `{{ .Labels.severity }}`
-              **Target:** `{{ .Labels.instance }}`
-              **Summary:** {{ .Annotations.summary }}
-              **Description:** {{ .Annotations.description }}
-              {{ end }}
-  # Mount the Discord webhook secret as a file for api_url_file reference.
-  secrets: ["alertmanager-discord-webhook"]
   alertmanagerSpec:
+    # Use AlertmanagerConfig CRDs for routing. The matcher strategy is set to
+    # "None" (not the default "OnNamespace") so the Prometheus Operator does NOT
+    # inject namespace="monitoring" as a matcher on CRD-generated routes. This
+    # allows alerts from ALL namespaces (e.g., TargetDown for cabpt-system) to
+    # be routed to Discord, not just alerts from the monitoring namespace.
+    alertmanagerConfigMatcherStrategy:
+      type: None
+    alertmanagerConfigSelector:
+      matchLabels:
+        alertmanagerConfig: nqlabs
+    alertmanagerConfigNamespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: Exists
     storage:
       volumeClaimTemplate:
         spec:
