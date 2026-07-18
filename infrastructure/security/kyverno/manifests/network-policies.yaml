@@ -27,3 +27,26 @@ spec:
         - ports:
             - port: "8000"
               protocol: TCP
+---
+# Allow API server to reach Kyverno admission webhooks on port 9443.
+# The API server calls kyverno-svc:443 and kyverno-cleanup-controller:443,
+# which map to pod port 9443. With Cilium kube-proxy replacement, this
+# traffic arrives as host/remote-node/kube-apiserver entities, NOT from
+# the LAN CIDR. Without this rule, the deny-ingress CNP blocks all webhook
+# calls and every resource creation/update in the cluster fails.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kyverno-allow-apiserver-webhook
+  namespace: kyverno
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - host
+        - remote-node
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP
