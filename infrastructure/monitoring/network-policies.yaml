@@ -131,19 +131,21 @@ spec:
               protocol: TCP
 ---
 # Allow Prometheus to scrape all pods in all namespaces (egress)
+# This MUST be a CiliumClusterNetworkPolicy (CCNP), not a namespace-scoped CNP.
+# A namespace-scoped CNP with toEndpoints: [{}] only matches pods in the SAME
+# namespace (monitoring), not all pods cluster-wide. A CCNP is cluster-scoped
+# so toEndpoints: [{}] matches all pods in ALL namespaces.
 apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
+kind: CiliumClusterNetworkPolicy
 metadata:
   name: monitoring-allow-prometheus-egress
-  namespace: monitoring
 spec:
   endpointSelector:
     matchLabels:
+      k8s:io.kubernetes.pod.namespace: monitoring
       app.kubernetes.io/name: prometheus
   egress:
     # Scrape all pods in all namespaces
-    # toEndpoints: [{}] = empty matchLabels = all pods in ALL namespaces
-    # (toEndpoints: [] would mean "no endpoints" — blocking all pod egress)
     - toEndpoints:
         - {}
     # Scrape node exporters (host network)
