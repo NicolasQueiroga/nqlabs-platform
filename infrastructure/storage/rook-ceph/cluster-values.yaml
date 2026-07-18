@@ -28,9 +28,13 @@ cephClusterSpec:
   cephConfig:
     mon:
       mon_data_avail_warn: "10"
-      mon_osd_full_ratio: "0.95"
-      mon_osd_nearfull_ratio: "0.85"
-      mon_osd_backfillfull_ratio: "0.90"
+  # NOTE: mon_osd_full_ratio, mon_osd_nearfull_ratio, and
+  # mon_osd_backfillfull_ratio are "special" Ceph settings that cannot be
+  # stored in the config database (ceph config set rejects them with
+  # EINVAL). They can only be set via `ceph osd set-full-ratio` etc.
+  # Do NOT put them in cephConfig — Rook will fail to reconcile.
+  # They are set manually after cluster creation and persisted in the
+  # OSD map (not the config database). See docs/runbooks/cluster-lifecycle.md.
 
   # 1 MGR (active/standby not needed for 3-node lab)
   mgr:
