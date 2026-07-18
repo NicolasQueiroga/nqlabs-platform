@@ -11,16 +11,14 @@ spec:
     - fromEndpoints: []
 ---
 # Allow monitoring namespace (Gatus health checks + Prometheus scraping) to reach
-# Falcosidekick health endpoint on port 2801.
+# Falcosidekick health endpoint on port 2801 and Falco daemon metrics on port 8765.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
   name: falco-allow-monitoring
   namespace: falco
 spec:
-  endpointSelector:
-    matchLabels:
-      app.kubernetes.io/name: falcosidekick
+  endpointSelector: {}
   ingress:
     - fromEndpoints:
         - matchLabels:
@@ -28,4 +26,6 @@ spec:
       toPorts:
         - ports:
             - port: "2801"
+              protocol: TCP
+            - port: "8765"
               protocol: TCP

@@ -166,3 +166,57 @@ spec:
         - ports:
             - port: "9443"
               protocol: TCP
+
+---
+# Allow Prometheus (monitoring namespace) to scrape metrics on port 8443.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-monitoring-metrics
+  namespace: cabpt-system
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+      toPorts:
+        - ports:
+            - port: "8443"
+              protocol: TCP
+
+---
+# Allow Prometheus (monitoring namespace) to scrape metrics on port 8443.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-monitoring-metrics
+  namespace: cacppt-system
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+      toPorts:
+        - ports:
+            - port: "8443"
+              protocol: TCP
+
+---
+# Allow Prometheus (monitoring namespace) to scrape metrics on port 8443.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-monitoring-metrics
+  namespace: capi-system
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+      toPorts:
+        - ports:
+            - port: "8443"
+              protocol: TCP

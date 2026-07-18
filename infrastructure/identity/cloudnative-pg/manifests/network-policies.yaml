@@ -30,3 +30,21 @@ spec:
         - ports:
             - port: "9443"
               protocol: TCP
+
+---
+# Allow Prometheus (monitoring namespace) to scrape CNPG operator metrics on port 8080.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-monitoring-metrics
+  namespace: cnpg-system
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
