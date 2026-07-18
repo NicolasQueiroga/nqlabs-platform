@@ -24,6 +24,8 @@ metadata:
   name: argocd
   labels:
     gateway-access: "true"
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
 
 ---
 apiVersion: v1
