@@ -53,7 +53,7 @@ securityContext:
 
 persistence:
   enabled: true
-  storageClassName: local-path
+  storageClassName: ceph-block
   accessModes:
     - ReadWriteOnce
   size: 20Gi

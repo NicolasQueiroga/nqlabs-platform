@@ -4,7 +4,7 @@
 # Namespace: monitoring
 #
 # PVC backup strategy: Prometheus (20Gi) and Alertmanager (2Gi) PVCs are on
-# local-path storage. Velero does not snapshot local-path PVCs by default.
+# ceph-block storage. Velero does not snapshot ceph-block PVCs by default.
 # For backup: 1) Use Velero with restic for file-level backup, or 2) Use
 # Prometheus remote_write to a long-term storage backend, or 3) Accept data
 # loss on node failure (lab environment — metrics are ephemeral).
@@ -47,7 +47,7 @@ grafana:
 
   persistence:
     enabled: true
-    storageClassName: local-path
+    storageClassName: ceph-block
     size: 5Gi
 
   grafana.ini:
@@ -137,7 +137,7 @@ prometheus:
     storageSpec:
       volumeClaimTemplate:
         spec:
-          storageClassName: local-path
+          storageClassName: ceph-block
           accessModes: [ReadWriteOnce]
           resources:
             requests:
@@ -209,7 +209,7 @@ alertmanager:
     storage:
       volumeClaimTemplate:
         spec:
-          storageClassName: local-path
+          storageClassName: ceph-block
           accessModes: [ReadWriteOnce]
           resources:
             requests:
@@ -220,7 +220,7 @@ alertmanager:
     # docs/decisions/identity-provider.md.
 
     # Same Talos subPath kernel restriction that affects Prometheus applies here:
-    # non-root UIDs can't write to local-path PVC directories even with correct
+    # non-root UIDs can't write to ceph-block PVC directories even with correct
     # fsGroup/ownership. Run as root same as Prometheus. monitoring namespace
     # enforces 'privileged' pod security — running as root is intentional here.
     # (Bug found 2026-06-19: nflog/silences permission denied for 12+ hours)

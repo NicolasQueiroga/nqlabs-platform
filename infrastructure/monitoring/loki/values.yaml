@@ -61,7 +61,7 @@ singleBinary:
 
   persistence:
     enabled: true
-    storageClass: local-path
+    storageClass: ceph-block
     size: 20Gi
     accessModes:
       - ReadWriteOnce

@@ -53,7 +53,7 @@ receive:
         - thanos-receive-0.thanos-receive-headless.monitoring.svc.cluster.local:10901
   persistence:
     enabled: true
-    storageClass: local-path
+    storageClass: ceph-block
     size: 20Gi
   resources:
     requests:
@@ -71,7 +71,7 @@ storegateway:
   replicaCount: 1
   persistence:
     enabled: true
-    storageClass: local-path
+    storageClass: ceph-block
     size: 10Gi
   resources:
     requests:
@@ -88,7 +88,7 @@ compactor:
   retentionResolution1h: 365d
   persistence:
     enabled: true
-    storageClass: local-path
+    storageClass: ceph-block
     size: 10Gi
   resources:
     requests:
