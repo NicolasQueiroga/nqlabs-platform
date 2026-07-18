@@ -185,11 +185,61 @@ Required order:
 
 Only after Cilium is healthy should ArgoCD/root GitOps be bootstrapped.
 
-### 5b. Restrict CoreDNS LB source ranges (manual, post-sync)
+### 5a. Ceph OSD full ratio settings (manual, post-creation)
 
-The CoreDNS Helm chart does not template `loadBalancerSourceRanges`, so it
-must be patched manually after the Service is created. Cilium enforces the
-restriction at the data plane (requires `bpf.lbSourceRangeAllTypes: true`).
+The `mon_osd_full_ratio`, `mon_osd_nearfull_ratio`, and
+`mon_osd_backfillfull_ratio` are **"special" Ceph settings** that cannot
+be stored in the Ceph config database (`ceph config set` rejects them
+with `EINVAL`). This means Rook's `cephConfig` section in
+`cluster-values.yaml` **cannot** set them — regardless of whether
+they're under `mon:`, `osd:`, or `global:`. Rook will fail to reconcile
+with "failed to set ceph config for target: osd: failed to set keys
+\[mon_osd_*_ratio\]" and the CephCluster stays in Progressing/Error.
+
+After the CephCluster is created and Healthy, set these manually:
+
+```bash
+kubectl exec -n rook-ceph deploy/rook-ceph-tools -- \
+  ceph osd set-full-ratio 0.95
+kubectl exec -n rook-ceph deploy/rook-ceph-tools -- \
+  ceph osd set-nearfull-ratio 0.85
+kubectl exec -n rook-ceph deploy/rook-ceph-tools -- \
+  ceph osd set-backfillfull-ratio 0.90
+```
+
+These are persisted in the OSD map, not the config database. They
+survive pod restarts but are lost if the Ceph cluster is destroyed
+and recreated — re-run after any cluster rebuild.
+
+### 5b. BlueStore fragmentation warning (manual, as needed)
+
+After purging large amounts of data from Ceph RGW (e.g., old WAL
+archives, backup data), OSDs may show `BLUESTORE_FREE_FRAGMENTATION`
+warnings. This is cosmetic — it does not affect data safety or
+availability. However, it causes Ceph `HEALTH_WARN`, which ArgoCD's
+health check maps to `Degraded`.
+
+Mute the warning (7-day duration — fragmentation naturally resolves
+as Ceph reuses the fragmented free space):
+
+```bash
+kubectl exec -n rook-ceph deploy/rook-ceph-tools -- \
+  ceph health mute BLUESTORE_FREE_FRAGMENTATION 7d
+```
+
+### 5c. CoreDNS LB source ranges (GitOps-managed via Kyverno)
+
+The CoreDNS Helm chart does not template `loadBalancerSourceRanges`. A
+Kyverno mutate policy (`mutate-coredns-lb-source-ranges` in
+`infrastructure/security/kyverno/manifests/coredns-lb-source-ranges.yaml`)
+automatically adds `loadBalancerSourceRanges: ["100.64.0.0/10",
+"192.168.15.0/24"]` to the CoreDNS LoadBalancer Service on every
+creation/update. This is GitOps-managed — no manual patching needed.
+
+Cilium enforces the restriction at the data plane (requires
+`bpf.lbSourceRangeAllTypes: true` in Cilium Helm values).
+
+**Emergency fallback** (if Kyverno is unavailable):
 
 ```bash
 kubectl patch service coredns-dns -n dns --type=merge -p '{
@@ -201,8 +251,6 @@ kubectl patch service coredns-dns -n dns --type=merge -p '{
   }
 }'
 ```
-
-Re-run this after any Service recreation (e.g. chart upgrade, node rebuild).
 
 ### 6. Bootstrap GitOps or register with management
 
