@@ -56,7 +56,7 @@ persistence:
   storageClassName: ceph-block
   accessModes:
     - ReadWriteOnce
-  size: 20Gi
+  size: 5Gi
 
 serviceMonitor:
   enabled: true

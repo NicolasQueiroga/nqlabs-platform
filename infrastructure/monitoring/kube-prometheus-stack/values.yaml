@@ -49,7 +49,7 @@ grafana:
   persistence:
     enabled: true
     storageClassName: ceph-block
-    size: 5Gi
+    size: 2Gi
 
   grafana.ini:
     server:
@@ -133,7 +133,7 @@ grafana:
 prometheus:
   prometheusSpec:
     retention: 7d
-    retentionSize: "18GB"
+    retentionSize: "4GB"
 
     storageSpec:
       volumeClaimTemplate:
@@ -142,7 +142,7 @@ prometheus:
           accessModes: [ReadWriteOnce]
           resources:
             requests:
-              storage: 20Gi
+              storage: 5Gi
 
     # Discover ServiceMonitors/PodMonitors/Rules across all namespaces
     serviceMonitorSelectorNilUsesHelmValues: false
@@ -214,7 +214,7 @@ alertmanager:
           accessModes: [ReadWriteOnce]
           resources:
             requests:
-              storage: 2Gi
+              storage: 1Gi
 
     # UI authentication is handled centrally by Authentik (forward-auth proxy
     # outpost at the gateway), NOT per-app basic auth. See
