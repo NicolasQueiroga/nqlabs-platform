@@ -142,7 +142,10 @@ spec:
       app.kubernetes.io/name: prometheus
   egress:
     # Scrape all pods in all namespaces
-    - toEndpoints: []
+    # toEndpoints: [{}] = empty matchLabels = all pods in ALL namespaces
+    # (toEndpoints: [] would mean "no endpoints" — blocking all pod egress)
+    - toEndpoints:
+        - {}
     # Scrape node exporters (host network)
     - toEntities:
         - host
