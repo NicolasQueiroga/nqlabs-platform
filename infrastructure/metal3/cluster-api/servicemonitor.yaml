@@ -2,6 +2,15 @@
 # The webhook services only expose 443 (webhook), not metrics.
 # PodMonitors are needed to scrape the metrics port directly.
 # All CAPI providers use HTTPS with self-signed certs on the metrics port.
+#
+# NOTE: The CAPI controllers have --insecure-diagnostics=false, so their
+# metrics endpoints require authentication (kube-rbac-proxy). The
+# PodMonitor CRD does not support bearerTokenFile (removed in newer
+# prometheus-operator versions). To authenticate, use `authorization`
+# with a Secret containing the Prometheus SA token, or set
+# --insecure-diagnostics=true on the controllers. For now, these
+# targets will return 401 — the ComparisonError from bearerTokenFile
+# was worse (blocked the entire cluster-api app from syncing).
 
 ---
 # CAPI core — cluster-api provider
@@ -22,7 +31,6 @@ spec:
       interval: 30s
       path: /metrics
       scheme: https
-      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
       tlsConfig:
         insecureSkipVerify: true
 
@@ -45,7 +53,6 @@ spec:
       interval: 30s
       path: /metrics
       scheme: https
-      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
       tlsConfig:
         insecureSkipVerify: true
 
@@ -68,6 +75,5 @@ spec:
       interval: 30s
       path: /metrics
       scheme: https
-      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
       tlsConfig:
         insecureSkipVerify: true
