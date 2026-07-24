@@ -60,6 +60,11 @@ cephClusterSpec:
     config:
       osdsPerDevice: "1"
 
+  # Skip upgrade checks — with pool size=1, no OSD is "ok-to-stop" because
+  # there's no redundancy. The operator would loop forever trying to restart
+  # OSDs. This flag tells Rook to skip the ok-to-stop check.
+  skipUpgradeChecks: true
+
   # Tolerate control-plane taints
   placement:
     all:
