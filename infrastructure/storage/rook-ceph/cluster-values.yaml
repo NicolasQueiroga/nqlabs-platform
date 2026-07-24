@@ -100,14 +100,16 @@ cephClusterSpec:
         interval: 60s
 
 # Block storage pool (RBD) — replaces local-path for new PVCs
-# size 2: on a 3-node cluster this still tolerates 1 node failure while
-# halving the raw-space overhead vs size 3 (50% vs 200%).
+# size 1: no replication on this 3-node lab cluster. The 30 GiB raw capacity
+# (3×10 GiB OSDs) is too small for size=2 replication of all monitoring PVCs.
+# With size=2, 12 GiB of block data → 24 GiB raw + 3 GiB RGW + metadata = >27 GiB.
+# Size 1 is an accepted lab trade-off; add more OSD capacity to enable size=2.
 cephBlockPools:
   - name: ceph-blockpool
     spec:
       failureDomain: host
       replicated:
-        size: 2
+        size: 1
       application: rbd
     storageClass:
       enabled: true
@@ -141,7 +143,7 @@ cephObjectStores:
       metadataPool:
         failureDomain: host
         replicated:
-          size: 2
+          size: 1
       dataPool:
         failureDomain: host
         erasureCoded:
