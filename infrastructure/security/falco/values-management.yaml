@@ -23,6 +23,10 @@ falcosidekick:
     discord:
       webhookurl: ""
       minimumpriority: critical
+    loki:
+      hostport: http://loki-gateway.monitoring.svc.cluster.local/loki/api/v1/push
+      minimumpriority: notice
+      extralabels: source:falco,cluster:nqlabs-management
     extraEnv:
       - name: DISCORD_WEBHOOKURL
         valueFrom:

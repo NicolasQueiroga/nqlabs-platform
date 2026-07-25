@@ -50,6 +50,14 @@ loki:
     reject_old_samples_max_age: 168h
     allow_structured_metadata: true
     volume_enabled: true
+    # Rate limits — prevent any single tenant from flooding the PVC
+    ingestion_rate_mb: 4          # max 4MB/s per tenant
+    ingestion_burst_size_mb: 6    # burst up to 6MB
+    per_stream_rate_limit: 3MB    # max 3MB/s per stream
+    per_stream_rate_limit_burst: 1MB
+    max_streams_per_user: 10000   # cap active streams
+    max_global_streams_per_user: 0
+    max_line_size: 256KB          # truncate oversized log lines
 
   compactor:
     retention_enabled: true
