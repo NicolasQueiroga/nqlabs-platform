@@ -26,7 +26,7 @@ metadata:
     alertmanagerConfig: nqlabs
 spec:
   route:
-    receiver: null
+    receiver: "null"
     groupBy:
       - alertname
       - severity
@@ -51,7 +51,7 @@ spec:
         repeatInterval: 24h
         continue: false
       # Info/none alerts (Watchdog, InfoInhibitor) → null receiver, never Discord
-      - receiver: null
+      - receiver: "null"
         matchers:
           - name: severity
             matchType: =~
@@ -84,7 +84,7 @@ spec:
         - node
   receivers:
     # Null receiver — swallows alerts silently (Watchdog, InfoInhibitor)
-    - name: null
+    - name: "null"
     - name: discord
       discordConfigs:
         - apiURL:
