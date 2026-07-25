@@ -62,7 +62,7 @@ singleBinary:
   persistence:
     enabled: true
     storageClass: ceph-block
-    size: 5Gi
+    size: 2Gi
     accessModes:
       - ReadWriteOnce
 

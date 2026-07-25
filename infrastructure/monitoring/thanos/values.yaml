@@ -54,7 +54,7 @@ receive:
   persistence:
     enabled: true
     storageClass: ceph-block
-    size: 5Gi
+    size: 1Gi
   resources:
     requests:
       cpu: 100m
@@ -72,7 +72,7 @@ storegateway:
   persistence:
     enabled: true
     storageClass: ceph-block
-    size: 2Gi
+    size: 512Mi
   resources:
     requests:
       cpu: 50m
@@ -83,13 +83,13 @@ storegateway:
 
 compactor:
   enabled: true
-  retentionResolutionRaw: 30d
-  retentionResolution5m: 90d
-  retentionResolution1h: 365d
+  retentionResolutionRaw: 7d
+  retentionResolution5m: 30d
+  retentionResolution1h: 90d
   persistence:
     enabled: true
     storageClass: ceph-block
-    size: 2Gi
+    size: 1Gi
   resources:
     requests:
       cpu: 50m
