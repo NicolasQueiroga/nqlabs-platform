@@ -16,6 +16,29 @@
 #   - CoreDNS enabled      — kube-system CoreDNS is accessible
 #   - No tolerations needed — single node has no taints
 
+# ── Disable architecturally-impossible alert rules ──────────────────────────
+# These rules can never fire meaningfully on 3-node Talos VMs on Proxmox:
+# - No RAID, no NIC bonding, no systemd (Talos), no HPAs, no ResourceQuotas
+# - Single Talos version across all nodes
+# Disabling declaratively (not via runtime silences) so it's version-controlled.
+defaultRules:
+  disabled:
+    NodeRAIDDegraded: true
+    NodeRAIDDiskFailure: true
+    NodeBondingDegraded: true
+    NodeSystemdServiceFailed: true
+    NodeSystemdServiceCrashlooping: true
+    KubeHpaReplicasMismatch: true
+    KubeHpaMaxedOut: true
+    KubeCPUOvercommit: true
+    KubeMemoryOvercommit: true
+    KubeCPUQuotaOvercommit: true
+    KubeMemoryQuotaOvercommit: true
+    KubeQuotaAlmostFull: true
+    KubeQuotaFullyUsed: true
+    KubeQuotaExceeded: true
+    KubeVersionMismatch: true
+
 # ── Disabled components (not accessible on Talos + Cilium) ──────────────────
 kubeProxy:
   enabled: false

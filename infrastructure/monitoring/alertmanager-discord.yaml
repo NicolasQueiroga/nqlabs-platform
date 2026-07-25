@@ -8,6 +8,14 @@
 # so the Prometheus Operator does NOT inject namespace="monitoring" as a matcher
 # on the CRD-generated route. This allows alerts from ALL namespaces to be
 # routed to Discord.
+#
+# Routing design:
+#   critical → Discord, repeat 4h  (act now, keep pinging until fixed)
+#   warning  → Discord, repeat 24h (act today, once/day max — no firehose)
+#   info/none → null receiver      (Watchdog, InfoInhibitor never reach Discord)
+# Inhibition:
+#   critical inhibits warning for same alert+namespace+instance
+#   node-down inhibits ALL alerts on that node (prevents cascade spam)
 
 apiVersion: monitoring.coreos.com/v1alpha1
 kind: AlertmanagerConfig
@@ -18,19 +26,39 @@ metadata:
     alertmanagerConfig: nqlabs
 spec:
   route:
-    receiver: discord
+    receiver: null
     groupBy:
       - alertname
       - severity
-      - instance
     groupWait: 30s
     groupInterval: 5m
     repeatInterval: 4h
-    matchers:
-      - name: severity
-        matchType: =~
-        value: "critical|warning|info"
+    routes:
+      # Critical alerts → Discord, repeat every 4h
+      - receiver: discord
+        matchers:
+          - name: severity
+            matchType: =
+            value: critical
+        repeatInterval: 4h
+        continue: false
+      # Warning alerts → Discord, repeat once per 24h (anti-spam)
+      - receiver: discord
+        matchers:
+          - name: severity
+            matchType: =
+            value: warning
+        repeatInterval: 24h
+        continue: false
+      # Info/none alerts (Watchdog, InfoInhibitor) → null receiver, never Discord
+      - receiver: null
+        matchers:
+          - name: severity
+            matchType: =~
+            value: "none|info"
+        continue: false
   inhibitRules:
+    # Critical inhibits warning for same alert + namespace + instance
     - sourceMatch:
         - name: severity
           matchType: =
@@ -43,17 +71,20 @@ spec:
         - alertname
         - namespace
         - instance
+    # Node-down inhibits ALL other alerts on that node (prevents cascade spam)
     - sourceMatch:
         - name: alertname
           matchType: =~
-          value: NQLabsNodeNotReady|KubeNodeNotReady
+          value: NQLabsNodeNotReady|KubeNodeNotReady|KubeNodeUnreachable
       targetMatch:
-        - name: severity
+        - name: alertname
           matchType: =~
-          value: warning|critical
+          value: ".*"
       equal:
         - node
   receivers:
+    # Null receiver — swallows alerts silently (Watchdog, InfoInhibitor)
+    - name: null
     - name: discord
       discordConfigs:
         - apiURL:
