@@ -208,6 +208,41 @@ EOF
 #    Or update the values.yaml postgresql.host and sync the ArgoCD app.
 ```
 
+### Purge RGW WAL bucket before recreating CNPG cluster
+
+When the CNPG cluster is deleted and recreated (e.g., after a Ceph crisis, PVC
+migration, or DB wipe), stale WAL objects from the previous cluster incarnation
+remain in the RGW bucket. The new cluster's `barman-cloud-check-wal-archive`
+finds these stale objects and fails with "Expected empty archive", which
+prevents new WALs from being archived. WALs accumulate on the PVC → PVC fills
+→ CNPG refuses to start PostgreSQL → Authentik down.
+
+**Always purge the RGW WAL bucket before recreating the CNPG cluster.**
+
+```bash
+# 1. Purge all objects from the authentik-pg bucket
+kubectl exec -n rook-ceph deploy/rook-ceph-tools -- \
+  radosgw-admin --rgw-realm=platform-object-store bucket rm \
+  --bucket=authentik-pg --purge-objects
+
+# 2. Verify the bucket is empty (should error with "No such file or directory")
+kubectl exec -n rook-ceph deploy/rook-ceph-tools -- \
+  radosgw-admin --rgw-realm=platform-object-store bucket list \
+  --bucket=authentik-pg
+
+# 3. Now delete the CNPG cluster + PVC and let ArgoCD recreate it
+kubectl delete cluster.postgresql.cnpg.io -n authentik authentik-pg
+kubectl delete pvc -n authentik authentik-pg-1 --force
+
+# 4. After the new cluster is created, verify WAL archiving works:
+kubectl describe cluster authentik-pg -n authentik | grep -A5 "WAL Archiving"
+# Should show "ContinuousArchiving: True" after a few minutes
+```
+
+**Note:** WAL archiving is currently DISABLED in the CNPG cluster manifest
+(see `postgres-cluster.yaml`). The purge procedure above is required when
+re-enabling WAL archiving in the future.
+
 ## Verification
 
 ```bash

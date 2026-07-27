@@ -179,3 +179,38 @@ spec:
           annotations:
             summary: "Authentik PostgreSQL backups are failing"
             description: "Last CNPG backup for authentik-pg failed more recently than the last success."
+
+    - name: nqlabs.storage.pvc
+      rules:
+        - alert: NQLabsPVCUsageHigh
+          expr: |
+            (kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) > 0.70
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PVC {{ $labels.persistentvolumeclaim }} in {{ $labels.namespace }} is above 70%"
+            description: "PVC {{ $labels.persistentvolumeclaim }} (namespace: {{ $labels.namespace }}) is at {{ $value | humanizePercentage }} capacity. Investigate before it fills up."
+        - alert: NQLabsPVCUsageCritical
+          expr: |
+            (kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) > 0.85
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PVC {{ $labels.persistentvolumeclaim }} in {{ $labels.namespace }} is above 85%"
+            description: "PVC {{ $labels.persistentvolumeclaim }} (namespace: {{ $labels.namespace }}) is at {{ $value | humanizePercentage }} capacity. Pod will crash soon if the PVC fills up."
+
+    - name: nqlabs.database.cnpg
+      rules:
+        - alert: NQLabsCNPGWalArchivingFailing
+          expr: |
+            cnpg_cluster_status_phase{cluster="authentik-pg"} != 0
+            or
+            cnpg_pg_stat_archiver_failed_wals{cluster="authentik-pg"} > 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CNPG WAL archiving is failing for {{ $labels.cluster }}"
+            description: "WAL archiving has been failing for 10m. WAL files will accumulate on the PVC and eventually fill it, causing PostgreSQL to refuse to start. Purge stale objects from the RGW WAL bucket and restart the CNPG pod. See runbook sso-authentik.md."
